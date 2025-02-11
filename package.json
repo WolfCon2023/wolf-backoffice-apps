@@ -14,7 +14,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "postinstall": "npm install && npm run build",
+    "postinstall": "npm install",
     "serve": "serve -s build"
   },
   "engines": {
