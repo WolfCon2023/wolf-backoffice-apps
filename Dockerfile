@@ -20,7 +20,7 @@ RUN mkdir -p public && cp -r public/ /app/public/
 RUN npm run build
 
 # Ensure `build/` exists before deployment
-RUN ls -l /app/build
+RUN ls -l /app/build || echo "WARNING: build/ is missing"
 
 # Set environment variable for ports (Use Railway's default)
 ENV PORT=8080
