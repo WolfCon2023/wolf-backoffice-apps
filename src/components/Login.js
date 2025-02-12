@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { API_BASE_URL } from "../config";  // ✅ Import centralized API URL
 
 const Login = ({ setAuthToken }) => {
   const [email, setEmail] = useState("");
@@ -11,7 +12,7 @@ const Login = ({ setAuthToken }) => {
     e.preventDefault();
 
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/auth/login`, {
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password
       });
@@ -21,7 +22,7 @@ const Login = ({ setAuthToken }) => {
       console.log("✅ User Logged In:", response.data.token);  // ✅ Log token after login
       navigate("/dashboard");  // ✅ Redirect to Dashboard
     } catch (error) {
-      console.error("❌ Login failed", error);
+      console.error("❌ Login failed", error.response?.data || error.message);
       alert("Invalid credentials. Please try again.");
     }
   };
