@@ -16,6 +16,9 @@ COPY . .
 # Build React app
 RUN npm run build
 
+# Ensure public/ is copied before building
+RUN mkdir -p public && cp -r public/ /app/public/
+
 # Set environment variable for ports
 ENV PORT=3000
 
