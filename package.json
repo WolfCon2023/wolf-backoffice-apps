@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+  	"bcryptjs": "^2.4.3",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "jsonwebtoken": "^9.0.2",
