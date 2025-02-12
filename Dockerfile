@@ -16,6 +16,9 @@ COPY . .
 # Build React app
 RUN npm run build
 
+# Ensure `build/` exists before deployment
+RUN ls -l /app/build
+
 # Ensure public/ is copied before building
 RUN mkdir -p public && cp -r public/ /app/public/
 
