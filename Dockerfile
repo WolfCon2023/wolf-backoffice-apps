@@ -4,7 +4,7 @@ FROM node:18
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json first (for caching layers)
+# Copy package.json first (for caching layers)
 COPY package.json ./
 
 # Install dependencies efficiently
@@ -12,6 +12,9 @@ RUN npm install --force
 
 # Copy all files to container
 COPY . .
+
+# Build React app
+RUN npm run build
 
 # Set environment variable for ports
 ENV PORT=3000
