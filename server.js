@@ -7,8 +7,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ✅ Serve React Frontend from `build/`
+app.use(express.static(path.join(__dirname, "build")));
+
 // ✅ Set the port for Railway (Use Railway-assigned port)
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 
 // ✅ Serve React Frontend (Assumes React was built into `build/` directory)
 app.use(express.static(path.join(__dirname, "build")));
