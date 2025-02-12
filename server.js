@@ -6,20 +6,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve React Frontend from `build/`
-app.use(express.static(path.join(__dirname, "app/public")));
-
-// Set the port for Railway (Use Railway-assigned port)
-const port = process.env.PORT || 8080;
-
-// Serve React Frontend (Assumes React was built into `build/` directory)
+// ✅ Ensure React static files are served correctly
 app.use(express.static(path.join(__dirname, "build")));
 
-// Catch-All Route to Serve React Frontend
+// ✅ Serve React index.html for all unknown routes
 app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "app/public", "index.html"));
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-// Start Express Server
+// ✅ Set port for Railway
 const port = process.env.PORT || 8080;
-app.listen(port, () => console.log(`Frontend Server running on port ${port}`));
+app.listen(port, () => console.log(`🚀 Frontend Server running on port ${port}`));
