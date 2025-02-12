@@ -1,61 +1,22 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-
-// Import Routes
-const authRoutes = require("./routes/auth");
-const verifyToken = require("./middleware/authMiddleware");
-const customerRoutes = require("./routes/customers"); // Import customers route
+const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Set the port for Express (default: 3000)
+// ✅ Set the port for Railway (Use Railway-assigned port)
 const port = process.env.PORT || 3000;
 
-// Base Route
-app.get("/", (req, res) => {
-    res.send("🚀 Frontend Server is running on port " + port);
+// ✅ Serve React Frontend (Assumes React was built into `build/` directory)
+app.use(express.static(path.join(__dirname, "build")));
+
+// ✅ Catch-All Route to Serve React Frontend
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-// Authentication Routes
-app.use("/api/auth", authRoutes);
-
-// API Routes
-app.use("/api/customers", customerRoutes);
-
-// Protected Route Example
-app.get("/api/protected", verifyToken, (req, res) => {
-    res.json({ message: `Welcome, ${req.user.username}! This is a protected route.` });
-});
-
-// Appointment Routes (Mock Example)
-app.get("/api/appointments", verifyToken, (req, res) => {
-    res.json([
-        { title: "Doctor Visit", date: "2024-06-30" },
-        { title: "Business Meeting", date: "2024-07-05" }
-    ]);
-});
-
-// Customer Routes (Mock Example)
-app.get("/api/customers", verifyToken, (req, res) => {
-    res.json([
-        { id: 1, first_name: "John", last_name: "Doe", email: "john@example.com" },
-        { id: 2, first_name: "Jane", last_name: "Smith", email: "jane@example.com" }
-    ]);
-});
-
-// Global Error Handling
-process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception:", err);
-});
-
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled Rejection:", reason);
-});
-
-// Start Express Server
+// ✅ Start Express Server
 app.listen(port, () => console.log(`🚀 Frontend Server running on port ${port}`));
