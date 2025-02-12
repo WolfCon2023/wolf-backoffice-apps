@@ -1,32 +1,29 @@
-# Use official Node.js image
+# Step 1: Use the official Node.js image
 FROM node:18
 
-# Set working directory
+# Step 2: Set working directory inside the container
 WORKDIR /app
 
-# Copy package.json first (for caching layers)
+# Step 3: Copy package.json and package-lock.json (for caching layers)
 COPY package.json package-lock.json ./
 
-# Install dependencies (without --force)
+# Step 4: Install dependencies
 RUN npm install
 
-# Copy all project files
-COPY . . 
+# Step 5: Copy all project files (including `public/` and `src/`)
+COPY . .
 
-# Ensure `public/` is copied before building
-RUN mkdir -p public && cp -r public/ /app/public/
-
-# Build React app
+# Step 6: Build the React app
 RUN npm run build
 
-# Ensure `build/` exists before deployment
-RUN ls -l /app/build || echo "WARNING: build/ is missing"
+# Step 7: Ensure `build/` directory is present (for debugging purposes)
+RUN ls -l /app/build || echo "build/ is missing"
 
-# Set environment variable for ports (Use Railway's default)
+# Step 8: Set environment variable for the port Railway uses
 ENV PORT=8080
 
-# Expose port for external access
+# Step 9: Expose port 8080 to serve the app
 EXPOSE 8080
 
-# Serve the React app correctly
+# Step 10: Serve the React app using the 'serve' command (using the `build/` directory)
 CMD ["npx", "serve", "-s", "build", "-l", "8080"]
