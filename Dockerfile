@@ -13,11 +13,11 @@ RUN npm install
 # Step 5: Copy all project files (including `public/` and `src/`)
 COPY . .
 
-# Step 6: Build the React app
-RUN npm run build
+# Step 6: Ensure `build/` directory is present (for debugging purposes)
+RUN ls -al /app/public  # Debug step to check if the public folder is in the container
 
-# Step 7: Ensure `build/` directory is present (for debugging purposes)
-RUN ls -l /app/build || echo "build/ is missing"
+# Step 7: Build the React app
+RUN npm run build
 
 # Step 8: Set environment variable for the port Railway uses
 ENV PORT=8080
