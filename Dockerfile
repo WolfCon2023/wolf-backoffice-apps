@@ -7,11 +7,14 @@ WORKDIR /app
 # Copy package.json first (for caching layers)
 COPY package.json package-lock.json ./
 
-# Install dependencies efficiently
-RUN npm install --force
+# Install dependencies (without --force)
+RUN npm install
 
-# Copy all files to container
-COPY . .
+# Copy all project files
+COPY . . 
+
+# Ensure `public/` is copied before building
+RUN mkdir -p public && cp -r public/ /app/public/
 
 # Build React app
 RUN npm run build
@@ -19,14 +22,11 @@ RUN npm run build
 # Ensure `build/` exists before deployment
 RUN ls -l /app/build
 
-# Ensure public/ is copied before building
-RUN mkdir -p public && cp -r public/ /app/public/
-
-# Set environment variable for ports
-ENV PORT=3000
+# Set environment variable for ports (Use Railway's default)
+ENV PORT=8080
 
 # Expose port for external access
-EXPOSE 3000
+EXPOSE 8080
 
-# Start the application
-CMD ["node", "server.js"]
+# Serve the React app correctly
+CMD ["npx", "serve", "-s", "build", "-l", "8080"]
