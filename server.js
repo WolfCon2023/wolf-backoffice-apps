@@ -10,9 +10,13 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "build")));
 
 // ✅ Serve React index.html for all unknown routes
+//app.get('*', function (req, res) {
+  //const index = path.join(__dirname, 'build', 'index.html');
+  //res.sendFile(index);
+//});
+
 app.get('*', function (req, res) {
-  const index = path.join(__dirname, 'build', 'index.html');
-  res.sendFile(index);
+  res.sendFile('index.html');
 });
 
 // ✅ Set port for Railway
