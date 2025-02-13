@@ -16,6 +16,10 @@ COPY . .
 # Build React app
 RUN npm run build
 
+# ? Debugging: List directory contents to confirm where index.html is
+RUN echo "Listing contents of /app after build:" && ls -l /app
+RUN echo "Listing contents of /app/build after build:" && ls -l /app/build
+
 # Ensure `build/` exists before deployment
 RUN ls -l /app/build
 
