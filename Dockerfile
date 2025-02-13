@@ -1,29 +1,32 @@
 # Use official Node.js image
 FROM node:18
 
-# Set working directory inside container
+# Set working directory
 WORKDIR /app
 
 # Copy package.json and package-lock.json first
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --force
 
-# Copy all project files, including `app/public/` and `src/`
+# Copy public/ before building
+COPY public/ public/
+
+# Copy all files to container
 COPY . .
 
-# Debugging: Ensure `app/public/` exists
-RUN ls -al /app/public || echo "WARNING: /app/public is missing"
-
-# Build the React app
+# Build React app
 RUN npm run build
 
-# Ensure the build folder exists
-RUN ls -al /app/build || echo "WARNING: /app/build is missing"
+# Ensure `build/` exists
+RUN ls -l /app/build
 
-# Expose the correct port
-EXPOSE 8080
+# Set environment variable for ports
+ENV PORT=3000
 
-# Serve the React app using `serve`
-CMD ["npx", "serve", "-s", "build", "-l", "8080"]
+# Expose port for external access
+EXPOSE 3000
+
+# Start the application
+CMD ["serve", "-s", "build"]
