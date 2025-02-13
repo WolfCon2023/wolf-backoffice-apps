@@ -6,19 +6,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Ensure React static files are served correctly
+// Serve React build files correctly
 app.use(express.static(path.join(__dirname, "build")));
 
-// ✅ Serve React index.html for all unknown routes
-//app.get('*', function (req, res) {
-  //const index = path.join(__dirname, 'build', 'index.html');
-  //res.sendFile(index);
-//});
-
-app.get('*', function (req, res) {
-  res.sendFile('index.html');
+// Serve `index.html` for all routes to enable React routing
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-// ✅ Set port for Railway
+// Set the correct port
 const port = process.env.PORT || 8080;
-app.listen(port, () => console.log(`🚀 Frontend Server running on port ${port}`));
+app.listen(port, () => console.log(`Frontend Server running on port ${port}`));
