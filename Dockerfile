@@ -13,13 +13,10 @@ RUN npm install --force
 # Copy all project files
 COPY . . 
 
-# Ensure `build/` exists before running the build
-RUN mkdir -p build
-
-# Build React app
+# Build React app (Ensures `/app/build` is created)
 RUN npm run build
 
-# Confirm `build/` directory exists after build
+# Debugging: Confirm `build/` exists after build
 RUN ls -l /app/build
 
 # Set environment variable for ports
@@ -29,4 +26,4 @@ ENV PORT=5000
 EXPOSE 5000
 
 # Start the application using `serve`
-CMD ["npx", "serve", "-s", "build"]
+CMD ["npx", "serve", "-s", "build", "-l", "5000"]
