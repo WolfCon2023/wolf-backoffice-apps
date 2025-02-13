@@ -6,22 +6,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ensure proper resolution of base directory
-const dirName = path.resolve();
+// Set correct path for serving frontend
+const buildPath = path.join(__dirname, "build");
+console.log("Serving frontend from:", buildPath);
 
-// Confirm Build Path
-const buildPath = path.join(dirName, "build");
-console.log("✅ Serving frontend from:", buildPath);
-
-// Serve React build files from `/app/build`
+// Ensure `build/` exists before running
 app.use(express.static(buildPath));
 
 // Serve `index.html` for all routes (Enable React Routing)
 app.get("*", (req, res) => {
   const indexPath = path.join(buildPath, "index.html");
 
-  // Debugging logs
-  console.log(`Attempting to serve: ${indexPath}`);
+  console.log(`✅ Attempting to serve: ${indexPath}`);
 
   res.sendFile(indexPath, (err) => {
     if (err) {
@@ -31,6 +27,6 @@ app.get("*", (req, res) => {
   });
 });
 
-// Set the correct port for Railway
-const port = process.env.PORT || 8080;
+// Use Railway's assigned PORT
+const port = process.env.PORT || 5000;
 app.listen(port, () => console.log(`Frontend Server running on port ${port}`));

@@ -16,7 +16,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && mv build app/public",
+    "build": "react-scripts build",
     "postinstall": "npm run build"
   },
   "engines": {

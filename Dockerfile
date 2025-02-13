@@ -4,30 +4,29 @@ FROM node:18
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json first (cache layer optimization)
+# Copy package.json and package-lock.json first
 COPY package.json package-lock.json ./
 
 # Install dependencies efficiently
 RUN npm install --force
 
-# Copy all project files (including `public/` & `src/`)
-COPY . .
+# Copy all project files
+COPY . . 
+
+# Ensure `build/` exists before running the build
+RUN mkdir -p build
 
 # Build React app
 RUN npm run build
 
-# ? Debugging: List directory contents to confirm where index.html is
-RUN echo "Listing contents of /app after build:" && ls -l /app
-RUN echo "Listing contents of /app/build after build:" && ls -l /app/build
-
-# Ensure `build/` exists before deployment
+# Confirm `build/` directory exists after build
 RUN ls -l /app/build
 
 # Set environment variable for ports
-ENV PORT=8080
+ENV PORT=5000
 
 # Expose port for external access
-EXPOSE 8080
+EXPOSE 5000
 
-# Start the application
+# Start the application using `serve`
 CMD ["npx", "serve", "-s", "build"]
