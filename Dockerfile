@@ -10,7 +10,7 @@ COPY package.json package-lock.json ./
 # Install dependencies
 RUN npm install --force
 
-# Copy public/ before building
+# Copy public/ **before** building
 COPY public/ public/
 
 # Copy all files to container
@@ -23,10 +23,10 @@ RUN npm run build
 RUN ls -l /app/build
 
 # Set environment variable for ports
-ENV PORT=3000
+ENV PORT=8080
 
 # Expose port for external access
-EXPOSE 3000
+EXPOSE 8080
 
-# Start the application
-CMD ["serve", "-s", "build"]
+# Start the application with `serve`
+CMD ["npx", "serve", "-s", "build"]
