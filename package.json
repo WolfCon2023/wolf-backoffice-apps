@@ -17,7 +17,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build && mv build app/public",
-    "postinstall": "npm run build"  // ✅ No more infinite loop
+    "postinstall": "npm run build"
   },
   "engines": {
     "node": ">=16"
