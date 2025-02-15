@@ -1,16 +1,17 @@
 import { Link } from "react-router-dom";
-
+import { FaCalendarAlt, FaClipboardList, FaUserFriends, FaUsers, FaPlusCircle } from "react-icons/fa"; // ✅ Import Icons
+import "./Dashboard.css";  // ✅ Import the CSS file
 const Dashboard = () => {
   return (
-    <div>
-      <h1>Wolf Back Office Applications Menu</h1>
-      <nav>
+    <div className="dashboard-container">
+      <h1 className="dashboard-title">Wolf Back Office Applications</h1>
+      <nav className="dashboard-menu" aria-label="Main Navigation">
         <ul>
-          <li><Link to="/appointments">Appointments</Link></li>
-          <li><Link to="/schedule-appointment">Schedule Appointment</Link></li>
-          <li><Link to="/calendar">Calendar</Link></li>
-          <li><Link to="/customers">Customers</Link></li>
-          <li><Link to="/crm">CRM</Link></li>
+          <li><Link to="/appointments"><FaClipboardList className="icon" /> Appointments</Link></li>
+          <li><Link to="/schedule-appointment"><FaPlusCircle className="icon" /> Schedule Appointment</Link></li>
+          <li><Link to="/calendar"><FaCalendarAlt className="icon" /> Calendar</Link></li>
+          <li><Link to="/customers"><FaUserFriends className="icon" /> Customers</Link></li>
+          <li><Link to="/crm"><FaUsers className="icon" /> CRM</Link></li>
         </ul>
       </nav>
     </div>
