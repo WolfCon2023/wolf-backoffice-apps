@@ -1,10 +1,16 @@
 import { Link } from "react-router-dom";
-import { FaCalendarAlt, FaClipboardList, FaUserFriends, FaUsers, FaPlusCircle } from "react-icons/fa"; // ✅ Import Icons
-import "./Dashboard.css";  // ✅ Import the CSS file
+import { FaCalendarAlt, FaClipboardList, FaUserFriends, FaUsers, FaPlusCircle } from "react-icons/fa";
+import "./Dashboard.css";  // Ensure styles are applied
+
 const Dashboard = () => {
   return (
     <div className="dashboard-container">
-      <h1 className="dashboard-title">Wolf Back Office Applications</h1>
+      {/* ✅ Logo at the Top Left */}
+      <div className="dashboard-header">
+        <img src="/logo.png" alt="Wolf Back Office Logo" className="dashboard-logo" />
+        <h1 className="dashboard-title">Wolf Back Office Applications</h1>
+      </div>
+
       <nav className="dashboard-menu" aria-label="Main Navigation">
         <ul>
           <li><Link to="/appointments"><FaClipboardList className="icon" /> Appointments</Link></li>
