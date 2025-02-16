@@ -40,7 +40,7 @@ function App() {
           <Route path="/customers" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
           <Route path="/customer/:id" element={authToken ? <CustomerDetails /> : <Navigate to="/login" />} />
         </Routes>
-        <Footer />
+        <Footer username={username} /> {/* ✅ Pass username to Footer */}
       </div>
     </Router>
   );

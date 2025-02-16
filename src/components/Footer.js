@@ -1,9 +1,10 @@
-import "./Footer.css"; // ✅ Import the CSS file for styling
+import "./Footer.css"; // ✅ Ensure styles are applied
 
-const Footer = () => {
+const Footer = ({ username }) => {
   return (
     <footer className="footer">
-      <p>Powered by <strong>Wolf Consulting Group, LLC</strong></p>
+      <p>Powered by Wolf Consulting Group, LLC</p>
+      {username && <p className="footer-username">Logged in as: {username}</p>} {/* ✅ New Element */}
     </footer>
   );
 };
