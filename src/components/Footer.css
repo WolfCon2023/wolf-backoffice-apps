@@ -24,5 +24,5 @@
   white-space: nowrap; /* ✅ Ensures text stays in one line */
   overflow: hidden; /* ✅ Prevents accidental overflow */
   text-overflow: ellipsis; /* ✅ Adds "..." if text is too long */
-  margin-right: 20px; /* ✅ Moves text slightly to the left */
+  margin-right: 24px; /* ✅ Moves text slightly to the left */
 }
