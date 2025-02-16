@@ -1,5 +1,5 @@
-import "./Header.css"; 
 import { useNavigate } from "react-router-dom";
+import "./Header.css"; // ✅ Ensure styles are applied
 
 const Header = ({ username, setAuthToken }) => {
   const navigate = useNavigate();
@@ -10,14 +10,16 @@ const Header = ({ username, setAuthToken }) => {
     navigate("/login");
   };
 
+  const handleGoToDashboard = () => {
+    navigate("/dashboard");
+  };
+
   return (
     <header className="header">
-      {/* ✅ Keep only the Logo in the Header */}
-      <img src="/wcg_logo.png" alt="Wolf Back Office Logo" className="header-logo" />
-
-      <div className="header-info">
-        <p className="header-text">Logged in as <strong>{username ? username : "Guest"}</strong></p>
-        <button className="logout-button" onClick={handleLogout}>Logout</button>
+      <h1>Wolf Backoffice Suite</h1>
+      <div className="header-buttons">
+        <button className="logout-button" onClick={handleLogout}>Log Out</button>
+        <button className="dashboard-header-button" onClick={handleGoToDashboard}>🏠 Dashboard</button> {/* ✅ New Button */}
       </div>
     </header>
   );
