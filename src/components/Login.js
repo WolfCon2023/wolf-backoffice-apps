@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../config";
+import "./Login.css"; // ✅ New CSS file for styling
 
 const Login = ({ setAuthToken }) => {
   const [email, setEmail] = useState("");
@@ -29,14 +30,16 @@ const Login = ({ setAuthToken }) => {
   };
 
   return (
-    <div>
-      <h1>Login</h1>
-      <form onSubmit={handleLogin}>
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-        <button type="submit">Login</button>
-      </form>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <div className="login-container">
+      <div className="login-box">
+        <h1>Login</h1>
+        <form onSubmit={handleLogin}>
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <button type="submit">Login</button>
+        </form>
+        {error && <p className="error-text">{error}</p>}
+      </div>
     </div>
   );
 };
