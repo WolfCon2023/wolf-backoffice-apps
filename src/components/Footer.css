@@ -6,12 +6,12 @@
   width: 100%;
   background-color: #333;
   color: white;
-  padding: 6px 20px; /* ✅ Added padding to prevent cutoff */
+  padding: 6px 20px; /* ✅ Keeps spacing consistent */
   font-size: 0.9rem;
   height: 45px;
   z-index: 1000;
   display: flex;
-  justify-content: space-between; /* ✅ Keeps "Powered by" text on the left and username on the right */
+  justify-content: space-between; /* ✅ Keeps text properly aligned */
   align-items: center;
 }
 
@@ -23,6 +23,6 @@
   max-width: 180px; /* ✅ Prevents excessive shifting */
   white-space: nowrap; /* ✅ Ensures text stays in one line */
   overflow: hidden; /* ✅ Prevents accidental overflow */
-  text-overflow: ellipsis; /* ✅ Adds "..." if the text is too long */
-  margin-right: 20px; /* ✅ Moves text slightly inward */
+  text-overflow: ellipsis; /* ✅ Adds "..." if text is too long */
+  margin-right: 6px; /* ✅ Moves text slightly to the left */
 }
