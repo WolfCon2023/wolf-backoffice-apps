@@ -1,57 +1,35 @@
 /* 🎨 Dashboard Container */
 .dashboard-container {
   padding: 20px;
-  background-color: #f5f7fa; /* Soft background */
+  background-color: #f5f7fa;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Ensures title stays centered */
 }
 
-/* 📌 Dashboard Header: Upper Left Logo, Centered Title */
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Keeps logo left & title centered */
-  width: 100%;
-  max-width: 1200px;
-  padding: 10px 20px;
-  position: relative;
-}
-
-/* ✅ Logo in Upper Left */
-.dashboard-logo {
-  height: 60px; /* Adjust size */
-  width: auto;
-  position: static; /* Remove absolute positioning */
-  margin-right: auto; /* Pushes title to center */
-}
-
-/* ✅ Center Title */
+/* ✅ Dashboard Title Styling */
 .dashboard-title {
   font-size: 2rem;
   font-weight: bold;
   color: #333;
   text-align: center;
-  flex-grow: 1; /* Centers the title */
+  margin-bottom: 10px; /* ✅ Reduce spacing */
 }
 
-/* 📌 Navigation Menu */
+/* ✅ Move Applications Menu Up */
 .dashboard-menu {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 40px;
+  margin-top: 20px; /* ✅ Pulls menu closer to title */
 }
 
-/* 📌 Menu Items */
+/* 📌 Navigation Menu */
 .dashboard-menu ul {
   list-style: none;
   padding: 0;
 }
 
 .dashboard-menu li {
-  margin: 15px 0;
+  margin: 10px 0; /* Reduce spacing between items */
 }
 
 .dashboard-menu a {
@@ -80,19 +58,9 @@
   outline: 2px solid #0056b3;
 }
 
-/* 📌 Responsive Adjustments */
+/* 📌 Mobile Responsive */
 @media (max-width: 768px) {
-  .dashboard-header {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .dashboard-logo {
-    margin-bottom: 10px;
-  }
-
-  .dashboard-title {
-    text-align: center;
-    margin-top: 10px;
+  .dashboard-menu {
+    margin-top: 10px; /* Reduce top margin */
   }
 }

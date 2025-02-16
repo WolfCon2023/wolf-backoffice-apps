@@ -1,39 +1,31 @@
 /* 🎨 Header Container */
 .header {
     display: flex;
-    flex-direction: column; /* ✅ Stack logo, title, and user info */
-    align-items: center;
-    justify-content: center;
+    align-items: center; /* ✅ Align items vertically */
+    justify-content: space-between; /* ✅ Space out elements */
     background-color: #0056b3;
     color: white;
-    padding: 20px;
+    padding: 10px 20px;
+    height: 80px; /* ✅ Ensure a fixed height for better alignment */
     text-align: center;
   }
   
-  /* ✅ Logo Styling */
+  /* ✅ Logo Styling (Centered Vertically) */
   .header-logo {
-    height: 80px; /* Adjust size */
+    height: 60px; /* Adjust logo size */
     width: auto;
-    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
   }
   
-  /* ✅ Centered Title */
-  .header-title {
-    font-size: 2rem;
-    font-weight: bold;
-    margin: 0;
-  }
-  
-  /* 📌 User Info & Logout */
+  /* ✅ User Info & Logout Aligned */
   .header-info {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    max-width: 1200px;
-    margin-top: 10px;
+    gap: 15px; /* ✅ Space between username & logout button */
   }
   
+  /* ✅ Username Styling */
   .header-text {
     margin: 0;
     font-size: 1rem;
@@ -58,13 +50,19 @@
   
   /* 📌 Mobile Responsive */
   @media (max-width: 768px) {
+    .header {
+      flex-direction: column;
+      height: auto; /* Adjust height */
+      text-align: center;
+    }
+  
     .header-info {
       flex-direction: column;
       text-align: center;
     }
   
     .logout-button {
-      margin-top: 10px;
+      margin-top: 5px;
     }
   }
   
