@@ -14,9 +14,15 @@ const Login = ({ setAuthToken }) => {
 
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
-      localStorage.setItem("token", response.data.token);
-      setAuthToken(response.data.token);
-      navigate("/dashboard");
+      const token = response.data.token;
+
+      localStorage.setItem("token", token);
+      setAuthToken(token);
+
+      // ✅ Wait a short time before navigating to ensure state updates
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 100);
     } catch (error) {
       setError(error.response?.data?.message || "Login failed. Please try again.");
     }

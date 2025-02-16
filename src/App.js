@@ -9,7 +9,7 @@ import CustomerCRM from "./components/CustomerCRM";
 import CustomerDetails from "./components/CustomerDetails";
 import Dashboard from "./components/Dashboard";
 import Footer from "./components/Footer";
-import Header from "./components/Header"; // ✅ Import Header
+import Header from "./components/Header";
 
 function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem("token") || "");
@@ -29,10 +29,11 @@ function App() {
   return (
     <Router>
       <div className="app-container">
-        <Header username={username} setAuthToken={setAuthToken} /> {/* ✅ Display logo and title on every page */}
+        <Header username={username} setAuthToken={setAuthToken} />
         <Routes>
-          <Route path="/" element={authToken ? <Dashboard /> : <Navigate to="/login" />} />
+          <Route path="/" element={authToken ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           <Route path="/login" element={<Login setAuthToken={setAuthToken} />} />
+          <Route path="/dashboard" element={authToken ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/appointments" element={authToken ? <Appointments /> : <Navigate to="/login" />} />
           <Route path="/schedule-appointment" element={authToken ? <AppointmentScheduler /> : <Navigate to="/login" />} />
           <Route path="/calendar" element={authToken ? <Calendar /> : <Navigate to="/login" />} />
