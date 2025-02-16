@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import jwtDecode from "jwt-decode";  // ✅ Install this if not already: npm install jwt-decode
+import { jwtDecode } from "jwt-decode";
 import Login from "./components/Login";
 import Appointments from "./components/Appointments";
 import AppointmentScheduler from "./components/AppointmentScheduler";
