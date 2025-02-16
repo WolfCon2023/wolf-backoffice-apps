@@ -29,7 +29,7 @@ function App() {
   return (
     <Router>
       <div className="app-container">
-        <Header username={username} setAuthToken={setAuthToken} /> {/* ✅ Pass logout function */}
+        <Header username={username} setAuthToken={setAuthToken} /> {/* ✅ Display logo and title on every page */}
         <Routes>
           <Route path="/" element={authToken ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/login" element={<Login setAuthToken={setAuthToken} />} />

@@ -1,4 +1,4 @@
-import "./Header.css";
+import "./Header.css"; // ✅ Import styles
 import { useNavigate } from "react-router-dom";
 
 const Header = ({ username, setAuthToken }) => {
@@ -12,12 +12,14 @@ const Header = ({ username, setAuthToken }) => {
 
   return (
     <header className="header">
-      <p className="header-text">
-        Logged in as <strong>{username ? username : "Guest"}</strong>
-      </p>
-      <button className="logout-button" onClick={handleLogout}>
-        Logout
-      </button>
+      {/* ✅ Logo Above Title */}
+      <img src="/wcg_logo.png" alt="Wolf Back Office Logo" className="header-logo" />
+      <h1 className="header-title">Wolf Back Office Applications</h1>
+
+      <div className="header-info">
+        <p className="header-text">Logged in as <strong>{username ? username : "Guest"}</strong></p>
+        <button className="logout-button" onClick={handleLogout}>Logout</button>
+      </div>
     </header>
   );
 };

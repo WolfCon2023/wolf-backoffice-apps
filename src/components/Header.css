@@ -1,19 +1,45 @@
+/* 🎨 Header Container */
 .header {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column; /* ✅ Stack logo, title, and user info */
     align-items: center;
-    width: 100%;
+    justify-content: center;
     background-color: #0056b3;
     color: white;
-    padding: 10px 20px;
-    font-size: 1rem;
-    font-weight: 600;
+    padding: 20px;
+    text-align: center;
+  }
+  
+  /* ✅ Logo Styling */
+  .header-logo {
+    height: 80px; /* Adjust size */
+    width: auto;
+    margin-bottom: 10px;
+  }
+  
+  /* ✅ Centered Title */
+  .header-title {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+  }
+  
+  /* 📌 User Info & Logout */
+  .header-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1200px;
+    margin-top: 10px;
   }
   
   .header-text {
     margin: 0;
+    font-size: 1rem;
   }
   
+  /* ✅ Logout Button */
   .logout-button {
     background-color: #ff4d4d;
     color: white;
@@ -28,5 +54,17 @@
   
   .logout-button:hover {
     background-color: #cc0000;
+  }
+  
+  /* 📌 Mobile Responsive */
+  @media (max-width: 768px) {
+    .header-info {
+      flex-direction: column;
+      text-align: center;
+    }
+  
+    .logout-button {
+      margin-top: 10px;
+    }
   }
   
