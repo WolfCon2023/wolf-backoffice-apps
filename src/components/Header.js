@@ -1,20 +1,19 @@
-import "./Header.css"; // ✅ Import styles
+import "./Header.css"; 
 import { useNavigate } from "react-router-dom";
 
 const Header = ({ username, setAuthToken }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("token"); // ✅ Remove token
-    setAuthToken(""); // ✅ Clear authentication state
-    navigate("/login"); // ✅ Redirect to login page
+    localStorage.removeItem("token");
+    setAuthToken("");
+    navigate("/login");
   };
 
   return (
     <header className="header">
-      {/* ✅ Logo Above Title */}
+      {/* ✅ Keep only the Logo in the Header */}
       <img src="/wcg_logo.png" alt="Wolf Back Office Logo" className="header-logo" />
-      <h1 className="header-title">Wolf Back Office Applications</h1>
 
       <div className="header-info">
         <p className="header-text">Logged in as <strong>{username ? username : "Guest"}</strong></p>

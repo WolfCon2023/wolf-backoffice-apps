@@ -1,15 +1,12 @@
 import { Link } from "react-router-dom";
 import { FaCalendarAlt, FaClipboardList, FaUserFriends, FaUsers, FaPlusCircle } from "react-icons/fa";
-import "./Dashboard.css"; // ✅ Ensure styles are applied
+import "./Dashboard.css";
 
 const Dashboard = () => {
   return (
     <div className="dashboard-container">
-      {/* ✅ Logo in Upper Left, Title Centered */}
-      <header className="dashboard-header">
-        <img src="/wcg_logo.png" alt="Wolf Back Office Logo" className="dashboard-logo" />
-        <h1 className="dashboard-title">Wolf Back Office Applications</h1>
-      </header>
+      {/* ✅ Keep the title but REMOVE the logo */}
+      <h1 className="dashboard-title">Wolf Back Office Applications</h1>
 
       <nav className="dashboard-menu" aria-label="Main Navigation">
         <ul>
