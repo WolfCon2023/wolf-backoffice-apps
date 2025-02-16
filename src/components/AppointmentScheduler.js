@@ -2,6 +2,9 @@ import { useState } from "react";
 import axios from "axios";
 import "./AppointmentScheduler.css"; // ✅ Ensure styles are imported
 
+// ✅ Load API URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
+
 const AppointmentScheduler = () => {
   const [appointment, setAppointment] = useState({
     title: "",
@@ -21,8 +24,14 @@ const AppointmentScheduler = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("https://your-backend-url/api/appointments", appointment);
+      console.log("Submitting appointment to:", `${API_BASE_URL}/appointments`); // ✅ Debugging API URL
+      console.log("Appointment Data:", appointment); // ✅ Debugging Request Data
+      
+      const response = await axios.post(`${API_BASE_URL}/appointments`, appointment);
+      
+      console.log("Response:", response.data); // ✅ Log API Response
       alert("Appointment scheduled successfully!");
+      
       setAppointment({
         title: "",
         date: "",
@@ -34,8 +43,8 @@ const AppointmentScheduler = () => {
         notes: "",
       });
     } catch (error) {
-      console.error("Error scheduling appointment:", error);
-      alert("Failed to schedule appointment.");
+      console.error("❌ Error scheduling appointment:", error.response ? error.response.data : error.message);
+      alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
     }
   };
 
