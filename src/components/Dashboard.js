@@ -7,7 +7,7 @@ const Dashboard = () => {
     <div className="dashboard-container">
       {/* ✅ Logo in Upper Left, Title Centered */}
       <header className="dashboard-header">
-        <img src="/logo.png" alt="Wolf Back Office Logo" className="dashboard-logo" />
+        <img src="/wcg_logo.png" alt="Wolf Back Office Logo" className="dashboard-logo" />
         <h1 className="dashboard-title">Wolf Back Office Applications</h1>
       </header>
 

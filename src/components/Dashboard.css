@@ -3,25 +3,28 @@
   padding: 20px;
   background-color: #f5f7fa; /* Soft background */
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Ensures title stays centered */
 }
 
 /* 📌 Dashboard Header: Upper Left Logo, Centered Title */
 .dashboard-header {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Ensures logo is left, title is centered */
+  justify-content: space-between; /* Keeps logo left & title centered */
   width: 100%;
+  max-width: 1200px;
   padding: 10px 20px;
   position: relative;
 }
 
 /* ✅ Logo in Upper Left */
 .dashboard-logo {
-  height: 50px; /* Adjust size */
+  height: 60px; /* Adjust size */
   width: auto;
-  position: absolute;
-  left: 20px; /* Moves to upper left */
-  top: 15px;
+  position: static; /* Remove absolute positioning */
+  margin-right: auto; /* Pushes title to center */
 }
 
 /* ✅ Center Title */
@@ -30,7 +33,7 @@
   font-weight: bold;
   color: #333;
   text-align: center;
-  flex-grow: 1; /* Keeps it centered */
+  flex-grow: 1; /* Centers the title */
 }
 
 /* 📌 Navigation Menu */
@@ -38,7 +41,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 40px; /* Creates spacing below the header */
+  margin-top: 40px;
 }
 
 /* 📌 Menu Items */
@@ -81,12 +84,10 @@
 @media (max-width: 768px) {
   .dashboard-header {
     flex-direction: column;
-    text-align: center;
+    align-items: center;
   }
 
   .dashboard-logo {
-    position: relative;
-    left: 0;
     margin-bottom: 10px;
   }
 
