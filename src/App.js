@@ -30,18 +30,16 @@ function App() {
     <Router>
       <div className="app-container">
         <Header username={username} setAuthToken={setAuthToken} />
-        <div className="main-content"> {/* ✅ This makes the content scrollable */}
-          <Routes>
-            <Route path="/" element={authToken ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
-            <Route path="/login" element={<Login setAuthToken={setAuthToken} />} />
-            <Route path="/dashboard" element={authToken ? <Dashboard /> : <Navigate to="/login" />} />
-            <Route path="/appointments" element={authToken ? <Appointments /> : <Navigate to="/login" />} />
-            <Route path="/schedule-appointment" element={authToken ? <AppointmentScheduler /> : <Navigate to="/login" />} />
-            <Route path="/calendar" element={authToken ? <Calendar /> : <Navigate to="/login" />} />
-            <Route path="/customers" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
-            <Route path="/customer/:id" element={authToken ? <CustomerDetails /> : <Navigate to="/login" />} />
-          </Routes>
-        </div>
+        <Routes>
+          <Route path="/" element={authToken ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
+          <Route path="/login" element={<Login setAuthToken={setAuthToken} />} />
+          <Route path="/dashboard" element={authToken ? <Dashboard /> : <Navigate to="/login" />} />
+          <Route path="/appointments" element={authToken ? <Appointments /> : <Navigate to="/login" />} />
+          <Route path="/schedule-appointment" element={authToken ? <AppointmentScheduler /> : <Navigate to="/login" />} />
+          <Route path="/calendar" element={authToken ? <Calendar /> : <Navigate to="/login" />} />
+          <Route path="/customers" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
+          <Route path="/customer/:id" element={authToken ? <CustomerDetails /> : <Navigate to="/login" />} />
+        </Routes>
         <Footer />
       </div>
     </Router>
