@@ -1,60 +1,7 @@
-/* 🎨 App Container */
 .App {
   text-align: center;
 }
 
-/* 🎨 Ensure the full viewport height */
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* Prevents the body from scrolling */
-}
-
-/* ✅ Make the app container take the full height */
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh; /* Full screen height */
-}
-
-/* ✅ Sticky Header */
-.header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background-color: #0056b3;
-  color: white;
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 1000; /* Ensures it stays above content */
-  height: 80px; /* Keeps a consistent height */
-}
-
-/* ✅ Main Content Scroll Area */
-.main-content {
-  flex: 1;
-  overflow-y: auto; /* Enables scrolling for content */
-  padding-top: 90px; /* Push content down below the header */
-  height: calc(100vh - 80px); /* Prevents scrolling past viewport */
-  background-color: #f5f7fa; /* Light background */
-}
-
-/* ✅ Footer Stays at Bottom */
-.footer {
-  text-align: center;
-  padding: 10px;
-  background-color: #333;
-  color: white;
-  width: 100%;
-  position: fixed;
-  bottom: 0;
-}
-
-/* ✅ Logo Animation */
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -66,7 +13,6 @@ html, body {
   }
 }
 
-/* ✅ Old Header Style (Now Overridden) */
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -78,12 +24,26 @@ html, body {
   color: white;
 }
 
-/* ✅ Links */
 .App-link {
   color: #61dafb;
 }
 
-/* ✅ Logo Animation Keyframes */
+/* ✅ Footer (Smaller & Still Readable) */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 6px; /* ✅ Reduced from 10px */
+  font-size: 0.9rem; /* ✅ Slightly smaller text */
+  height: 45px; /* ✅ Reduced height from 60px */
+  z-index: 1000;
+  box-shadow: 0px -4px 6px rgba(0, 0, 0, 0.1);
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

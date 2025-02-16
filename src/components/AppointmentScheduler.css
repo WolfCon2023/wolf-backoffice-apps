@@ -70,7 +70,7 @@
     display: flex;
     justify-content: center;
     margin-top: 20px;
-    margin-bottom: 60px; /* ✅ Keeps button above the footer */
+    margin-bottom: 50px; /* ✅ Keeps button above the footer */
   }
   
   /* ✅ Improve Submit Button Appearance */
