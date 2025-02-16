@@ -16,10 +16,10 @@ const Header = ({ username, setAuthToken }) => {
 
   return (
     <header className="header">
-      <h1>Wolf Backoffice Suite</h1>
+      <h1>Back Office Applications ZoneOS</h1>
       <div className="header-buttons">
         <button className="logout-button" onClick={handleLogout}>Log Out</button>
-        <button className="dashboard-header-button" onClick={handleGoToDashboard}>🏠 Dashboard</button> {/* ✅ New Button */}
+        <button className="d  ashboard-header-button" onClick={handleGoToDashboard}>🏠 Dashboard</button> {/* ✅ New Button */}
       </div>
     </header>
   );

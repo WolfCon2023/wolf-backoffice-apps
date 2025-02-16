@@ -5,8 +5,7 @@ import "./Dashboard.css";
 const Dashboard = () => {
   return (
     <div className="dashboard-container">
-      {/* ✅ Keep the title but REMOVE the logo */}
-      <h1 className="dashboard-title">Wolf Back Office Applications</h1>
+      {/* ❌ Title removed */}
 
       <nav className="dashboard-menu" aria-label="Main Navigation">
         <ul>
