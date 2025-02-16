@@ -1,0 +1,83 @@
+/* 🎨 Main Container */
+.scheduler-container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 20px;
+    background: white;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+  }
+  
+  /* ✅ Centered Title */
+  .scheduler-title {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  
+  /* ✅ Form Styling */
+  .scheduler-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* ✅ Input Groups */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #0056b3;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    border-color: #0056b3;
+  }
+  
+  /* ✅ Submit Button */
+  .submit-button {
+    background-color: #0056b3;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  .submit-button:hover {
+    background-color: #004494;
+  }
+  
+  /* 📌 Mobile Responsive */
+  @media (max-width: 600px) {
+    .scheduler-container {
+      width: 90%;
+      padding: 15px;
+    }
+  
+    .scheduler-title {
+      font-size: 1.5rem;
+    }
+  }
+  

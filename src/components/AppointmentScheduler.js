@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import "./AppointmentScheduler.css"; // ✅ Import styles
 
 const AppointmentScheduler = () => {
   const [appointment, setAppointment] = useState({
@@ -10,7 +11,7 @@ const AppointmentScheduler = () => {
     contactPhone: "",
     contactEmail: "",
     scheduledBy: "",
-    notes: ""
+    notes: "",
   });
 
   const handleChange = (e) => {
@@ -22,7 +23,16 @@ const AppointmentScheduler = () => {
     try {
       await axios.post("https://your-backend-url/api/appointments", appointment);
       alert("Appointment scheduled successfully!");
-      setAppointment({ title: "", date: "", location: "", contactName: "", contactPhone: "", contactEmail: "", scheduledBy: "", notes: "" });
+      setAppointment({
+        title: "",
+        date: "",
+        location: "",
+        contactName: "",
+        contactPhone: "",
+        contactEmail: "",
+        scheduledBy: "",
+        notes: "",
+      });
     } catch (error) {
       console.error("Error scheduling appointment:", error);
       alert("Failed to schedule appointment.");
@@ -30,18 +40,50 @@ const AppointmentScheduler = () => {
   };
 
   return (
-    <div>
-      <h1>Business Appointment Scheduler</h1>
-      <form onSubmit={handleSubmit}>
-        <input type="text" name="title" placeholder="Title" value={appointment.title} onChange={handleChange} required />
-        <input type="datetime-local" name="date" value={appointment.date} onChange={handleChange} required />
-        <input type="text" name="location" placeholder="Location" value={appointment.location} onChange={handleChange} />
-        <input type="text" name="contactName" placeholder="Contact Name" value={appointment.contactName} onChange={handleChange} />
-        <input type="text" name="contactPhone" placeholder="Phone" value={appointment.contactPhone} onChange={handleChange} />
-        <input type="email" name="contactEmail" placeholder="Email" value={appointment.contactEmail} onChange={handleChange} />
-        <input type="text" name="scheduledBy" placeholder="Scheduled By" value={appointment.scheduledBy} onChange={handleChange} required />
-        <textarea name="notes" placeholder="Notes" value={appointment.notes} onChange={handleChange} />
-        <button type="submit">Add Appointment</button>
+    <div className="scheduler-container">
+      <h1 className="scheduler-title">Business Appointment Scheduler</h1>
+      <form className="scheduler-form" onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Title</label>
+          <input type="text" name="title" value={appointment.title} onChange={handleChange} required />
+        </div>
+
+        <div className="form-group">
+          <label>Date</label>
+          <input type="datetime-local" name="date" value={appointment.date} onChange={handleChange} required />
+        </div>
+
+        <div className="form-group">
+          <label>Location</label>
+          <input type="text" name="location" value={appointment.location} onChange={handleChange} />
+        </div>
+
+        <div className="form-group">
+          <label>Contact Name</label>
+          <input type="text" name="contactName" value={appointment.contactName} onChange={handleChange} />
+        </div>
+
+        <div className="form-group">
+          <label>Contact Phone</label>
+          <input type="text" name="contactPhone" value={appointment.contactPhone} onChange={handleChange} />
+        </div>
+
+        <div className="form-group">
+          <label>Contact Email</label>
+          <input type="email" name="contactEmail" value={appointment.contactEmail} onChange={handleChange} />
+        </div>
+
+        <div className="form-group">
+          <label>Scheduled By</label>
+          <input type="text" name="scheduledBy" value={appointment.scheduledBy} onChange={handleChange} required />
+        </div>
+
+        <div className="form-group">
+          <label>Notes</label>
+          <textarea name="notes" value={appointment.notes} onChange={handleChange} />
+        </div>
+
+        <button type="submit" className="submit-button">Add Appointment</button>
       </form>
     </div>
   );
