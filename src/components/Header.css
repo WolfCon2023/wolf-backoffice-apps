@@ -1,0 +1,14 @@
+.header {
+    width: 100%;
+    background-color: #0056b3; /* Dark blue header */
+    color: white;
+    text-align: right;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .header-text {
+    margin: 0;
+  }
+  

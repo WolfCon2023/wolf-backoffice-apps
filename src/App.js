@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import jwtDecode from "jwt-decode";  // ✅ Install this if not already: npm install jwt-decode
 import Login from "./components/Login";
 import Appointments from "./components/Appointments";
 import AppointmentScheduler from "./components/AppointmentScheduler";
@@ -7,14 +8,29 @@ import Calendar from "./components/Calendar";
 import CustomerCRM from "./components/CustomerCRM";
 import CustomerDetails from "./components/CustomerDetails";
 import Dashboard from "./components/Dashboard";
-import Footer from "./components/Footer"; // ✅ Import Footer component
+import Footer from "./components/Footer";
+import Header from "./components/Header"; // ✅ Import Header to show username
 
 function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem("token") || "");
+  const [username, setUsername] = useState("");
+
+  // ✅ Extract username from the JWT token
+  useEffect(() => {
+    if (authToken) {
+      try {
+        const decodedToken = jwtDecode(authToken); // Decode the token
+        setUsername(decodedToken.username); // Store username
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
+    }
+  }, [authToken]);
 
   return (
     <Router>
       <div className="app-container">
+        <Header username={username} />  {/* ✅ Pass username to the header */}
         <Routes>
           <Route path="/" element={authToken ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/login" element={<Login setAuthToken={setAuthToken} />} />
@@ -24,8 +40,7 @@ function App() {
           <Route path="/customers" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
           <Route path="/customer/:id" element={authToken ? <CustomerDetails /> : <Navigate to="/login" />} />
         </Routes>
-        
-        <Footer /> {/* ✅ Add Footer so it appears on every page */}
+        <Footer />
       </div>
     </Router>
   );
