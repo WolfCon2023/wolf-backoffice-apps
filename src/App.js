@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from "jwt-decode"; 
 import Login from "./components/Login";
 import Appointments from "./components/Appointments";
 import AppointmentScheduler from "./components/AppointmentScheduler";
@@ -9,18 +9,17 @@ import CustomerCRM from "./components/CustomerCRM";
 import CustomerDetails from "./components/CustomerDetails";
 import Dashboard from "./components/Dashboard";
 import Footer from "./components/Footer";
-import Header from "./components/Header"; // ✅ Import Header to show username
+import Header from "./components/Header"; // ✅ Import Header
 
 function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem("token") || "");
   const [username, setUsername] = useState("");
 
-  // ✅ Extract username from the JWT token
   useEffect(() => {
     if (authToken) {
       try {
-        const decodedToken = jwtDecode(authToken); // Decode the token
-        setUsername(decodedToken.username); // Store username
+        const decodedToken = jwtDecode(authToken);
+        setUsername(decodedToken.username);
       } catch (error) {
         console.error("Error decoding token:", error);
       }
@@ -30,7 +29,7 @@ function App() {
   return (
     <Router>
       <div className="app-container">
-        <Header username={username} />  {/* ✅ Pass username to the header */}
+        <Header username={username} setAuthToken={setAuthToken} /> {/* ✅ Pass logout function */}
         <Routes>
           <Route path="/" element={authToken ? <Dashboard /> : <Navigate to="/login" />} />
           <Route path="/login" element={<Login setAuthToken={setAuthToken} />} />
