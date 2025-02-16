@@ -1,90 +1,97 @@
-/* 🎨 Dashboard Styles */
+/* 🎨 Dashboard Container */
 .dashboard-container {
-    text-align: center;
-    padding: 20px;
-    background-color: #f5f7fa; /* Soft background for better readability */
-    min-height: 100vh;
-  }
-  
-  /* 📌 Dashboard Title */
-  .dashboard-title {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 20px;
-  }
-  
-  /* ✅ Styles for Dashboard Header */
+  padding: 20px;
+  background-color: #f5f7fa; /* Soft background */
+  min-height: 100vh;
+}
+
+/* 📌 Dashboard Header: Upper Left Logo, Centered Title */
 .dashboard-header {
   display: flex;
   align-items: center;
-  justify-content: center; /* Centers title */
-  gap: 15px;
-  margin-bottom: 20px;
+  justify-content: space-between; /* Ensures logo is left, title is centered */
+  width: 100%;
+  padding: 10px 20px;
+  position: relative;
 }
 
-/* ✅ Logo Styling */
+/* ✅ Logo in Upper Left */
 .dashboard-logo {
-  height: 50px; /* Adjust as needed */
+  height: 50px; /* Adjust size */
   width: auto;
-  display: block;
+  position: absolute;
+  left: 20px; /* Moves to upper left */
+  top: 15px;
 }
 
-/* ✅ Title Styling */
+/* ✅ Center Title */
 .dashboard-title {
   font-size: 2rem;
   font-weight: bold;
   color: #333;
+  text-align: center;
+  flex-grow: 1; /* Keeps it centered */
 }
 
-  /* 📌 Navigation Menu */
-  .dashboard-menu {
-    display: flex;
+/* 📌 Navigation Menu */
+.dashboard-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 40px; /* Creates spacing below the header */
+}
+
+/* 📌 Menu Items */
+.dashboard-menu ul {
+  list-style: none;
+  padding: 0;
+}
+
+.dashboard-menu li {
+  margin: 15px 0;
+}
+
+.dashboard-menu a {
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: #0056b3;
+  padding: 10px 20px;
+  border-radius: 8px;
+  background: white;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* ✅ Icon Spacing */
+.dashboard-menu .icon {
+  margin-right: 10px;
+}
+
+/* 📌 Hover & Focus for Accessibility */
+.dashboard-menu a:hover,
+.dashboard-menu a:focus {
+  background: #0056b3;
+  color: white;
+  outline: 2px solid #0056b3;
+}
+
+/* 📌 Responsive Adjustments */
+@media (max-width: 768px) {
+  .dashboard-header {
     flex-direction: column;
-    align-items: center;
+    text-align: center;
   }
-  
-  /* 📌 Menu Items */
-  .dashboard-menu ul {
-    list-style: none;
-    padding: 0;
+
+  .dashboard-logo {
+    position: relative;
+    left: 0;
+    margin-bottom: 10px;
   }
-  
-  .dashboard-menu li {
-    margin: 15px 0;
+
+  .dashboard-title {
+    text-align: center;
+    margin-top: 10px;
   }
-  
-  .dashboard-menu a {
-    display: flex;
-    align-items: center;
-    font-size: 1.5rem;
-    font-weight: 600;
-    text-decoration: none;
-    color: #0056b3; /* High contrast blue for readability */
-    padding: 10px 20px;
-    border-radius: 8px;
-    background: white;
-    transition: background 0.3s, color 0.3s;
-  }
-  
-  /* ✅ Add icon spacing */
-  .dashboard-menu .icon {
-    margin-right: 10px;
-  }
-  
-  /* 📌 Hover and Focus for Accessibility */
-  .dashboard-menu a:hover,
-  .dashboard-menu a:focus {
-    background: #0056b3;
-    color: white;
-    outline: 2px solid #0056b3;
-  }
-  
-  /* 📌 Mobile Responsive */
-  @media (max-width: 600px) {
-    .dashboard-menu a {
-      font-size: 1.2rem;
-      padding: 8px 15px;
-    }
-  }
-  
+}
