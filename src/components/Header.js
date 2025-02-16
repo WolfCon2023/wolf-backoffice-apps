@@ -34,29 +34,37 @@ const Header = ({ username, setAuthToken }) => {
   };
 
   return (
-    <header className="header">
-      <h1 className="header-title">Back Office Applications ZoneOS</h1>
+    <>
+      {/* ✅ Header now fixed and main content adjusted below */}
+      <header className="header">
+        <h1 className="header-title">Back Office Applications ZoneOS</h1>
 
-      {/* ✅ Dropdown Menu on Right Side */}
-      <div
-        ref={dropdownRef}
-        className={`header-dropdown ${menuOpen ? "active" : ""}`}
-        aria-expanded={menuOpen ? "true" : "false"}
-      >
-        <button
-          className="dropdown-toggle"
-          onClick={() => setMenuOpen((prev) => !prev)}
+        {/* ✅ Dropdown Menu on Right Side */}
+        <div
+          ref={dropdownRef}
+          className={`header-dropdown ${menuOpen ? "active" : ""}`}
           aria-expanded={menuOpen ? "true" : "false"}
         >
-          <FaUserCircle size={24} />
-        </button>
+          <button
+            className="dropdown-toggle"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-expanded={menuOpen ? "true" : "false"}
+          >
+            <FaUserCircle size={24} />
+          </button>
 
-        <ul className="dropdown-menu">
-          <li onClick={() => handleNavigate("/dashboard")}>🏠 Home</li>
-          <li onClick={handleLogout}>🚪 Logout</li>
-        </ul>
+          <ul className="dropdown-menu">
+            <li onClick={() => handleNavigate("/dashboard")}>🏠 Home</li>
+            <li onClick={handleLogout}>🚪 Logout</li>
+          </ul>
+        </div>
+      </header>
+
+      {/* ✅ Ensures the main container doesn't move up */}
+      <div className="main-content">
+        {/* This wrapper ensures spacing below the header */}
       </div>
-    </header>
+    </>
   );
 };
 

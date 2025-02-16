@@ -1,36 +1,38 @@
-/* 🎨 Header Container */
+/* 🎨 Header Container (Reduced Height to Match Footer) */
 .header {
   display: flex;
   align-items: center; /* ✅ Align items vertically */
-  justify-content: space-between; /* ✅ Keeps dropdown on right */
+  justify-content: center; /* ✅ Center elements horizontally */
   background-color: #0056b3;
   color: white;
-  padding: 10px 20px;
-  height: 80px; /* ✅ Ensure a fixed height */
-  position: relative;
+  padding: 6px 20px; /* ✅ Matches footer padding */
+  height: 45px; /* ✅ Matches footer height */
+  position: fixed;
+  top: 0;
   width: 100%;
-  overflow: visible !important; /* ✅ Ensures dropdown visibility */
-  z-index: 1500; /* ✅ Keeps header above other content */
+  z-index: 1500;
 }
 
-/* ✅ Title (Centered in Header) */
+/* ✅ Title (Perfectly Centered in Header) */
 .header-title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.5rem;
+  font-size: 1rem; /* ✅ Adjusted for smaller header */
   font-weight: bold;
   color: white;
   text-align: center;
-  white-space: nowrap; /* ✅ Prevents text from wrapping */
+  white-space: nowrap;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
 }
 
 /* ✅ Dropdown Menu on Right */
 .header-dropdown {
-  position: relative;
-  display: inline-block;
-  margin-left: auto;
-  z-index: 2000; /* ✅ Ensures it's above content */
+  position: absolute;
+  right: 20px; /* ✅ Keeps dropdown inside screen */
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2000;
 }
 
 /* 🔽 Dropdown Toggle Button */
@@ -39,15 +41,16 @@
   border: none;
   cursor: pointer;
   color: white;
-  font-size: 1.5rem;
-  padding: 10px;
+  font-size: 1.2rem;
+  padding: 5px;
+  margin-right: 20px; /* ✅ Moves the button/icon left */
 }
 
 /* 📜 Dropdown Menu Styling */
 .dropdown-menu {
   position: absolute;
   right: 0;
-  top: 40px;
+  top: 45px; /* ✅ Ensures dropdown appears below header */
   background: white;
   color: black;
   border-radius: 5px;
@@ -55,8 +58,8 @@
   list-style: none;
   padding: 10px;
   min-width: 140px;
-  z-index: 3000; /* ✅ Ensures it appears on top */
-  display: none; /* Default state */
+  z-index: 3000;
+  display: none;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease-in-out, visibility 0.3s;
@@ -76,7 +79,7 @@
   text-align: left;
   cursor: pointer;
   transition: background 0.2s;
-  white-space: nowrap; /* ✅ Prevents text wrapping */
+  white-space: nowrap;
 }
 
 /* 🚀 Hover Effect */
@@ -84,10 +87,17 @@
   background: #f0f0f0;
 }
 
-/* ✅ Fix overflow issues */
+/* ✅ Fix Overflow Issues */
 .header,
 .header-dropdown {
   overflow: visible !important;
+}
+
+/* ✅ Adjust Main Content to Prevent Moving Up */
+.main-container {
+  margin-top: 55px; /* ✅ Creates space below the smaller header */
+  padding: 10px;
+  flex-grow: 1;
 }
 
 /* 📱 Mobile Adjustments */
