@@ -2,10 +2,13 @@
 .scheduler-container {
     max-width: 600px;
     margin: 40px auto;
-    padding: 20px;
+    padding: 30px;
     background: white;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
     border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 160px);
   }
   
   /* ✅ Centered Title */
@@ -14,70 +17,102 @@
     font-size: 1.8rem;
     font-weight: bold;
     color: #333;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
   }
   
   /* ✅ Form Styling */
   .scheduler-form {
     display: flex;
     flex-direction: column;
+    gap: 15px; /* ✅ Adds spacing between input fields */
   }
   
   /* ✅ Input Groups */
   .form-group {
     display: flex;
     flex-direction: column;
+    gap: 5px;
     margin-bottom: 15px;
   }
   
   .form-group label {
     font-size: 1rem;
     font-weight: bold;
-    margin-bottom: 5px;
     color: #0056b3;
   }
   
+  /* ✅ Improve Input & Textarea Styles */
   .form-group input,
   .form-group textarea {
-    padding: 10px;
+    padding: 12px;
     font-size: 1rem;
     border: 1px solid #ccc;
-    border-radius: 5px;
+    border-radius: 6px;
     outline: none;
-    transition: border-color 0.3s;
+    transition: border-color 0.3s ease;
+    background: #f8f9fa; /* ✅ Light gray background for better contrast */
   }
   
   .form-group input:focus,
   .form-group textarea:focus {
     border-color: #0056b3;
+    background: white;
   }
   
-  /* ✅ Submit Button */
+  /* ✅ Ensure Textarea is Properly Sized */
+  .form-group textarea {
+    min-height: 80px;
+    resize: vertical;
+  }
+  
+  /* ✅ Fix Button Position */
+  .button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 60px; /* ✅ Keeps button above the footer */
+  }
+  
+  /* ✅ Improve Submit Button Appearance */
   .submit-button {
     background-color: #0056b3;
     color: white;
     font-size: 1rem;
     font-weight: bold;
-    padding: 10px;
+    padding: 12px 20px;
     border: none;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.3s ease, transform 0.2s ease;
+    width: 100%;
+    max-width: 300px;
   }
   
   .submit-button:hover {
     background-color: #004494;
+    transform: scale(1.05);
   }
   
-  /* 📌 Mobile Responsive */
+  /* ✅ Mobile Friendly */
   @media (max-width: 600px) {
     .scheduler-container {
       width: 90%;
-      padding: 15px;
+      padding: 20px;
     }
   
     .scheduler-title {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
+    }
+  
+    .form-group input,
+    .form-group textarea {
+      font-size: 0.9rem;
+      padding: 10px;
+    }
+  
+    .submit-button {
+      font-size: 0.9rem;
+      padding: 10px 15px;
     }
   }
   
