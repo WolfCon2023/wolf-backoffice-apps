@@ -1,68 +1,90 @@
 /* 🎨 Header Container */
 .header {
-    display: flex;
-    align-items: center; /* ✅ Align items vertically */
-    justify-content: space-between; /* ✅ Space out elements */
-    background-color: #0056b3;
-    color: white;
-    padding: 10px 20px;
-    height: 80px; /* ✅ Ensure a fixed height for better alignment */
-    text-align: center;
-  }
-  
-  /* ✅ Logo Styling (Centered Vertically) */
-  .header-logo {
-    height: 60px; /* Adjust logo size */
-    width: auto;
-    display: flex;
-    align-items: center;
-  }
-  
-  /* ✅ User Info & Logout Aligned */
-  .header-info {
-    display: flex;
-    align-items: center;
-    gap: 15px; /* ✅ Space between username & logout button */
-  }
-  
-  /* ✅ Username Styling */
-  .header-text {
-    margin: 0;
-    font-size: 1rem;
-  }
-  
-  /* ✅ Logout Button */
-  .logout-button {
-    background-color: #ff4d4d;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    font-size: 1rem;
-    font-weight: bold;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
-  }
-  
-  .logout-button:hover {
-    background-color: #cc0000;
-  }
-  
-  /* 📌 Mobile Responsive */
-  @media (max-width: 768px) {
-    .header {
+  display: flex;
+  align-items: center; /* ✅ Align items vertically */
+  justify-content: space-between; /* ✅ Space out elements */
+  background-color: #0056b3;
+  color: white;
+  padding: 10px 20px;
+  height: 80px; /* ✅ Ensure a fixed height for better alignment */
+  text-align: center;
+}
+
+/* ✅ Logo Styling (Centered Vertically) */
+.header-logo {
+  height: 60px; /* Adjust logo size */
+  width: auto;
+  display: flex;
+  align-items: center;
+}
+
+/* ✅ User Info & Logout Aligned */
+.header-info {
+  display: flex;
+  flex-direction: column; /* ✅ Stack Logout & Dashboard button */
+  align-items: flex-end; /* ✅ Align to the right */
+  gap: 5px; /* ✅ Space between buttons */
+}
+
+/* ✅ Username Styling */
+.header-text {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* ✅ Logout Button */
+.logout-button {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.logout-button:hover {
+  background-color: #cc0000;
+}
+
+/* 🎨 Dashboard Button (Under Logout) */
+.dashboard-header-button {
+  background-color: #007bff;
+  color: white;
+  font-size: 0.9rem; /* ✅ Slightly smaller than logout button */
+  padding: 6px 15px; /* ✅ Thinner design */
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+  width: 100px;
+  text-align: center;
+}
+
+.dashboard-header-button:hover {
+  background-color: #0056b3;
+}
+
+/* 📌 Mobile Responsive */
+@media (max-width: 768px) {
+  .header {
       flex-direction: column;
       height: auto; /* Adjust height */
       text-align: center;
-    }
-  
-    .header-info {
+  }
+
+  .header-info {
       flex-direction: column;
       text-align: center;
-    }
-  
-    .logout-button {
-      margin-top: 5px;
-    }
   }
-  
+
+  .logout-button {
+      margin-top: 5px;
+  }
+
+  .dashboard-header-button {
+      width: auto; /* ✅ Adjust button width for smaller screens */
+  }
+}
