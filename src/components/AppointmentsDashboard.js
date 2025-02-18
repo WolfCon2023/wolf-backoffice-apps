@@ -21,29 +21,22 @@ const AppointmentsDashboard = () => {
         console.warn("❌ No token found. Redirecting to login.");
         return;
       }
+      console.log("✅ Sending API request to:", `${API_BASE_URL}/appointments`);
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         params: { page: currentPage, limit: 50 },
       });
-      console.log("✅ API Response:", response.data); // Debugging API response
-      setAppointments(response.data.appointments);
-      setTotalPages(response.data.totalPages);
+
+      console.log("✅ API Response:", response.data);
+      if (response.data && response.data.appointments) {
+        setAppointments(response.data.appointments);
+        setTotalPages(response.data.totalPages);
+        console.log("✅ Appointments state updated:", response.data.appointments);
+      } else {
+        console.warn("⚠️ API returned no appointments.");
+      }
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
-    }
-  };
-
-  const handleQuery = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      const response = await axios.get(`${API_BASE_URL}/appointments/history`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { startDate: queryRange.startDate, endDate: queryRange.endDate },
-      });
-      setAppointments(response.data);
-    } catch (error) {
-      console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
     }
   };
 
@@ -61,7 +54,7 @@ const AppointmentsDashboard = () => {
           value={queryRange.endDate}
           onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })}
         />
-        <button onClick={handleQuery}>Query Historical Appointments</button>
+        <button onClick={fetchAppointments}>Query Historical Appointments</button>
       </div>
       <table className="appointments-table">
         <thead>
@@ -74,17 +67,23 @@ const AppointmentsDashboard = () => {
           </tr>
         </thead>
         <tbody>
-          {appointments.map((appt) => (
-            <tr key={appt._id}>
-              <td>{appt.title}</td>
-              <td>{new Date(appt.date).toLocaleString()}</td>
-              <td>{appt.location}</td>
-              <td>{appt.scheduledBy}</td>
-              <td>
-                <button>Edit</button>
-              </td>
+          {appointments.length > 0 ? (
+            appointments.map((appt) => (
+              <tr key={appt._id}>
+                <td>{appt.title}</td>
+                <td>{new Date(appt.date).toLocaleString()}</td>
+                <td>{appt.location || "N/A"}</td>
+                <td>{appt.scheduledBy || "Unknown"}</td>
+                <td>
+                  <button>Edit</button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="5" style={{ textAlign: "center", color: "red" }}>No appointments available.</td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
       <div className="pagination">
