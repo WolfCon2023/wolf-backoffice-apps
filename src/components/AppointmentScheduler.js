@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import "./AppointmentScheduler.css"; // ✅ Ensure styles are imported
+import "./AppointmentScheduler.css"; 
 
-// ✅ Load API URL from environment variable
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
 
 const AppointmentScheduler = () => {
@@ -13,9 +12,20 @@ const AppointmentScheduler = () => {
     contactName: "",
     contactPhone: "",
     contactEmail: "",
-    scheduledBy: "",
+    scheduledByUserId: "", // ✅ Store user ID instead of full name
     notes: "",
   });
+
+  const [users, setUsers] = useState([]); // ✅ Store user list
+
+  // ✅ Fetch users when the component loads
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/users`)
+      .then((response) => {
+        setUsers(response.data);
+      })
+      .catch((error) => console.error("Error fetching users:", error));
+  }, []);
 
   const handleChange = (e) => {
     setAppointment({ ...appointment, [e.target.name]: e.target.value });
@@ -24,12 +34,11 @@ const AppointmentScheduler = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      console.log("Submitting appointment to:", `${API_BASE_URL}/appointments`); // ✅ Debugging API URL
-      console.log("Appointment Data:", appointment); // ✅ Debugging Request Data
-      
+      console.log("Submitting appointment to:", `${API_BASE_URL}/appointments`); 
+
       const response = await axios.post(`${API_BASE_URL}/appointments`, appointment);
       
-      console.log("Response:", response.data); // ✅ Log API Response
+      console.log("Response:", response.data); 
       alert("Appointment scheduled successfully!");
       
       setAppointment({
@@ -39,7 +48,7 @@ const AppointmentScheduler = () => {
         contactName: "",
         contactPhone: "",
         contactEmail: "",
-        scheduledBy: "",
+        scheduledByUserId: "", // ✅ Reset user selection
         notes: "",
       });
     } catch (error) {
@@ -51,7 +60,7 @@ const AppointmentScheduler = () => {
   return (
     <div className="scheduler-container">
       <h1 className="scheduler-title">Business Appointment Scheduler</h1>
-      <div className="scheduler-scrollable"> {/* ✅ Ensures form and button are inside a scrollable div */}
+      <div className="scheduler-scrollable">
         <form className="scheduler-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Title</label>
@@ -85,7 +94,14 @@ const AppointmentScheduler = () => {
 
           <div className="form-group">
             <label>Scheduled By</label>
-            <input type="text" name="scheduledBy" value={appointment.scheduledBy} onChange={handleChange} required />
+            <select name="scheduledByUserId" value={appointment.scheduledByUserId} onChange={handleChange} required>
+              <option value="">Select User</option>
+              {users.map((user) => (
+                <option key={user._id} value={user._id}>
+                  {user.firstName} {user.lastName} ({user.email})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
@@ -93,7 +109,6 @@ const AppointmentScheduler = () => {
             <textarea name="notes" value={appointment.notes} onChange={handleChange} />
           </div>
 
-          {/* ✅ Move button into a div to prevent it from being hidden */}
           <div className="button-container">
             <button type="submit" className="submit-button">Add Appointment</button>
           </div>
