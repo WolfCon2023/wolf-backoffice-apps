@@ -20,11 +20,31 @@ const AppointmentScheduler = () => {
 
   // ✅ Fetch users when the component loads
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/users`)
-      .then((response) => {
-        setUsers(response.data);
-      })
-      .catch((error) => console.error("Error fetching users:", error));
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem("token"); // ✅ Retrieve token
+        if (!token) {
+          console.warn("❌ No token found. Redirecting to login.");
+          return;
+        }
+
+        const response = await axios.get(`${API_BASE_URL}/users`, {
+          headers: { Authorization: `Bearer ${token}` }, // ✅ Include token
+        });
+
+        console.log("✅ Users fetched (Before State Update):", response.data);
+        setUsers((prevUsers) => {
+          console.log("✅ Previous users state:", prevUsers);
+          console.log("✅ New users state:", response.data);
+          return response.data;
+        }); // ✅ Update state
+        console.log("✅ Users state updated:", response.data);
+      } catch (error) {
+        console.error("❌ Error fetching users:", error.response?.data || error.message);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   const handleChange = (e) => {
@@ -96,11 +116,15 @@ const AppointmentScheduler = () => {
             <label>Scheduled By</label>
             <select name="scheduledByUserId" value={appointment.scheduledByUserId} onChange={handleChange} required>
               <option value="">Select User</option>
-              {users.map((user) => (
-                <option key={user._id} value={user._id}>
-                  {user.firstName} {user.lastName} ({user.email})
-                </option>
-              ))}
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <option key={user._id} value={user._id}>
+                    {user.firstName} {user.lastName} ({user.email})
+                  </option>
+                ))
+              ) : (
+                <option disabled>Loading users...</option>
+              )}
             </select>
           </div>
 
