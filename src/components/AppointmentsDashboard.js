@@ -9,6 +9,9 @@ const AppointmentsDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [viewingAppointment, setViewingAppointment] = useState(null);
+  const [isQueryView, setIsQueryView] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -26,7 +29,7 @@ const AppointmentsDashboard = () => {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         params: { page: currentPage, limit: 50 },
       });
-
+      
       console.log("✅ API Response:", response.data);
       if (response.data && response.data.appointments) {
         setAppointments(response.data.appointments);
@@ -51,14 +54,45 @@ const AppointmentsDashboard = () => {
       });
       console.log("✅ Historical Appointments Response:", response.data);
       setAppointments(response.data);
+      setIsQueryView(true);
     } catch (error) {
       console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
     }
   };
 
+  const handleEdit = (appointment) => {
+    console.log("✏️ Editing appointment:", appointment);
+    setEditingAppointment({ ...appointment });
+  };
+
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      console.log("✅ Saving appointment update:", editingAppointment);
+      await axios.put(`${API_BASE_URL}/appointments/${editingAppointment._id}`, editingAppointment, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setEditingAppointment(null);
+      fetchAppointments();
+    } catch (error) {
+      console.error("❌ Error updating appointment:", error.response?.data || error.message);
+    }
+  };
+
   return (
     <div className="appointments-dashboard-container">
-      <h1>Appointments Dashboard</h1>
+      <div className="header-container">
+        <h1>Appointments Dashboard</h1>
+        <div className="button-group">
+          {editingAppointment && (
+            <>
+              <button onClick={handleSave}>Save</button>
+              <button onClick={() => setEditingAppointment(null)}>Cancel</button>
+            </>
+          )}
+        </div>
+      </div>
       <div className="query-container">
         <input
           type="date"
@@ -72,6 +106,9 @@ const AppointmentsDashboard = () => {
         />
         <button onClick={handleQuery}>Query Historical Appointments</button>
       </div>
+      {isQueryView && (
+        <button className="back-button" onClick={() => { setIsQueryView(false); fetchAppointments(); }}>Back to Dashboard</button>
+      )}
       <table className="appointments-table">
         <thead>
           <tr>
@@ -91,7 +128,8 @@ const AppointmentsDashboard = () => {
                 <td>{appt.location || "N/A"}</td>
                 <td>{appt.scheduledBy || "Unknown"}</td>
                 <td>
-                  <button>Edit</button>
+                  <button onClick={() => handleEdit(appt)}>Edit</button>
+                  <button onClick={() => setViewingAppointment(appt)}>View</button>
                 </td>
               </tr>
             ))
