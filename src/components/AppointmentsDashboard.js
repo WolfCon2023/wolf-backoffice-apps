@@ -21,17 +21,15 @@ const AppointmentsDashboard = () => {
         console.warn("❌ No token found. Redirecting to login.");
         return;
       }
-  
       console.log("✅ Sending API request to:", `${API_BASE_URL}/appointments`);
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         params: { page: currentPage, limit: 50 },
       });
-  
+
       console.log("✅ API Response:", response.data);
-      
       if (response.data && response.data.appointments) {
-        setAppointments([...response.data.appointments]);  // 🔹 Ensure state updates
+        setAppointments(response.data.appointments);
         setTotalPages(response.data.totalPages);
         console.log("✅ Appointments state updated:", response.data.appointments);
       } else {
@@ -41,7 +39,23 @@ const AppointmentsDashboard = () => {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
   };
-  
+
+  const handleQuery = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      console.log("✅ Querying historical appointments from:", queryRange.startDate, "to", queryRange.endDate);
+      const response = await axios.get(`${API_BASE_URL}/appointments/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { startDate: queryRange.startDate, endDate: queryRange.endDate },
+      });
+      console.log("✅ Historical Appointments Response:", response.data);
+      setAppointments(response.data);
+    } catch (error) {
+      console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
+    }
+  };
+
   return (
     <div className="appointments-dashboard-container">
       <h1>Appointments Dashboard</h1>
@@ -56,7 +70,7 @@ const AppointmentsDashboard = () => {
           value={queryRange.endDate}
           onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })}
         />
-        <button onClick={fetchAppointments}>Query Historical Appointments</button>
+        <button onClick={handleQuery}>Query Historical Appointments</button>
       </div>
       <table className="appointments-table">
         <thead>
