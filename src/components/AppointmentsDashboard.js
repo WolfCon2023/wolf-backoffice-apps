@@ -21,15 +21,17 @@ const AppointmentsDashboard = () => {
         console.warn("❌ No token found. Redirecting to login.");
         return;
       }
+  
       console.log("✅ Sending API request to:", `${API_BASE_URL}/appointments`);
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
         params: { page: currentPage, limit: 50 },
       });
-
+  
       console.log("✅ API Response:", response.data);
+      
       if (response.data && response.data.appointments) {
-        setAppointments(response.data.appointments);
+        setAppointments([...response.data.appointments]);  // 🔹 Ensure state updates
         setTotalPages(response.data.totalPages);
         console.log("✅ Appointments state updated:", response.data.appointments);
       } else {
@@ -39,7 +41,7 @@ const AppointmentsDashboard = () => {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
   };
-
+  
   return (
     <div className="appointments-dashboard-container">
       <h1>Appointments Dashboard</h1>
