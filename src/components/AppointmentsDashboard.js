@@ -9,9 +9,9 @@ const AppointmentsDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
-  const [editingAppointment, setEditingAppointment] = useState(null);
-  const [viewingAppointment, setViewingAppointment] = useState(null);
-  const [isQueryView, setIsQueryView] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [viewMode, setViewMode] = useState("");
+  const [isQueryResults, setIsQueryResults] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -24,20 +24,14 @@ const AppointmentsDashboard = () => {
         console.warn("❌ No token found. Redirecting to login.");
         return;
       }
-      console.log("✅ Sending API request to:", `${API_BASE_URL}/appointments`);
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        headers: { Authorization: `Bearer ${token}` },
         params: { page: currentPage, limit: 50 },
       });
-      
       console.log("✅ API Response:", response.data);
-      if (response.data && response.data.appointments) {
-        setAppointments(response.data.appointments);
-        setTotalPages(response.data.totalPages);
-        console.log("✅ Appointments state updated:", response.data.appointments);
-      } else {
-        console.warn("⚠️ API returned no appointments.");
-      }
+      setAppointments(response.data.appointments);
+      setTotalPages(response.data.totalPages);
+      setIsQueryResults(false);
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
@@ -47,52 +41,50 @@ const AppointmentsDashboard = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      console.log("✅ Querying historical appointments from:", queryRange.startDate, "to", queryRange.endDate);
       const response = await axios.get(`${API_BASE_URL}/appointments/history`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { startDate: queryRange.startDate, endDate: queryRange.endDate },
       });
-      console.log("✅ Historical Appointments Response:", response.data);
       setAppointments(response.data);
-      setIsQueryView(true);
+      setIsQueryResults(true);
     } catch (error) {
       console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
     }
   };
 
-  const handleEdit = (appointment) => {
-    console.log("✏️ Editing appointment:", appointment);
-    setEditingAppointment({ ...appointment });
+  const openModal = (appointment, mode) => {
+    setSelectedAppointment({ ...appointment });
+    setViewMode(mode);
+  };
+
+  const closeModal = () => {
+    setSelectedAppointment(null);
+    setViewMode("");
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setSelectedAppointment((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      console.log("✅ Saving appointment update:", editingAppointment);
-      await axios.put(`${API_BASE_URL}/appointments/${editingAppointment._id}`, editingAppointment, {
+      const response = await axios.put(`${API_BASE_URL}/appointments/${selectedAppointment._id}`, selectedAppointment, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setEditingAppointment(null);
+      console.log("✅ Appointment updated successfully!", response.data);
       fetchAppointments();
+      closeModal();
     } catch (error) {
-      console.error("❌ Error updating appointment:", error.response?.data || error.message);
+      console.error("❌ Error saving appointment:", error.response?.data || error.message);
     }
   };
 
   return (
     <div className="appointments-dashboard-container">
-      <div className="header-container">
-        <h1>Appointments Dashboard</h1>
-        <div className="button-group">
-          {editingAppointment && (
-            <>
-              <button onClick={handleSave}>Save</button>
-              <button onClick={() => setEditingAppointment(null)}>Cancel</button>
-            </>
-          )}
-        </div>
-      </div>
+      <h1>Appointments Dashboard</h1>
       <div className="query-container">
         <input
           type="date"
@@ -106,8 +98,8 @@ const AppointmentsDashboard = () => {
         />
         <button onClick={handleQuery}>Query Historical Appointments</button>
       </div>
-      {isQueryView && (
-        <button className="back-button" onClick={() => { setIsQueryView(false); fetchAppointments(); }}>Back to Dashboard</button>
+      {isQueryResults && (
+        <button onClick={fetchAppointments} className="back-button">Back to Dashboard</button>
       )}
       <table className="appointments-table">
         <thead>
@@ -120,24 +112,18 @@ const AppointmentsDashboard = () => {
           </tr>
         </thead>
         <tbody>
-          {appointments.length > 0 ? (
-            appointments.map((appt) => (
-              <tr key={appt._id}>
-                <td>{appt.title}</td>
-                <td>{new Date(appt.date).toLocaleString()}</td>
-                <td>{appt.location || "N/A"}</td>
-                <td>{appt.scheduledBy || "Unknown"}</td>
-                <td>
-                  <button onClick={() => handleEdit(appt)}>Edit</button>
-                  <button onClick={() => setViewingAppointment(appt)}>View</button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="5" style={{ textAlign: "center", color: "red" }}>No appointments available.</td>
+          {appointments.map((appt) => (
+            <tr key={appt._id}>
+              <td>{appt.title}</td>
+              <td>{new Date(appt.date).toLocaleString()}</td>
+              <td>{appt.location}</td>
+              <td>{appt.scheduledBy}</td>
+              <td>
+                <button onClick={() => openModal(appt, "edit")}>Edit</button>
+                <button onClick={() => openModal(appt, "view")}>View</button>
+              </td>
             </tr>
-          )}
+          ))}
         </tbody>
       </table>
       <div className="pagination">
@@ -149,6 +135,20 @@ const AppointmentsDashboard = () => {
           Next
         </button>
       </div>
+      {selectedAppointment && (
+        <div className="edit-container">
+          <div className="edit-box">
+            <button className="close-button" onClick={closeModal}>Close</button>
+            <h2>{viewMode === "edit" ? "Edit Appointment" : "View Appointment"}</h2>
+            <input type="text" name="title" value={selectedAppointment.title} onChange={handleInputChange} disabled={viewMode === "view"} />
+            <input type="datetime-local" name="date" value={selectedAppointment.date} onChange={handleInputChange} disabled={viewMode === "view"} />
+            <input type="text" name="location" value={selectedAppointment.location} onChange={handleInputChange} disabled={viewMode === "view"} />
+            <input type="text" name="scheduledBy" value={selectedAppointment.scheduledBy} disabled />
+            <textarea name="notes" value={selectedAppointment.notes} onChange={handleInputChange} disabled={viewMode === "view"} />
+            {viewMode === "edit" && <button onClick={handleSave}>Save</button>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
