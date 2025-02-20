@@ -15,9 +15,9 @@
     margin-bottom: 20px; /* Adds spacing below title */
   }
   
-  .calendar-wrapper {
-    width: 70vw;
-    max-width: 75vw;
+  .calendar-view {
+    width: 75vw;
+    max-width: 80vw;
     max-height: 600px; /* Sets a defined height */
     overflow-y: auto; /* Makes it scrollable */
     border: 1px solid #ccc;
@@ -50,6 +50,9 @@
     padding: 5px 0;
     font-size: 0.85rem; /* Reduced text size for better fit */
     border-bottom: 1px solid #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   @media (max-width: 1024px) {
@@ -58,7 +61,7 @@
       align-items: center;
     }
   
-    .calendar-wrapper {
+    .calendar-view {
       width: 90vw;
       max-width: 100%;
     }

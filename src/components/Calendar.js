@@ -6,7 +6,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import "./Calendar.css";
 
-const Calendar = ({ openAppointmentModal }) => {
+const Calendar = () => {
   const [events, setEvents] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [nextWeekAppointments, setNextWeekAppointments] = useState([]);
@@ -19,8 +19,13 @@ const Calendar = ({ openAppointmentModal }) => {
           id: appt._id,
           title: appt.title,
           start: new Date(appt.date),
-          description: appt.notes || "",
-          formattedTime: new Date(appt.date).toLocaleString([], { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }),
+          location: appt.location || "N/A",
+          scheduledBy: appt.scheduledBy || "N/A",
+          contactName: appt.contactName || "N/A",
+          contactPhone: appt.contactPhone || "N/A",
+          contactEmail: appt.contactEmail || "N/A",
+          description: appt.notes || "N/A",
+          formattedTime: new Date(appt.date).toLocaleString("en-US", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }),
         }));
 
         setEvents(appointments);
@@ -39,44 +44,64 @@ const Calendar = ({ openAppointmentModal }) => {
 
     const thisWeek = appointments.filter(appt => new Date(appt.start) >= now && new Date(appt.start) < nextWeek);
     const upcoming = thisWeek.slice(0, 5); // Limit to 5 for display
-    const nextWeekList = thisWeek.filter(appt => new Date(appt.start) >= nextWeek).slice(0, 5);
+    const nextWeekList = appointments.filter(appt => new Date(appt.start) >= nextWeek).slice(0, 5);
 
     setUpcomingAppointments(upcoming);
     setNextWeekAppointments(nextWeekList);
   };
 
+  const showAppointmentDetails = (appointment) => {
+    const details = `Appointment: ${appointment.title}\nTime: ${appointment.formattedTime}\nLocation: ${appointment.location}\nScheduled By: ${appointment.scheduledBy}\nContact Name: ${appointment.contactName}\nContact Phone: ${appointment.contactPhone}\nContact Email: ${appointment.contactEmail}\nNotes: ${appointment.description}`;
+    alert(details);
+  };
+
   const handleEventClick = (clickInfo) => {
-    openAppointmentModal(clickInfo.event.id, "view");
+    showAppointmentDetails(clickInfo.event.extendedProps);
   };
 
   return (
-    <div className="calendar-container">
+    <div className="calendar-container" style={{ overflowY: "auto", maxHeight: "90vh", paddingBottom: "20px" }}>
       <h1 className="calendar-title">Business Calendar</h1>
-      <div className="calendar-wrapper">
+      <div className="calendar-view" style={{ overflowY: "auto", maxHeight: "600px" }}>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="timeGridDay"
+          initialView="timeGridWeek"
           slotMinTime="00:00:00"
           slotMaxTime="24:00:00"
-          height="600px"
-          scrollTime="08:00:00"
+          height="auto"
           events={events}
           eventClick={handleEventClick}
         />
       </div>
-      <div className="appointments-sidebar">
-        <h2>Upcoming Appointments This Week</h2>
-        <ul>
-          {upcomingAppointments.map((appt) => (
-            <li key={appt.id} style={{ fontSize: "0.85rem" }}>{appt.formattedTime} - {appt.title}</li>
-          ))}
-        </ul>
-        <h2>Upcoming Appointments Next Week</h2>
-        <ul>
-          {nextWeekAppointments.map((appt) => (
-            <li key={appt.id} style={{ fontSize: "0.85rem" }}>{appt.formattedTime} - {appt.title}</li>
-          ))}
-        </ul>
+      <div className="appointments-container" style={{ display: "flex", justifyContent: "space-around", marginTop: "20px", gap: "20px", paddingBottom: "20px" }}>
+        <div className="appointments-sidebar" style={{ overflowY: "scroll", maxHeight: "280px", width: "48%", padding: "10px", border: "1px solid #ccc", borderRadius: "8px", background: "#f9f9f9" }}>
+          <h2>Upcoming Appointments This Week</h2>
+          <ul style={{ maxHeight: "250px", overflowY: "scroll" }}>
+            {upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map((appt) => (
+                <li key={appt.id} style={{ fontSize: "0.85rem", cursor: "pointer" }} onClick={() => showAppointmentDetails(appt)}>
+                  {appt.formattedTime} - {appt.title}
+                </li>
+              ))
+            ) : (
+              <li>No upcoming appointments</li>
+            )}
+          </ul>
+        </div>
+        <div className="appointments-sidebar" style={{ overflowY: "scroll", maxHeight: "280px", width: "48%", padding: "10px", border: "1px solid #ccc", borderRadius: "8px", background: "#f9f9f9" }}>
+          <h2>Upcoming Appointments Next Week</h2>
+          <ul style={{ maxHeight: "250px", overflowY: "scroll" }}>
+            {nextWeekAppointments.length > 0 ? (
+              nextWeekAppointments.map((appt) => (
+                <li key={appt.id} style={{ fontSize: "0.85rem", cursor: "pointer" }} onClick={() => showAppointmentDetails(appt)}>
+                  {appt.formattedTime} - {appt.title}
+                </li>
+              ))
+            ) : (
+              <li>No appointments next week</li>
+            )}
+          </ul>
+        </div>
       </div>
     </div>
   );
