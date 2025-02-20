@@ -53,7 +53,7 @@ const AppointmentsDashboard = () => {
   };
 
   const openModal = (appointment, mode) => {
-    setSelectedAppointment({ ...appointment });
+    setSelectedAppointment({ ...appointment, date: new Date(appointment.date).toISOString().slice(0, 16) });
     setViewMode(mode);
   };
 
