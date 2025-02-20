@@ -11,7 +11,7 @@ const AppointmentsDashboard = () => {
   const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewMode, setViewMode] = useState("");
-  const [isQueryResults, setIsQueryResults] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -28,46 +28,48 @@ const AppointmentsDashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
         params: { page: currentPage, limit: 50 },
       });
-      console.log("✅ API Response:", response.data);
       setAppointments(response.data.appointments);
       setTotalPages(response.data.totalPages);
-      setIsQueryResults(false);
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
   };
 
-  const handleQuery = async () => {
+  const handleDelete = async () => {
+    if (!deleteConfirmation) {
+      console.error("❌ No appointment selected for deletion.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
-      if (!token) return;
-      const response = await axios.get(`${API_BASE_URL}/appointments/history`, {
+      console.log("🔍 Retrieved Token for Deletion:", token); // Debug log
+
+      if (!token) {
+        console.error("❌ No token found. User must be authenticated.");
+        return;
+      }
+
+      console.log("🔍 Attempting to delete appointment ID:", deleteConfirmation);
+
+      const response = await axios.delete(`${API_BASE_URL}/appointments/${deleteConfirmation}`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { startDate: queryRange.startDate, endDate: queryRange.endDate },
       });
-      setAppointments(response.data);
-      setIsQueryResults(true);
+
+      console.log("✅ Appointment deleted successfully:", response.data);
+      fetchAppointments(); // Refresh the list after successful deletion
+      setDeleteConfirmation(null); // Clear the delete confirmation state
     } catch (error) {
-      console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
+      console.error("❌ Error deleting appointment:", error.response?.data || error.message);
+      if (error.response) {
+        console.error("🔍 Error Response:", error.response.data);
+        console.error("🔍 Status Code:", error.response.status);
+      }
     }
   };
 
-  const openModal = (appointment, mode) => {
-    setSelectedAppointment({ ...appointment, date: new Date(appointment.date).toISOString().slice(0, 16) });
-    setViewMode(mode);
-  };
-
-  const closeModal = () => {
-    setSelectedAppointment(null);
-    setViewMode("");
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setSelectedAppointment((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleSave = async () => {
+    if (!selectedAppointment) return;
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
@@ -82,25 +84,19 @@ const AppointmentsDashboard = () => {
     }
   };
 
+  const openModal = (appointment, mode) => {
+    setSelectedAppointment({ ...appointment, date: new Date(appointment.date).toISOString().slice(0, 16) });
+    setViewMode(mode);
+  };
+
+  const closeModal = () => {
+    setSelectedAppointment(null);
+    setViewMode("");
+  };
+
   return (
     <div className="appointments-dashboard-container">
       <h1>Appointments Dashboard</h1>
-      <div className="query-container">
-        <input
-          type="date"
-          value={queryRange.startDate}
-          onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })}
-        />
-        <input
-          type="date"
-          value={queryRange.endDate}
-          onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })}
-        />
-        <button onClick={handleQuery}>Query Historical Appointments</button>
-      </div>
-      {isQueryResults && (
-        <button onClick={fetchAppointments} className="back-button">Back to Dashboard</button>
-      )}
       <table className="appointments-table">
         <thead>
           <tr>
@@ -121,30 +117,31 @@ const AppointmentsDashboard = () => {
               <td>
                 <button onClick={() => openModal(appt, "edit")}>Edit</button>
                 <button onClick={() => openModal(appt, "view")}>View</button>
+                <button onClick={() => setDeleteConfirmation(appt._id)}>Delete</button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className="pagination">
-        <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-          Previous
-        </button>
-        <span>Page {currentPage} of {totalPages}</span>
-        <button onClick={() => setCurrentPage((prev) => prev + 1)} disabled={currentPage === totalPages}>
-          Next
-        </button>
-      </div>
+      {deleteConfirmation && (
+        <div className="delete-confirmation-container">
+          <div className="delete-confirmation-box">
+            <p>Click confirm to delete or exit to cancel</p>
+            <button className="confirm-delete" onClick={handleDelete}>Confirm</button>
+            <button className="cancel-delete" onClick={() => setDeleteConfirmation(null)}>X</button>
+          </div>
+        </div>
+      )}
       {selectedAppointment && (
         <div className="edit-container">
           <div className="edit-box">
             <button className="close-button" onClick={closeModal}>Close</button>
             <h2>{viewMode === "edit" ? "Edit Appointment" : "View Appointment"}</h2>
-            <input type="text" name="title" value={selectedAppointment.title} onChange={handleInputChange} disabled={viewMode === "view"} />
-            <input type="datetime-local" name="date" value={selectedAppointment.date} onChange={handleInputChange} disabled={viewMode === "view"} />
-            <input type="text" name="location" value={selectedAppointment.location} onChange={handleInputChange} disabled={viewMode === "view"} />
+            <input type="text" name="title" value={selectedAppointment.title} onChange={(e) => setSelectedAppointment({ ...selectedAppointment, title: e.target.value })} disabled={viewMode === "view"} />
+            <input type="datetime-local" name="date" value={selectedAppointment.date} onChange={(e) => setSelectedAppointment({ ...selectedAppointment, date: e.target.value })} disabled={viewMode === "view"} />
+            <input type="text" name="location" value={selectedAppointment.location} onChange={(e) => setSelectedAppointment({ ...selectedAppointment, location: e.target.value })} disabled={viewMode === "view"} />
             <input type="text" name="scheduledBy" value={selectedAppointment.scheduledBy} disabled />
-            <textarea name="notes" value={selectedAppointment.notes} onChange={handleInputChange} disabled={viewMode === "view"} />
+            <textarea name="notes" value={selectedAppointment.notes} onChange={(e) => setSelectedAppointment({ ...selectedAppointment, notes: e.target.value })} disabled={viewMode === "view"} />
             {viewMode === "edit" && <button onClick={handleSave}>Save</button>}
           </div>
         </div>
