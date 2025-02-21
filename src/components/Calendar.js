@@ -14,6 +14,13 @@ const Calendar = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
+        const token = localStorage.getItem("token");
+    console.log("🔍 Token Sent in Fetch Appointments:", token);
+
+    if (!token) {
+      console.warn("❌ No token found. Redirecting to login.");
+      return;
+    }
         const response = await axios.get(`${process.env.REACT_APP_API_BASE_URL}/appointments`);
         const appointments = response.data.appointments.map((appt) => ({
           id: appt._id,

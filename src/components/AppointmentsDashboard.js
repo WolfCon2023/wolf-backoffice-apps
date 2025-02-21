@@ -80,42 +80,43 @@ const AppointmentsDashboard = () => {
 
   const handleSave = async () => {
     try {
-        const token = localStorage.getItem("token");
-        console.log("🔍 Retrieved Token for Save:", token);
-
-        if (!token) {
-            alert("❌ No token found. Redirecting to login.");
-            return;
-        }
-
-        console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
-        console.log("🔍 Request Body:", JSON.stringify(appointment, null, 2));
-
-        const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
-            headers: { 
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json"
-            },
-        });
-
-        console.log("✅ Appointment Scheduled Successfully:", response.data);
-        alert("Appointment scheduled successfully!");
-
-        setAppointment({
-            title: "",
-            date: "",
-            location: "",
-            contactName: "",
-            contactPhone: "",
-            contactEmail: "",
-            scheduledByUserId: "",
-            notes: "",
-        });
+      const token = localStorage.getItem("token");
+      console.log("🔍 Retrieved Token for Save:", token);
+  
+      if (!token) {
+        alert("❌ No token found. Redirecting to login.");
+        return;
+      }
+  
+      console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
+      console.log("🔍 Request Body:", JSON.stringify(appointment, null, 2));
+  
+      const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+      });
+  
+      console.log("✅ Appointment Scheduled Successfully:", response.data);
+      alert("Appointment scheduled successfully!");
+  
+      setAppointment({
+        title: "",
+        date: "",
+        location: "",
+        contactName: "",
+        contactPhone: "",
+        contactEmail: "",
+        scheduledByUserId: "",
+        notes: "",
+      });
     } catch (error) {
-        console.error("❌ Error scheduling appointment:", error.response?.data || error.message);
-        alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
+      console.error("❌ Error scheduling appointment:", error.response?.data || error.message);
+      alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
     }
-};
+  };
+  
 
   const closeModal = () => {
     setSelectedAppointment(null);
