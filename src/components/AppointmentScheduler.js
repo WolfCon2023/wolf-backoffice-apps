@@ -54,13 +54,22 @@ const AppointmentScheduler = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      console.log("Submitting appointment to:", `${API_BASE_URL}/appointments`); 
-
-      const response = await axios.post(`${API_BASE_URL}/appointments`, appointment);
-      
-      console.log("Response:", response.data); 
+      const token = localStorage.getItem("token"); // ✅ Retrieve token
+      if (!token) {
+        alert("You must be logged in to schedule an appointment.");
+        return;
+      }
+  
+      console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
+      console.log("🔍 Request Body:", appointment);
+  
+      const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+  
+      console.log("✅ Appointment Scheduled Successfully:", response.data);
       alert("Appointment scheduled successfully!");
-      
+  
       setAppointment({
         title: "",
         date: "",
@@ -72,10 +81,11 @@ const AppointmentScheduler = () => {
         notes: "",
       });
     } catch (error) {
-      console.error("❌ Error scheduling appointment:", error.response ? error.response.data : error.message);
+      console.error("❌ Error scheduling appointment:", error.response?.data || error.message);
       alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
     }
   };
+  
 
   return (
     <div className="scheduler-container">
