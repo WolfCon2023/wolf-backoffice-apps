@@ -79,36 +79,43 @@ const AppointmentsDashboard = () => {
   };
 
   const handleSave = async () => {
-    if (!selectedAppointment) return;
     try {
-      const token = localStorage.getItem("token");
-      console.log("🔍 Retrieved Token for Save:", token);
+        const token = localStorage.getItem("token");
+        console.log("🔍 Retrieved Token for Save:", token);
 
-      if (!token) {
-        alert("❌ No token found. Redirecting to login.");
-        return;
-      }
+        if (!token) {
+            alert("❌ No token found. Redirecting to login.");
+            return;
+        }
 
-      console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
-      console.log("🔍 Request Body:", JSON.stringify(selectedAppointment, null, 2));
+        console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
+        console.log("🔍 Request Body:", JSON.stringify(appointment, null, 2));
 
-      const response = await axios.put(`${API_BASE_URL}/appointments/${selectedAppointment._id}`, selectedAppointment, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
+            headers: { 
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+        });
 
-      console.log("✅ Appointment updated successfully!", response.data);
-      fetchAppointments();
-      closeModal();
+        console.log("✅ Appointment Scheduled Successfully:", response.data);
+        alert("Appointment scheduled successfully!");
+
+        setAppointment({
+            title: "",
+            date: "",
+            location: "",
+            contactName: "",
+            contactPhone: "",
+            contactEmail: "",
+            scheduledByUserId: "",
+            notes: "",
+        });
     } catch (error) {
-      console.error("❌ Error saving appointment:", error.response?.data || error.message);
-      alert(`Failed to update appointment: ${error.response?.data?.message || "Server error"}`);
+        console.error("❌ Error scheduling appointment:", error.response?.data || error.message);
+        alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
     }
 };
-
-  const openModal = (appointment, mode) => {
-    setSelectedAppointment({ ...appointment, date: new Date(appointment.date).toISOString().slice(0, 16) });
-    setViewMode(mode);
-  };
 
   const closeModal = () => {
     setSelectedAppointment(null);
