@@ -82,17 +82,28 @@ const AppointmentsDashboard = () => {
     if (!selectedAppointment) return;
     try {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      console.log("🔍 Retrieved Token for Save:", token);
+
+      if (!token) {
+        alert("❌ No token found. Redirecting to login.");
+        return;
+      }
+
+      console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
+      console.log("🔍 Request Body:", JSON.stringify(selectedAppointment, null, 2));
+
       const response = await axios.put(`${API_BASE_URL}/appointments/${selectedAppointment._id}`, selectedAppointment, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       console.log("✅ Appointment updated successfully!", response.data);
       fetchAppointments();
       closeModal();
     } catch (error) {
       console.error("❌ Error saving appointment:", error.response?.data || error.message);
+      alert(`Failed to update appointment: ${error.response?.data?.message || "Server error"}`);
     }
-  };
+};
 
   const openModal = (appointment, mode) => {
     setSelectedAppointment({ ...appointment, date: new Date(appointment.date).toISOString().slice(0, 16) });
