@@ -53,18 +53,24 @@ const AppointmentScheduler = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+  
     try {
-      const token = localStorage.getItem("token"); // ✅ Retrieve token
+      const token = localStorage.getItem("token");
+      console.log("🔍 Retrieved Token for Save:", token);
+  
       if (!token) {
-        alert("You must be logged in to schedule an appointment.");
+        alert("❌ No token found. Redirecting to login.");
         return;
       }
   
       console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
-      console.log("🔍 Request Body:", appointment);
+      console.log("🔍 Request Body:", JSON.stringify(appointment, null, 2));
   
       const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
       });
   
       console.log("✅ Appointment Scheduled Successfully:", response.data);
@@ -77,15 +83,14 @@ const AppointmentScheduler = () => {
         contactName: "",
         contactPhone: "",
         contactEmail: "",
-        scheduledByUserId: "", // ✅ Reset user selection
+        scheduledByUserId: "",
         notes: "",
       });
     } catch (error) {
       console.error("❌ Error scheduling appointment:", error.response?.data || error.message);
       alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
     }
-  };
-  
+  };  
 
   return (
     <div className="scheduler-container">

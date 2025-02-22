@@ -1,3 +1,10 @@
+/* Ensure full height for the page */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 /* Appointments Dashboard Styles */
 .appointments-dashboard-container {
   width: 90%;
@@ -6,8 +13,8 @@
   background-color: #f9f9f9;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  max-height: 85vh;
-  overflow-y: auto;
+  max-height: 200vh;
+  overflow-y: auto;  /* Make the container scrollable when the content exceeds the height */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -45,11 +52,15 @@ h1 {
   background-color: #0056b3;
 }
 
+/* Appointments Table Scroll */
 .appointments-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-height: 300px; /* Set to a specific height for the table */
+  overflow-y: auto; /* Enables vertical scrolling */
+  display: block; /* Needed for scroll */
 }
 
 .appointments-table th, .appointments-table td {
@@ -68,6 +79,7 @@ h1 {
   background-color: #f1f1f1;
 }
 
+/* Pagination Styles */
 .pagination {
   display: flex;
   justify-content: center;
@@ -106,8 +118,8 @@ h1 {
 
 .edit-box, .view-box {
   width: 60%;
-  max-height: 80vh;
-  overflow-y: auto;
+  max-height: 80vh; /* Limit max height */
+  overflow-y: auto;  /* Make the modal content scrollable */
   background: white;
   padding: 20px;
   border-radius: 10px;

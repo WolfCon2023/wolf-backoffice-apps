@@ -1,54 +1,97 @@
-.App {
-  text-align: center;
+/* Ensure html and body take full height for proper scroll */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* App container takes full height */
+.app-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  height: 100%;  /* Full height of the viewport */
+  overflow: hidden;  /* Prevent the body from scrolling */
 }
 
-.App-link {
-  color: #61dafb;
+/* Ensure the main content area is scrollable */
+.main-content {
+  flex-grow: 1;  /* Allows the main content area to expand and fill available space */
+  overflow-y: auto;  /* Enable vertical scroll if content exceeds available height */
+  padding-bottom: 80px;  /* Add some padding to avoid content being hidden behind footer */
 }
 
-/* ✅ Footer (Smaller & Still Readable) */
+/* Footer stays at the bottom */
 .footer {
   position: fixed;
   bottom: 0;
-  left: 0;
   width: 100%;
   background-color: #333;
+  padding: 10px;
   color: white;
   text-align: center;
-  padding: 6px; /* ✅ Reduced from 10px */
-  font-size: 0.9rem; /* ✅ Slightly smaller text */
-  height: 45px; /* ✅ Reduced height from 60px */
   z-index: 1000;
-  box-shadow: 0px -4px 6px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+/* 🎨 Global Table Styling */
+.table-container {
+  width: 100%;
+  overflow-x: auto; /* Enable horizontal scroll if content is too wide */
+  margin-top: 20px;
+  background-color: white;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #007bff;
+  color: white;
+}
+
+tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* 🎨 Ensure Content Doesn't Overflow (Global Containers) */
+.container {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+}
+
+/* Ensure the overall page is scrollable */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;  /* Make the app-container scrollable */
+}
+
+/* Global Flex Container Adjustment */
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .flex-container {
+    flex-direction: column;
   }
 }

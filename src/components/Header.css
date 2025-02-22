@@ -1,35 +1,36 @@
-/* 🎨 Header Container (Reduced Height to Match Footer) */
+/* 🎨 Header Container */
 .header {
   display: flex;
-  align-items: center; /* ✅ Align items vertically */
-  justify-content: center; /* ✅ Center elements horizontally */
+  align-items: center;
+  justify-content: space-between; /* ✅ Ensures title stays centered, menu aligned right */
   background-color: #0056b3;
   color: white;
-  padding: 6px 20px; /* ✅ Matches footer padding */
-  height: 45px; /* ✅ Matches footer height */
+  padding: 6px 20px;
+  height: 45px;
   position: fixed;
   top: 0;
-  width: 100%;
+  left: 0; /* ✅ Flush left */
+  width: 100vw; /* ✅ Ensures it spans the full width */
   z-index: 1500;
 }
 
-/* ✅ Title (Perfectly Centered in Header) */
+/* ✅ Title Perfectly Centered */
 .header-title {
-  font-size: 1rem; /* ✅ Adjusted for smaller header */
+  font-size: 1rem;
   font-weight: bold;
   color: white;
   text-align: center;
   white-space: nowrap;
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%); /* ✅ Centers the text */
   margin: 0;
 }
 
-/* ✅ Dropdown Menu on Right */
+/* ✅ Dropdown Menu Container */
 .header-dropdown {
   position: absolute;
-  right: 20px; /* ✅ Keeps dropdown inside screen */
+  right: 40px; /* ✅ Manually moved left (Adjust as needed) */
   top: 50%;
   transform: translateY(-50%);
   z-index: 2000;
@@ -43,14 +44,13 @@
   color: white;
   font-size: 1.2rem;
   padding: 5px;
-  margin-right: 20px; /* ✅ Moves the button/icon left */
 }
 
-/* 📜 Dropdown Menu Styling */
+/* 📜 Dropdown Menu */
 .dropdown-menu {
   position: absolute;
-  right: 0;
-  top: 45px; /* ✅ Ensures dropdown appears below header */
+  right: 10px; /* ✅ Manually moved left (Adjust value as needed) */
+  top: 45px; /* ✅ Appears below button */
   background: white;
   color: black;
   border-radius: 5px;
@@ -65,12 +65,12 @@
   transition: opacity 0.3s ease-in-out, visibility 0.3s;
 }
 
-/* ✅ Ensure dropdown appears when `active` */
+/* ✅ Show Dropdown on Click */
 .header-dropdown.active .dropdown-menu,
 .header-dropdown[aria-expanded="true"] .dropdown-menu {
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
+  display: block;
+  opacity: 1;
+  visibility: visible;
 }
 
 /* ✅ Dropdown Items */
@@ -87,31 +87,23 @@
   background: #f0f0f0;
 }
 
-/* ✅ Fix Overflow Issues */
-.header,
-.header-dropdown {
-  overflow: visible !important;
-}
-
-/* ✅ Adjust Main Content to Prevent Moving Up */
-.main-container {
-  margin-top: 55px; /* ✅ Creates space below the smaller header */
-  padding: 10px;
-  flex-grow: 1;
+/* ✅ Prevent Header Overlapping Content */
+.main-content {
+  margin-top: 55px; /* ✅ Creates space below the header */
 }
 
 /* 📱 Mobile Adjustments */
 @media (max-width: 768px) {
   .header {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between; /* ✅ Ensures title stays centered */
     height: auto;
-    text-align: center;
   }
 
   .header-title {
-    position: static;
-    transform: none;
-    margin-top: 5px;
+    font-size: 0.9rem;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .header-dropdown {

@@ -11,6 +11,8 @@ const AppointmentsDashboard = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewMode, setViewMode] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
+  const [isQueryResults, setIsQueryResults] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -33,99 +35,69 @@ const AppointmentsDashboard = () => {
 
       // ✅ Filter out soft-deleted records
       const filteredAppointments = response.data.appointments.filter(appt => !appt.toBeDeleted);
-      
+
       console.log("✅ Filtered Appointments (Removing Deleted):", filteredAppointments);
 
       setAppointments(filteredAppointments);
       setTotalPages(response.data.totalPages);
+      setIsQueryResults(false);
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteConfirmation) {
-      console.error("❌ No appointment selected for deletion.");
-      return;
-    }
-
+  const handleQuery = async () => {
     try {
       const token = localStorage.getItem("token");
-      console.log("🔍 Token Retrieved for Delete:", token);
-
       if (!token) {
-        console.error("❌ No token found. User must be authenticated.");
+        console.error("❌ No token found. Cannot query historical appointments.");
         return;
       }
 
-      console.log("🔍 Marking appointment as deleted:", deleteConfirmation);
-
-      // ✅ Convert DELETE into a PUT request to set `toBeDeleted: true`
-      const response = await axios.put(
-        `${API_BASE_URL}/appointments/${deleteConfirmation}`, 
-        { toBeDeleted: true }, // ✅ Updating the flag
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      console.log("✅ Appointment marked as deleted:", response.data);
-
-      // ✅ Immediately remove the deleted appointment from state
-      setAppointments(prevAppointments => prevAppointments.filter(appt => appt._id !== deleteConfirmation));
-
-      setDeleteConfirmation(null); // Clear confirmation state
-    } catch (error) {
-      console.error("❌ Error marking appointment as deleted:", error.response?.data || error.message);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      console.log("🔍 Retrieved Token for Save:", token);
-  
-      if (!token) {
-        alert("❌ No token found. Redirecting to login.");
+      if (!queryRange.startDate || !queryRange.endDate) {
+        alert("Please select both start and end dates.");
         return;
       }
-  
-      console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
-      console.log("🔍 Request Body:", JSON.stringify(appointment, null, 2));
-  
-      const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-      });
-  
-      console.log("✅ Appointment Scheduled Successfully:", response.data);
-      alert("Appointment scheduled successfully!");
-  
-      setAppointment({
-        title: "",
-        date: "",
-        location: "",
-        contactName: "",
-        contactPhone: "",
-        contactEmail: "",
-        scheduledByUserId: "",
-        notes: "",
-      });
-    } catch (error) {
-      console.error("❌ Error scheduling appointment:", error.response?.data || error.message);
-      alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
-    }
-  };
-  
 
-  const closeModal = () => {
-    setSelectedAppointment(null);
-    setViewMode("");
+      console.log("🔍 Querying historical appointments:", queryRange);
+
+      const startISO = new Date(queryRange.startDate).toISOString();
+      const endISO = new Date(queryRange.endDate).toISOString();
+
+      console.log("🔍 Sending Request with Start:", startISO, "End:", endISO);
+
+      const response = await axios.get(`${API_BASE_URL}/appointments/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { startDate: startISO, endDate: endISO },
+      });
+
+      console.log("✅ Historical Appointments Response:", response.data);
+
+      if (response.data.length === 0) {
+        alert("No appointments found for the selected date range.");
+      }
+
+      setAppointments(response.data);
+      setIsQueryResults(true);
+    } catch (error) {
+      console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
+    }
   };
 
   return (
     <div className="appointments-dashboard-container">
       <h1>Appointments Dashboard</h1>
+
+      {/* ✅ Query Section for Date Range Filtering */}
+      <div className="query-container">
+        <input type="date" value={queryRange.startDate} onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })} />
+        <input type="date" value={queryRange.endDate} onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })} />
+        <button onClick={handleQuery}>Query Historical Appointments</button>
+      </div>
+
+      {/* ✅ Show "Back to Dashboard" Button if Query Results Are Displayed */}
+      {isQueryResults && <button onClick={fetchAppointments} className="back-button">Back to Dashboard</button>}
+
       <table className="appointments-table">
         <thead>
           <tr>
@@ -133,7 +105,6 @@ const AppointmentsDashboard = () => {
             <th>Date</th>
             <th>Location</th>
             <th>Scheduled By</th>
-            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -143,79 +114,10 @@ const AppointmentsDashboard = () => {
               <td>{new Date(appt.date).toLocaleString()}</td>
               <td>{appt.location}</td>
               <td>{appt.scheduledBy}</td>
-              <td>
-                <button onClick={() => openModal(appt, "edit")}>Edit</button>
-                <button onClick={() => openModal(appt, "view")}>View</button>
-                <button onClick={() => setDeleteConfirmation(appt._id)}>Delete</button>
-              </td>
             </tr>
           ))}
         </tbody>
       </table>
-
-      {deleteConfirmation && (
-        <div className="delete-confirmation-container">
-          <div className="delete-confirmation-box">
-            <p>Click confirm to delete or exit to cancel</p>
-            <button className="confirm-delete" onClick={handleDelete}>Confirm</button>
-            <button className="cancel-delete" onClick={() => setDeleteConfirmation(null)}>X</button>
-          </div>
-        </div>
-      )}
-
-      {selectedAppointment && (
-        <div className="edit-container">
-          <div className="edit-box">
-            <button className="close-button" onClick={closeModal}>Close</button>
-            <h2>{viewMode === "edit" ? "Edit Appointment" : "View Appointment"}</h2>
-
-            <label>Title:</label>
-            <input 
-              type="text" 
-              name="title" 
-              value={selectedAppointment.title} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, title: e.target.value })} 
-              disabled={viewMode === "view"} 
-            />
-
-            <label>Date:</label>
-            <input 
-              type="datetime-local" 
-              name="date" 
-              value={selectedAppointment.date} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, date: e.target.value })} 
-              disabled={viewMode === "view"} 
-            />
-
-            <label>Location:</label>
-            <input 
-              type="text" 
-              name="location" 
-              value={selectedAppointment.location} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, location: e.target.value })} 
-              disabled={viewMode === "view"} 
-            />
-
-            <label>Scheduled By:</label>
-            <input 
-              type="text" 
-              name="scheduledBy" 
-              value={selectedAppointment.scheduledBy} 
-              disabled 
-            />
-
-            <label>Notes:</label>
-            <textarea 
-              name="notes" 
-              value={selectedAppointment.notes} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, notes: e.target.value })} 
-              disabled={viewMode === "view"} 
-            />
-
-            {viewMode === "edit" && <button onClick={handleSave}>Save</button>}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
