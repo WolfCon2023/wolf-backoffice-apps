@@ -15,7 +15,7 @@ const AppointmentsDashboard = () => {
   const [isQueryResults, setIsQueryResults] = useState(false);
 
   useEffect(() => {
-    console.log("✅ Using API URL:", API_BASE_URL);
+    console.log("🔍 Component Mounted. Fetching appointments...");
     fetchAppointments();
   }, []);
 
