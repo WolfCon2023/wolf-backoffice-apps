@@ -1,155 +1,174 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import "./AppointmentScheduler.css"; 
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import DatePicker from "react-datepicker";
+import Select from "react-select";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "react-datepicker/dist/react-datepicker.css";
+import "./AppointmentScheduler.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  "https://wolf-backoffice-backend-development.up.railway.app/api";
+
+// ✅ Form Validation Schema
+const schema = yup.object().shape({
+  title: yup.string().required("Title is required"),
+  date: yup.date().required("Date is required"),
+  location: yup.string().notRequired(),
+  contactName: yup.string().notRequired(),
+  contactPhone: yup.string().notRequired(),
+  contactEmail: yup.string().email("Invalid email").notRequired(),
+  scheduledBy: yup.string().required("User must be selected"),
+  notes: yup.string().notRequired(),
+});
 
 const AppointmentScheduler = () => {
-  const [appointment, setAppointment] = useState({
-    title: "",
-    date: "",
-    location: "",
-    contactName: "",
-    contactPhone: "",
-    contactEmail: "",
-    scheduledBy: "",
-    notes: "",
+  const queryClient = useQueryClient();
+  
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(schema),
   });
 
-  const [users, setUsers] = useState([]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.warn("❌ No token found. Redirecting to login.");
-          return;
-        }
-
-        const response = await axios.get(`${API_BASE_URL}/users`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        console.log("✅ Users fetched (Before State Update):", response.data);
-        setUsers((prevUsers) => {
-          console.log("✅ Previous users state:", prevUsers);
-          console.log("✅ New users state:", response.data);
-          return response.data;
-        });
-        console.log("✅ Users state updated:", response.data);
-      } catch (error) {
-        console.error("❌ Error fetching users:", error.response?.data || error.message);
-      }
-    };
-
-    fetchUsers();
-  }, []);
-
-  const handleChange = (e) => {
-    setAppointment({ ...appointment, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-  
-    try {
+  // ✅ Fetch Users with React Query
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
       const token = localStorage.getItem("token");
-      console.log("🔍 Retrieved Token for Save:", token);
-  
-      if (!token) {
-        alert("❌ No token found. Redirecting to login.");
-        return;
-      }
-  
-      console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
-      console.log("🔍 Request Body:", JSON.stringify(appointment, null, 2));
-  
-      // Removed trailing slash to match the backend route exactly
-      const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
+      if (!token) throw new Error("No token found");
+      const response = await axios.get(`${API_BASE_URL}/users`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-  
-      console.log("✅ Appointment Scheduled Successfully:", response.data);
-      alert("Appointment scheduled successfully!");
-  
-      setAppointment({
-        title: "",
-        date: "",
-        location: "",
-        contactName: "",
-        contactPhone: "",
-        contactEmail: "",
-        scheduledBy: "",
-        notes: "",
-      });
-    } catch (error) {
-      console.error("❌ Error scheduling appointment:", error.response?.data || error.message);
-      alert(`Failed to schedule appointment: ${error.response?.data?.message || "Server error"}`);
-    }
-  };  
+      return response.data;
+    },
+  });
+
+  // ✅ Mutation for Scheduling an Appointment
+  const scheduleAppointment = useMutation({
+    mutationFn: async (appointmentData) => {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
+      const response = await axios.post(
+        `${API_BASE_URL}/appointments`,
+        appointmentData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Appointment scheduled successfully!");
+      reset();
+      queryClient.invalidateQueries(["appointments"]);
+    },
+    onError: (error) => {
+      toast.error(`Error: ${error.response?.data?.message || "Failed to schedule appointment"}`);
+    },
+  });
 
   return (
     <div className="scheduler-container">
       <h1 className="scheduler-title">Business Appointment Scheduler</h1>
+
       <div className="scheduler-scrollable">
-        <form className="scheduler-form" onSubmit={handleSubmit}>
+        <form className="scheduler-form" onSubmit={handleSubmit(scheduleAppointment.mutate)}>
+          {/* Title Input */}
           <div className="form-group">
             <label>Title</label>
-            <input type="text" name="title" value={appointment.title} onChange={handleChange} required />
+            <input {...register("title")} type="text" placeholder="Enter appointment title" />
+            <p className="error">{errors.title?.message}</p>
           </div>
 
+          {/* Date Picker */}
           <div className="form-group">
             <label>Date</label>
-            <input type="datetime-local" name="date" value={appointment.date} onChange={handleChange} required />
+            <Controller
+              control={control}
+              name="date"
+              render={({ field }) => (
+                <DatePicker 
+                  selected={field.value} 
+                  onChange={(date) => field.onChange(date)} 
+                  showTimeSelect 
+                  dateFormat="Pp"
+                />
+              )}
+            />
+            <p className="error">{errors.date?.message}</p>
           </div>
 
+          {/* Location */}
           <div className="form-group">
             <label>Location</label>
-            <input type="text" name="location" value={appointment.location} onChange={handleChange} />
+            <input {...register("location")} type="text" placeholder="Enter location" />
           </div>
 
+          {/* Contact Name */}
           <div className="form-group">
             <label>Contact Name</label>
-            <input type="text" name="contactName" value={appointment.contactName} onChange={handleChange} />
+            <input {...register("contactName")} type="text" placeholder="Enter contact name" />
           </div>
 
+          {/* Contact Phone */}
           <div className="form-group">
             <label>Contact Phone</label>
-            <input type="text" name="contactPhone" value={appointment.contactPhone} onChange={handleChange} />
+            <input {...register("contactPhone")} type="text" placeholder="Enter phone number" />
           </div>
 
+          {/* Contact Email */}
           <div className="form-group">
             <label>Contact Email</label>
-            <input type="email" name="contactEmail" value={appointment.contactEmail} onChange={handleChange} />
+            <input {...register("contactEmail")} type="email" placeholder="Enter email" />
+            <p className="error">{errors.contactEmail?.message}</p>
           </div>
 
+          {/* Scheduled By (User Dropdown) */}
           <div className="form-group">
             <label>Scheduled By</label>
-            <select name="scheduledBy" value={appointment.scheduledBy} onChange={handleChange} required>
-              <option value="">Select User</option>
-              {users.length > 0 ? (
-                users.map((user) => (
-                  <option key={user._id} value={user._id}>
-                    {user.firstName} {user.lastName} ({user.email})
-                  </option>
-                ))
-              ) : (
-                <option disabled>Loading users...</option>
+            <Controller
+              control={control}
+              name="scheduledBy"
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  options={
+                    isLoading
+                      ? [{ label: "Loading users...", value: "" }]
+                      : users.map((user) => ({
+                          label: `${user.firstName} ${user.lastName} (${user.email})`,
+                          value: user._id,
+                        }))
+                  }
+                  isLoading={isLoading}
+                  placeholder="Select a user"
+                />
               )}
-            </select>
+            />
+            <p className="error">{errors.scheduledBy?.message}</p>
           </div>
 
+          {/* Notes */}
           <div className="form-group">
             <label>Notes</label>
-            <textarea name="notes" value={appointment.notes} onChange={handleChange} />
+            <textarea {...register("notes")} placeholder="Enter any notes" />
           </div>
 
+          {/* Submit Button */}
           <div className="button-container">
-            <button type="submit" className="submit-button">Add Appointment</button>
+            <button type="submit" className="submit-button">
+              {scheduleAppointment.isLoading ? "Scheduling..." : "Add Appointment"}
+            </button>
           </div>
         </form>
       </div>

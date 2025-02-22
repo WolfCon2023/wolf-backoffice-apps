@@ -1,167 +1,135 @@
-/* Ensure full height for the page */
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-/* Appointments Dashboard Styles */
-.appointments-dashboard-container {
-  width: 90%;
-  margin: 20px auto;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  max-height: 85vh;
-  overflow-y: auto;
+/* 🎨 Main Container */
+.scheduler-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px; /* Increase padding for spacing */
+  padding-top: 10px; /* Ensure the first field is visible */
+  background: white;
+  box-sizing: border-box;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  position: relative;
+  min-height: 80vh; /* Ensure enough height to show first field */
+  max-height: 90vh; /* Prevent excessive height */
+  overflow-y: auto; /* Enable scrolling if content overflows */
 }
 
-h1 {
+/* ✅ Centered Title */
+.scheduler-title {
   text-align: center;
+  font-size: 1.8rem;
+  font-weight: bold;
   color: #333;
+  margin-bottom: 25px;
+  margin-top: 10px; /* Ensure title is not pushed too high */
 }
 
-/* Query Input and Button */
-.query-container {
+/* ✅ Form Styling */
+.scheduler-form {
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 15px; /* ✅ Adds spacing between input fields */
 }
 
-.query-container input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.query-container button {
-  padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.query-container button:hover {
-  background-color: #0056b3;
-}
-
-/* Appointments Table */
-.appointments-table {
+/* Ensure all form controls use full width */
+.scheduler-form input,
+.scheduler-form select,
+.scheduler-form textarea {
   width: 100%;
-  border-collapse: collapse;
-  background: white;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.appointments-table th, .appointments-table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-  color: #000;
-}
-
-.appointments-table th {
-  background-color: #007bff;
-  color: white;
-}
-
-.appointments-table tr:hover {
-  background-color: #f1f1f1;
-}
-
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.pagination button {
-  padding: 8px 12px;
-  margin: 0 5px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-}
-
-.pagination button:enabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-/* Full-Screen Edit & View Overlay */
-.edit-container, .view-container {
-  width: 100vw;
-  height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-.edit-box, .view-box {
-  width: 60%;
-  max-height: 80vh;
-  overflow-y: auto;
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.3);
-  position: relative;
-}
-
-.close-button {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: red;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.close-button:hover {
-  background: darkred;
-}
-
-/* Inputs & Buttons */
-.edit-box input, .edit-box textarea, .view-box p {
-  width: 100%;
-  padding: 10px;
+  box-sizing: border-box;
   margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+}
+
+/* ✅ Input Groups */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+/* ✅ Label Improvements */
+.form-group label {
   font-size: 1rem;
-  color: #000;
+  font-weight: bold;
+  color: #0056b3;
 }
 
-.edit-box button {
-  padding: 10px 15px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 10px;
+/* ✅ Improve Input & Textarea Styles */
+.form-group input,
+.form-group textarea {
+  padding: 12px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.3s ease;
+  background: #f8f9fa; /* ✅ Light gray background for better contrast */
 }
 
-.edit-box button:hover {
+/* ✅ Focus Effect */
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #0056b3;
+  background: white;
+}
+
+/* ✅ Ensure Textarea is Properly Sized */
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ✅ Fix Button Position */
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  margin-bottom: 50px; /* ✅ Keeps button above the footer */
+}
+
+/* ✅ Improve Submit Button Appearance */
+.submit-button {
   background-color: #0056b3;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  width: 100%;
+  max-width: 300px;
+}
+
+.submit-button:hover {
+  background-color: #004494;
+  transform: scale(1.05);
+}
+
+/* ✅ Mobile Friendly */
+@media (max-width: 600px) {
+  .scheduler-container {
+    width: 90%;
+    padding: 20px;
+    min-height: auto; /* Adjust for smaller screens */
+    max-height: none;
+  }
+
+  .scheduler-title {
+    font-size: 1.6rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 0.9rem;
+    padding: 10px;
+  }
+
+  .submit-button {
+    font-size: 0.9rem;
+    padding: 10px 15px;
+  }
 }
