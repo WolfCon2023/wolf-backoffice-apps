@@ -25,25 +25,33 @@ const AppointmentsDashboard = () => {
         console.warn("❌ No token found. Redirecting to login.");
         return;
       }
-
+ 
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { page: currentPage, limit: 50 },
       });
-
-      console.log("✅ Raw API Response:", response.data.appointments);
-
+ 
+      console.log("✅ Raw API Response:", response.data);
+ 
+      // Ensure response.data.appointments is defined before using filter
+      if (!response.data || !response.data.appointments) {
+        console.error("❌ Unexpected API response structure:", response.data);
+        return;
+      }
+ 
+      // ✅ Filter out soft-deleted records
       const filteredAppointments = response.data.appointments.filter(appt => !appt.toBeDeleted);
-
+ 
       console.log("✅ Filtered Appointments (Removing Deleted):", filteredAppointments);
-
+ 
       setAppointments(filteredAppointments);
       setTotalPages(response.data.totalPages);
       setIsQueryResults(false);
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
-  };
+ };
+ 
 
   const handleQuery = async () => {
     try {
