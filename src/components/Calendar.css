@@ -42,12 +42,12 @@ html, body {
 .calendar-view {
   width: 60vw;
   max-width: 65vw;
-  /* Removed fixed max-height and overflow to ensure FullCalendar's toolbar is fully visible */
-  overflow: visible;
+  max-height: 500px;
+  overflow-y: auto;
   border: 1px solid #cccccc;
   border-radius: 8px;
   padding: 15px;
-  background: #fff;
+  background: rgb(255, 255, 255);
 }
 
 .fc-toolbar {
@@ -59,7 +59,8 @@ html, body {
   display: inline-block !important; /* Ensure buttons are not hidden */
 }
 
-/* Sidebar Styles */
+
+/* ✅ Properly align upcoming appointments */
 .appointments-sidebar {
   display: flex;
   flex-direction: column;
@@ -70,7 +71,20 @@ html, body {
   border-radius: 8px;
 }
 
-.upcoming-appointments,
+/* ✅ Left Side - Upcoming Appointments This Week */
+.upcoming-appointments {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-height: 60vh;
+  background: #f4f4f4;
+  padding: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ✅ Right Side - Upcoming Appointments Next Week */
 .next-week-appointments {
   display: flex;
   flex-direction: column;
@@ -83,6 +97,7 @@ html, body {
   overflow: hidden;
 }
 
+/* ✅ Fix Titles in Place While Scrolling */
 .appointments-sidebar h2 {
   font-size: 1rem;
   margin-bottom: 5px;
@@ -96,15 +111,17 @@ html, body {
   border-bottom: 2px solid #ccc;
 }
 
+/* ✅ Scrollable event list with BOTH vertical & horizontal scrolling */
 .scrollable-appointments {
   width: 100%;
   max-height: 55vh;
-  overflow-y: auto;
-  overflow-x: auto;
+  overflow-y: auto; /* ✅ Vertical Scroll */
+  overflow-x: auto; /* ✅ Horizontal Scroll */
   padding: 5px;
-  white-space: nowrap;
+  white-space: nowrap; /* ✅ Prevents text wrapping */
 }
 
+/* ✅ Properly format and align appointment details */
 .appointments-sidebar ul {
   list-style: none;
   padding: 0;
@@ -113,9 +130,10 @@ html, body {
   flex-grow: 1;
   max-height: calc(100% - 40px);
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: auto; /* ✅ Ensures horizontal scrolling */
 }
 
+/* ✅ Ensure text is fully visible */
 .appointments-sidebar li {
   width: 100%;
   padding: 8px;
@@ -123,11 +141,12 @@ html, body {
   border-bottom: 1px solid #ccc;
   text-align: left;
   white-space: nowrap;
-  overflow: auto;
+  overflow: auto; /* ✅ Allows both vertical and horizontal scrolling */
   text-overflow: ellipsis;
   line-height: 1.4;
 }
 
+/* ✅ Ensure full text visibility when hovered */
 .appointments-sidebar li:hover {
   background: rgba(0, 0, 0, 0.05);
   cursor: pointer;
@@ -153,6 +172,7 @@ html, body {
   .calendar-view {
     width: 90vw;
     max-width: 100%;
+    max-height: 400px;
   }
 
   .appointments-sidebar {
