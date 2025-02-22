@@ -10,7 +10,8 @@ html, body {
   display: flex;
   flex-direction: column;
   height: 100%;  /* Full height of the viewport */
-  overflow: hidden;  /* Prevent the body from scrolling */
+  min-height: 100vh;
+  overflow-y: auto;  /* Make the app-container scrollable */
 }
 
 /* Ensure the main content area is scrollable */

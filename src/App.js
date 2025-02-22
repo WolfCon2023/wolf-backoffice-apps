@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { jwtDecode } from "jwt-decode"; 
+import jwtDecode from "jwt-decode"; 
 import Login from "./components/Login";
 import AppointmentsDashboard from "./components/AppointmentsDashboard";
 import AppointmentScheduler from "./components/AppointmentScheduler";
