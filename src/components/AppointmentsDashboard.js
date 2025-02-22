@@ -15,6 +15,7 @@ const AppointmentsDashboard = () => {
   const [isQueryResults, setIsQueryResults] = useState(false);
 
   useEffect(() => {
+    console.log("✅ Using API URL:", API_BASE_URL);
     fetchAppointments();
   }, []);
 
@@ -25,33 +26,31 @@ const AppointmentsDashboard = () => {
         console.warn("❌ No token found. Redirecting to login.");
         return;
       }
- 
+
+      console.log("🔍 Fetching appointments...");
+
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { page: currentPage, limit: 50 },
       });
- 
-      console.log("✅ Raw API Response:", response.data);
- 
-      // Ensure response.data.appointments is defined before using filter
+
+      console.log("✅ API Response:", response.data);
+
       if (!response.data || !response.data.appointments) {
-        console.error("❌ Unexpected API response structure:", response.data);
+        console.error("❌ Unexpected API response:", response.data);
         return;
       }
- 
-      // ✅ Filter out soft-deleted records
+
       const filteredAppointments = response.data.appointments.filter(appt => !appt.toBeDeleted);
- 
-      console.log("✅ Filtered Appointments (Removing Deleted):", filteredAppointments);
- 
+      console.log("✅ Appointments Retrieved:", filteredAppointments);
+
       setAppointments(filteredAppointments);
-      setTotalPages(response.data.totalPages);
+      setTotalPages(response.data.totalPages || 1);
       setIsQueryResults(false);
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
- };
- 
+  };
 
   const handleQuery = async () => {
     try {
@@ -91,6 +90,20 @@ const AppointmentsDashboard = () => {
     }
   };
 
+  const openModal = (appointment, mode) => {
+    console.log(`📝 Opening ${mode} mode for`, appointment);
+    setSelectedAppointment({
+      ...appointment,
+      date: new Date(appointment.date).toISOString().slice(0, 16),
+    });
+    setViewMode(mode);
+  };
+
+  const closeModal = () => {
+    setSelectedAppointment(null);
+    setViewMode("");
+  };
+
   return (
     <div className="appointments-dashboard-container">
       <h1>Appointments Dashboard</h1>
@@ -125,14 +138,69 @@ const AppointmentsDashboard = () => {
               <td>{appt.location}</td>
               <td>{appt.scheduledBy}</td>
               <td>
-                <button onClick={() => setSelectedAppointment(appt)}>Edit</button>
-                <button onClick={() => setSelectedAppointment(appt)}>View</button>
+                <button onClick={() => openModal(appt, "edit")}>Edit</button>
+                <button onClick={() => openModal(appt, "view")}>View</button>
                 <button onClick={() => setDeleteConfirmation(appt._id)}>Delete</button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* ✅ MODAL DISPLAY LOGIC (Only shows when `selectedAppointment` is set) */}
+      {selectedAppointment && (
+        <div className="edit-container">
+          <div className="edit-box">
+            <button className="close-button" onClick={closeModal}>Close</button>
+            <h2>{viewMode === "edit" ? "Edit Appointment" : "View Appointment"}</h2>
+
+            <label>Title:</label>
+            <input 
+              type="text" 
+              name="title" 
+              value={selectedAppointment.title} 
+              disabled={viewMode === "view"} 
+              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, title: e.target.value })}
+            />
+
+            <label>Date:</label>
+            <input 
+              type="datetime-local" 
+              name="date" 
+              value={selectedAppointment.date} 
+              disabled={viewMode === "view"} 
+              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, date: e.target.value })}
+            />
+
+            <label>Location:</label>
+            <input 
+              type="text" 
+              name="location" 
+              value={selectedAppointment.location} 
+              disabled={viewMode === "view"} 
+              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, location: e.target.value })}
+            />
+
+            <label>Scheduled By:</label>
+            <input 
+              type="text" 
+              name="scheduledBy" 
+              value={selectedAppointment.scheduledBy} 
+              disabled 
+            />
+
+            <label>Notes:</label>
+            <textarea 
+              name="notes" 
+              value={selectedAppointment.notes} 
+              disabled={viewMode === "view"} 
+              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, notes: e.target.value })}
+            />
+
+            {viewMode === "edit" && <button onClick={() => console.log("📝 Saving Appointment...", selectedAppointment)}>Save</button>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
