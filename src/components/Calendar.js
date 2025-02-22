@@ -65,12 +65,16 @@ const Calendar = () => {
       setEvents(appointments);
       organizeUpcomingAppointments(appointments);
     } catch (error) {
-      console.error("❌ Error fetching appointments:", error.response?.data || error.message);
+      console.error(
+        "❌ Error fetching appointments:",
+        error.response?.data || error.message
+      );
       if (error.response && error.response.status === 401) {
         // Token expired or invalid: redirect to login (or trigger a token refresh)
         window.location.href = "/login";
       }
-    });
+    }
+  }; // <-- Added missing closing brace for fetchAppointments
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
