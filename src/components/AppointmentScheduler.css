@@ -2,15 +2,18 @@
 .scheduler-container {
   max-width: 600px;
   margin: 40px auto;
-  padding: 10px;
+  padding: 20px; /* Increase padding for spacing */
   background: white;
   box-sizing: border-box;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 200px);
+  min-height: 70vh; /* Ensure enough height to show first field */
+  max-height: 85vh; /* Prevent excessive height */
+  overflow-y: auto; /* Enable scrolling if content overflows */
 }
+
 
 /* ✅ Centered Title */
 .scheduler-title {
