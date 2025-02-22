@@ -10,7 +10,7 @@ const Appointments = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("Fetching from:", API_BASE_URL);
+    console.log("Fetching appointments from:", API_BASE_URL);
 
     const token = localStorage.getItem("token");
     if (!token) {
@@ -19,11 +19,22 @@ const Appointments = () => {
       return;
     }
 
+    // Default date range covering all appointments
+    const defaultStartDate = "2000-01-01T00:00:00.000Z";
+    const defaultEndDate = "2100-01-01T00:00:00.000Z";
+
     axios
-      .get(`${API_BASE_URL}/appointments`, {
-        headers: { Authorization: `Bearer ${token}` },
+      .get(
+        `${API_BASE_URL}/appointments?startDate=${defaultStartDate}&endDate=${defaultEndDate}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      .then((response) => {
+        // Filter out appointments marked to be deleted
+        const validAppointments = response.data.filter(
+          (appt) => !appt.toBeDeleted
+        );
+        setAppointments(validAppointments);
       })
-      .then((response) => setAppointments(response.data))
       .catch((error) => {
         console.error("Error fetching appointments:", error);
         setError("Failed to load appointments. Please try again.");
@@ -41,9 +52,9 @@ const Appointments = () => {
       {error && <p style={{ color: "red" }}>{error}</p>}
       <ul>
         {appointments.length > 0 ? (
-          appointments.map((appt, index) => (
-            <li key={index}>
-              {appt.title} - {appt.date}
+          appointments.map((appt) => (
+            <li key={appt._id}>
+              {appt.title} - {new Date(appt.date).toLocaleString()}
             </li>
           ))
         ) : (

@@ -12,24 +12,23 @@ const AppointmentScheduler = () => {
     contactName: "",
     contactPhone: "",
     contactEmail: "",
-    scheduledByUserId: "", // ✅ Store user ID instead of full name
+    scheduledBy: "",
     notes: "",
   });
 
-  const [users, setUsers] = useState([]); // ✅ Store user list
+  const [users, setUsers] = useState([]);
 
-  // ✅ Fetch users when the component loads
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("token"); // ✅ Retrieve token
+        const token = localStorage.getItem("token");
         if (!token) {
           console.warn("❌ No token found. Redirecting to login.");
           return;
         }
 
         const response = await axios.get(`${API_BASE_URL}/users`, {
-          headers: { Authorization: `Bearer ${token}` }, // ✅ Include token
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         console.log("✅ Users fetched (Before State Update):", response.data);
@@ -37,7 +36,7 @@ const AppointmentScheduler = () => {
           console.log("✅ Previous users state:", prevUsers);
           console.log("✅ New users state:", response.data);
           return response.data;
-        }); // ✅ Update state
+        });
         console.log("✅ Users state updated:", response.data);
       } catch (error) {
         console.error("❌ Error fetching users:", error.response?.data || error.message);
@@ -66,6 +65,7 @@ const AppointmentScheduler = () => {
       console.log("🔍 Sending Appointment to:", `${API_BASE_URL}/appointments`);
       console.log("🔍 Request Body:", JSON.stringify(appointment, null, 2));
   
+      // Removed trailing slash to match the backend route exactly
       const response = await axios.post(`${API_BASE_URL}/appointments`, appointment, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -83,7 +83,7 @@ const AppointmentScheduler = () => {
         contactName: "",
         contactPhone: "",
         contactEmail: "",
-        scheduledByUserId: "",
+        scheduledBy: "",
         notes: "",
       });
     } catch (error) {
@@ -129,7 +129,7 @@ const AppointmentScheduler = () => {
 
           <div className="form-group">
             <label>Scheduled By</label>
-            <select name="scheduledByUserId" value={appointment.scheduledByUserId} onChange={handleChange} required>
+            <select name="scheduledBy" value={appointment.scheduledBy} onChange={handleChange} required>
               <option value="">Select User</option>
               {users.length > 0 ? (
                 users.map((user) => (

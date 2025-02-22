@@ -4,14 +4,17 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import listPlugin from "@fullcalendar/list"; // ✅ List View
-import resourceTimelinePlugin from "@fullcalendar/resource-timeline"; // ✅ Timeline View
-import momentPlugin from "@fullcalendar/moment"; // ✅ Moment.js Support
-import bootstrapPlugin from "@fullcalendar/bootstrap"; // ✅ Bootstrap Styling
-import adaptivePlugin from "@fullcalendar/adaptive"; // ✅ Mobile Optimizations
+import listPlugin from "@fullcalendar/list";
+import momentPlugin from "@fullcalendar/moment";
+import bootstrapPlugin from "@fullcalendar/bootstrap";
+import adaptivePlugin from "@fullcalendar/adaptive";
+import tippy from "tippy.js";
 import "./Calendar.css";
+import "tippy.js/dist/tippy.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  "https://wolf-backoffice-backend-development.up.railway.app/api";
 
 const Calendar = () => {
   const [events, setEvents] = useState([]);
@@ -36,31 +39,36 @@ const Calendar = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("✅ API Response:", response.data.appointments);
+      console.log("✅ API Response:", response.data);
 
-      // ✅ Exclude appointments that are marked as deleted
-      const filteredAppointments = response.data.appointments.filter(appt => !appt.toBeDeleted);
-      console.log("✅ Filtered Appointments (Removing Deleted):", filteredAppointments);
+      // Filter out appointments marked to be deleted
+      const filteredAppointments = response.data.filter(
+        (appt) => !appt.toBeDeleted
+      );
 
-      // ✅ Format events for FullCalendar
+      console.log("✅ Filtered Appointments:", filteredAppointments);
+
       const appointments = filteredAppointments.map((appt) => ({
         id: appt._id,
         title: appt.title,
-        start: new Date(appt.date).toISOString(),  // ✅ Ensure ISO format
-        extendedProps: {  // ✅ Store extra fields inside extendedProps
+        start: new Date(appt.date).toISOString(),
+        extendedProps: {
           location: appt.location || "N/A",
           scheduledBy: appt.scheduledBy || "N/A",
           contactName: appt.contactName || "N/A",
           contactPhone: appt.contactPhone || "N/A",
           contactEmail: appt.contactEmail || "N/A",
           description: appt.notes || "N/A",
-        }
+        },
       }));
 
       setEvents(appointments);
       organizeUpcomingAppointments(appointments);
     } catch (error) {
-      console.error("❌ Error fetching appointments:", error.response?.data || error.message);
+      console.error(
+        "❌ Error fetching appointments:",
+        error.response?.data || error.message
+      );
     }
   };
 
@@ -80,19 +88,38 @@ const Calendar = () => {
     const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
 
-    const thisWeek = appointments.filter(appt => new Date(appt.start) >= now && new Date(appt.start) < nextWeek);
-    const upcoming = thisWeek.slice(0, 5).map(appt => ({
-      ...appt,
-      formattedTime: formatDate(appt.start)
-    }));
+    const thisWeek = appointments
+      .filter(
+        (appt) => new Date(appt.start) >= now && new Date(appt.start) < nextWeek
+      )
+      .slice(0, 5)
+      .map((appt) => ({
+        ...appt,
+        formattedTime: formatDate(appt.start),
+      }));
 
-    const nextWeekList = appointments.filter(appt => new Date(appt.start) >= nextWeek).slice(0, 5).map(appt => ({
-      ...appt,
-      formattedTime: formatDate(appt.start)
-    }));
+    const nextWeekList = appointments
+      .filter((appt) => new Date(appt.start) >= nextWeek)
+      .slice(0, 5)
+      .map((appt) => ({
+        ...appt,
+        formattedTime: formatDate(appt.start),
+      }));
 
-    setUpcomingAppointments(upcoming);
+    setUpcomingAppointments(thisWeek);
     setNextWeekAppointments(nextWeekList);
+  };
+
+  const handleEventRender = (info) => {
+    tippy(info.el, {
+      content: `<strong>${info.event.title}</strong><br>${
+        info.event.extendedProps.description || "No details"
+      }`,
+      allowHTML: true,
+      placement: "top",
+      animation: "fade",
+      theme: "light-border",
+    });
   };
 
   const handleEventClick = (clickInfo) => {
@@ -104,7 +131,6 @@ const Calendar = () => {
       return;
     }
 
-    // ✅ Ensure all event fields have values
     const formattedStart = new Date(eventData.start).toLocaleString();
 
     const appointmentDetails = `
@@ -130,16 +156,21 @@ const Calendar = () => {
             dayGridPlugin,
             timeGridPlugin,
             interactionPlugin,
-            listPlugin, // ✅ Adds List View
-            resourceTimelinePlugin, // ✅ Adds Timeline View
-            momentPlugin, // ✅ Enables Moment.js Support
-            bootstrapPlugin, // ✅ Applies Bootstrap Styling
-            adaptivePlugin, // ✅ Enhances Mobile Experience
+            listPlugin,
+            momentPlugin,
+            bootstrapPlugin,
+            adaptivePlugin,
           ]}
           initialView="dayGridMonth"
           themeSystem="bootstrap"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
+          }}
           events={events}
           eventClick={handleEventClick}
+          eventDidMount={handleEventRender}
         />
       </div>
       <div className="appointments-sidebar">
@@ -149,10 +180,17 @@ const Calendar = () => {
             <ul>
               {upcomingAppointments.length > 0 ? (
                 upcomingAppointments.map((appt) => (
-                  <li 
-                    key={appt.id} 
-                    style={{ fontSize: "0.85rem", cursor: "pointer", color: "blue", textDecoration: "underline" }}
-                    onClick={() => handleEventClick({ event: { ...appt, extendedProps: appt } })}
+                  <li
+                    key={appt.id}
+                    style={{
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      color: "blue",
+                      textDecoration: "underline",
+                    }}
+                    onClick={() =>
+                      handleEventClick({ event: { ...appt, extendedProps: appt } })
+                    }
                   >
                     {appt.formattedTime} - {appt.title}
                   </li>
@@ -169,10 +207,17 @@ const Calendar = () => {
             <ul>
               {nextWeekAppointments.length > 0 ? (
                 nextWeekAppointments.map((appt) => (
-                  <li 
-                    key={appt.id} 
-                    style={{ fontSize: "0.85rem", cursor: "pointer", color: "blue", textDecoration: "underline" }}
-                    onClick={() => handleEventClick({ event: { ...appt, extendedProps: appt } })}
+                  <li
+                    key={appt.id}
+                    style={{
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      color: "blue",
+                      textDecoration: "underline",
+                    }}
+                    onClick={() =>
+                      handleEventClick({ event: { ...appt, extendedProps: appt } })
+                    }
                   >
                     {appt.formattedTime} - {appt.title}
                   </li>
