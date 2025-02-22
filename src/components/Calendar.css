@@ -2,7 +2,6 @@ html, body {
   height: 100vh;
   width: 100vw;
   overflow-x: hidden;
-  overflow-y: auto;
   margin: 0;
   padding: 0;
   display: flex;
@@ -11,56 +10,35 @@ html, body {
   justify-content: center;
 }
 
-.main-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 90vh;
-  width: 100vw;
-  gap: 20px;
-}
-
 .calendar-title {
   text-align: center;
   font-size: 1.8rem;
-  font-weight: bold;
   margin-bottom: 10px;
 }
 
-.calendar-container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  max-width: 95vw;
-  height: 80vh;
-  position: relative;
-}
-
+/* Adjusted calendar container for a smaller, professional look */
 .calendar-view {
-  width: 60vw;
-  max-width: 65vw;
-  max-height: 500px;
+  width: 50vw;         /* Reduced width */
+  max-width: 60vw;
+  max-height: 400px;     /* Reduced height */
   overflow-y: auto;
   border: 1px solid #cccccc;
   border-radius: 8px;
   padding: 15px;
-  background: rgb(255, 255, 255);
+  background: #fff;
 }
 
+/* Toolbar adjustments to ensure buttons remain visible */
 .fc-toolbar {
-  display: flex !important; /* Ensure toolbar is visible */
+  display: flex !important;
   justify-content: space-between;
 }
 
 .fc-button {
-  display: inline-block !important; /* Ensure buttons are not hidden */
+  display: inline-block !important;
 }
 
-
-/* ✅ Properly align upcoming appointments */
+/* Sidebar styles remain unchanged */
 .appointments-sidebar {
   display: flex;
   flex-direction: column;
@@ -71,118 +49,10 @@ html, body {
   border-radius: 8px;
 }
 
-/* ✅ Left Side - Upcoming Appointments This Week */
-.upcoming-appointments {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-height: 60vh;
-  background: #f4f4f4;
-  padding: 10px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* ✅ Right Side - Upcoming Appointments Next Week */
-.next-week-appointments {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-height: 60vh;
-  background: #f4f4f4;
-  padding: 10px;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* ✅ Fix Titles in Place While Scrolling */
-.appointments-sidebar h2 {
-  font-size: 1rem;
-  margin-bottom: 5px;
-  text-align: center;
-  position: sticky;
-  top: 0;
-  background: #f4f4f4;
-  padding: 8px;
-  z-index: 10;
-  width: 100%;
-  border-bottom: 2px solid #ccc;
-}
-
-/* ✅ Scrollable event list with BOTH vertical & horizontal scrolling */
-.scrollable-appointments {
-  width: 100%;
-  max-height: 55vh;
-  overflow-y: auto; /* ✅ Vertical Scroll */
-  overflow-x: auto; /* ✅ Horizontal Scroll */
-  padding: 5px;
-  white-space: nowrap; /* ✅ Prevents text wrapping */
-}
-
-/* ✅ Properly format and align appointment details */
-.appointments-sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  flex-grow: 1;
-  max-height: calc(100% - 40px);
-  overflow-y: auto;
-  overflow-x: auto; /* ✅ Ensures horizontal scrolling */
-}
-
-/* ✅ Ensure text is fully visible */
-.appointments-sidebar li {
-  width: 100%;
-  padding: 8px;
-  font-size: 0.85rem;
-  border-bottom: 1px solid #ccc;
-  text-align: left;
-  white-space: nowrap;
-  overflow: auto; /* ✅ Allows both vertical and horizontal scrolling */
-  text-overflow: ellipsis;
-  line-height: 1.4;
-}
-
-/* ✅ Ensure full text visibility when hovered */
-.appointments-sidebar li:hover {
-  background: rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-}
-
+/* Additional responsive adjustments can be added as needed */
 @media (max-width: 1024px) {
-  html, body {
-    display: block;
-    overflow-y: auto;
-  }
-
-  .main-container {
-    flex-direction: column;
-    align-items: center;
-    height: auto;
-  }
-
-  .calendar-container {
-    flex-direction: column;
-    align-items: center;
-  }
-
   .calendar-view {
-    width: 90vw;
-    max-width: 100%;
-    max-height: 400px;
-  }
-
-  .appointments-sidebar {
-    flex-direction: column;
-    width: 100%;
-    max-height: none;
-  }
-
-  .upcoming-appointments, .next-week-appointments {
-    width: 100%;
-    max-height: 300px;
+    width: 80vw;
+    max-height: 350px;
   }
 }
