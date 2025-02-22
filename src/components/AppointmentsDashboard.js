@@ -6,6 +6,8 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoff
 
 const AppointmentsDashboard = () => {
   const [appointments, setAppointments] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewMode, setViewMode] = useState("");
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
@@ -14,7 +16,7 @@ const AppointmentsDashboard = () => {
 
   useEffect(() => {
     fetchAppointments();
-  }, []); // ✅ Runs once when the component mounts
+  }, []);
 
   const fetchAppointments = async () => {
     try {
@@ -26,7 +28,7 @@ const AppointmentsDashboard = () => {
 
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 50 },
+        params: { page: currentPage, limit: 50 },
       });
 
       console.log("✅ Raw API Response:", response.data.appointments);
@@ -36,6 +38,7 @@ const AppointmentsDashboard = () => {
       console.log("✅ Filtered Appointments (Removing Deleted):", filteredAppointments);
 
       setAppointments(filteredAppointments);
+      setTotalPages(response.data.totalPages);
       setIsQueryResults(false);
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
@@ -84,31 +87,14 @@ const AppointmentsDashboard = () => {
     <div className="appointments-dashboard-container">
       <h1>Appointments Dashboard</h1>
 
-      {/* ✅ Query Section for Date Range Filtering */}
       <div className="query-container">
-        <input 
-          type="date" 
-          value={queryRange.startDate} 
-          onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })} 
-        />
-        <input 
-          type="date" 
-          value={queryRange.endDate} 
-          onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })} 
-        />
+        <input type="date" value={queryRange.startDate} onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })} />
+        <input type="date" value={queryRange.endDate} onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })} />
         <button onClick={handleQuery}>Query Historical Appointments</button>
       </div>
 
-      {/* ✅ Show "Back to Dashboard" Button if Query Results Are Displayed */}
       {isQueryResults && (
-        <button 
-          onClick={() => {
-            setQueryRange({ startDate: "", endDate: "" }); 
-            setIsQueryResults(false);
-            fetchAppointments();
-          }} 
-          className="back-button"
-        >
+        <button onClick={() => { setIsQueryResults(false); fetchAppointments(); }} className="back-button">
           Back to Dashboard
         </button>
       )}
