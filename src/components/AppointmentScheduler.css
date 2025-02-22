@@ -9,7 +9,7 @@
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 160px);
+  min-height: calc(100vh - 200px);
 }
 
 /* ✅ Centered Title */
