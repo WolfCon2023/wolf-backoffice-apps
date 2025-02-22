@@ -23,7 +23,7 @@ const AppointmentsDashboard = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        console.warn("❌ No token found. Redirecting to login.");
+        console.warn("❌ No token found! Redirecting to login.");
         return;
       }
 
