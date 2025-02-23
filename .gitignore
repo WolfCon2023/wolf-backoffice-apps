@@ -5,6 +5,9 @@
 /.pnp
 .pnp.js
 
+# Ignore ESLint cache (but keep the config file)
+.eslintcache
+
 # testing
 /coverage
 
