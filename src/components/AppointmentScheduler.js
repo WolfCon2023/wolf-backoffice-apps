@@ -6,6 +6,8 @@ import * as yup from "yup";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DatePicker from "react-datepicker";
 import Select from "react-select";
+import MiniCalendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 import { toast, ToastContainer } from "react-toastify"; 
 import "react-toastify/dist/ReactToastify.css";
 import "react-datepicker/dist/react-datepicker.css";
@@ -21,14 +23,14 @@ const schema = yup.object().shape({
   contactName: yup.string().notRequired(),
   contactPhone: yup.string().notRequired(),
   contactEmail: yup.string().email("Invalid email").notRequired(),
-  scheduledBy: yup.object().shape({
-    value: yup.string().required("User must be selected"),
-  }),
+  scheduledBy: yup.string().required("User must be selected"),
   notes: yup.string().notRequired(),
 });
 
 const AppointmentScheduler = () => {
   const queryClient = useQueryClient();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [quickNotes, setQuickNotes] = useState(localStorage.getItem("quickNotes") || ""); 
 
   const {
     register,
@@ -53,16 +55,46 @@ const AppointmentScheduler = () => {
     },
   });
 
+  // ✅ Fetch Upcoming Appointments
+  const { data: appointments = [], isLoading: isLoadingAppointments, error: appointmentsError } = useQuery({
+    queryKey: ["upcomingAppointments"],
+    queryFn: async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
+
+        // Format startDate (current date) and endDate (next 30 days)
+        const startDate = new Date().toISOString();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30);
+        const formattedEndDate = endDate.toISOString();
+
+        console.log(`📅 Fetching upcoming appointments from ${startDate} to ${formattedEndDate}`);
+
+        const response = await axios.get(
+          `${API_BASE_URL}/appointments?startDate=${startDate}&endDate=${formattedEndDate}&limit=10`, 
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        return response.data;
+      } catch (error) {
+        console.error("❌ Error fetching upcoming appointments:", error.response?.data || error.message);
+        throw error;
+      }
+    },
+  });
+
   // ✅ Mutation for Scheduling an Appointment
   const scheduleAppointment = useMutation({
     mutationFn: async (appointmentData) => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token found");
 
-      // ✅ Convert `scheduledBy` object to string ID before sending
       const formattedData = {
         ...appointmentData,
-        scheduledBy: appointmentData.scheduledBy.value, // <-- FIX: Extract only `value`
+        scheduledBy: appointmentData.scheduledBy,
       };
 
       console.log("📤 Sending Appointment Data:", formattedData);
@@ -83,99 +115,132 @@ const AppointmentScheduler = () => {
     },
   });
 
+  // ✅ Handle Quick Notes Storage
+  const handleNotesChange = (e) => {
+    setQuickNotes(e.target.value);
+    localStorage.setItem("quickNotes", e.target.value);
+  };
+
   return (
-    <div className="scheduler-container">
-      <h1 className="scheduler-title">Business Appointment Scheduler</h1>
+    <div className="scheduler-wrapper">
+      {/* 📅 Left Sidebar */}
+      <aside className="sidebar left-sidebar">
+        <h2>📆 Quick Calendar</h2>
+        <MiniCalendar onChange={setSelectedDate} value={selectedDate} />
 
-      <div className="scheduler-scrollable">
-        <form className="scheduler-form" onSubmit={handleSubmit(scheduleAppointment.mutate)}>
-          {/* Title Input */}
-          <div className="form-group full-width">
-            <label>Title</label>
-            <input {...register("title")} type="text" placeholder="Enter appointment title" />
-            <p className="error">{errors.title?.message}</p>
-          </div>
+        <h3>📝 Quick Notes</h3>
+        <textarea
+          value={quickNotes}
+          onChange={handleNotesChange}
+          placeholder="Write quick notes here..."
+        />
+      </aside>
 
-          {/* Date Picker */}
-          <div className="form-group">
-            <label>Date</label>
-            <Controller
-              control={control}
-              name="date"
-              render={({ field }) => (
-                <DatePicker 
-                  selected={field.value} 
-                  onChange={(date) => field.onChange(date)} 
-                  showTimeSelect 
-                  dateFormat="Pp"
+      {/* 📝 Appointment Form */}
+      <div className="scheduler-container">
+        <h1 className="scheduler-title">Business Appointment Scheduler</h1>
+
+        <div className="scheduler-scrollable">
+          <form className="scheduler-form" onSubmit={handleSubmit(scheduleAppointment.mutate)}>
+            
+            {/* Left Side Fields */}
+            <div className="left-side">
+              <div className="form-group">
+                <label>Title</label>
+                <input {...register("title")} type="text" placeholder="Enter title" />
+                <p className="error">{errors.title?.message}</p>
+              </div>
+
+              <div className="form-group">
+                <label>Date</label>
+                <Controller
+                  control={control}
+                  name="date"
+                  render={({ field }) => (
+                    <DatePicker
+                      selected={field.value}
+                      onChange={(date) => field.onChange(date)}
+                      showTimeSelect
+                      dateFormat="Pp"
+                      placeholderText="Select date"
+                    />
+                  )}
                 />
-              )}
-            />
-            <p className="error">{errors.date?.message}</p>
-          </div>
+                <p className="error">{errors.date?.message}</p>
+              </div>
 
-          {/* Location */}
-          <div className="form-group">
-            <label>Location</label>
-            <input {...register("location")} type="text" placeholder="Enter location" />
-          </div>
+              <div className="form-group">
+                <label>Location</label>
+                <input {...register("location")} type="text" placeholder="Enter location" />
+              </div>
 
-          {/* Contact Name */}
-          <div className="form-group">
-            <label>Contact Name</label>
-            <input {...register("contactName")} type="text" placeholder="Enter contact name" />
-          </div>
-
-          {/* Contact Phone */}
-          <div className="form-group">
-            <label>Contact Phone</label>
-            <input {...register("contactPhone")} type="text" placeholder="Enter phone number" />
-          </div>
-
-          {/* Contact Email */}
-          <div className="form-group">
-            <label>Contact Email</label>
-            <input {...register("contactEmail")} type="email" placeholder="Enter email" />
-            <p className="error">{errors.contactEmail?.message}</p>
-          </div>
-
-          {/* Scheduled By (User Dropdown) */}
-          <div className="form-group full-width">
-            <label>Scheduled By</label>
-            <Controller
-              control={control}
-              name="scheduledBy"
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  options={users.map(user => ({
-                    label: `${user.firstName} ${user.lastName} (${user.email})`,
-                    value: user._id,
-                  }))}
-                  isLoading={isLoading}
-                  placeholder="Select a user"
+              <div className="form-group">
+                <label>Scheduled By</label>
+                <Controller
+                  control={control}
+                  name="scheduledBy"
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      options={users.map((user) => ({
+                        label: `${user.firstName} ${user.lastName}`,
+                        value: user._id,
+                      }))}
+                      isLoading={isLoading}
+                      placeholder="Select user"
+                      onChange={(selectedOption) => field.onChange(selectedOption.value)}
+                    />
+                  )}
                 />
-              )}
-            />
-            <p className="error">{errors.scheduledBy?.value?.message}</p>
-          </div>
+                <p className="error">{errors.scheduledBy?.message}</p>
+              </div>
+            </div>
 
-          {/* Notes */}
-          <div className="form-group full-width">
-            <label>Notes</label>
-            <textarea {...register("notes")} placeholder="Enter any notes" />
-          </div>
+            {/* Right Side Fields */}
+            <div className="right-side">
+              <div className="form-group">
+                <label>Contact Name</label>
+                <input {...register("contactName")} type="text" placeholder="Enter name" />
+              </div>
 
-          {/* Submit Button */}
-          <div className="button-container">
-            <button type="submit" className="submit-button">
-              {scheduleAppointment.isLoading ? "Scheduling..." : "Add Appointment"}
-            </button>
-          </div>
-        </form>
+              <div className="form-group">
+                <label>Contact Phone</label>
+                <input {...register("contactPhone")} type="text" placeholder="Enter phone" />
+              </div>
+
+              <div className="form-group">
+                <label>Contact Email</label>
+                <input {...register("contactEmail")} type="email" placeholder="Enter email" />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="form-group full-width">
+              <label>Notes</label>
+              <textarea {...register("notes")} placeholder="Enter notes here..." />
+            </div>
+
+            <div className="button-container">
+              <button type="submit" className="submit-button">
+                {scheduleAppointment.isLoading ? "Scheduling..." : "Add Appointment"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      {/* ✅ Toast Container to Display Messages */}
+      {/* 📋 Right Sidebar */}
+      <aside className="sidebar right-sidebar">
+        <h3>📋 Upcoming Appointments</h3>
+        <ul>
+          {appointments.slice(0, 10).map((appt) => (
+            <li key={appt._id}>
+              {new Date(appt.date).toLocaleDateString()} - {appt.title}
+            </li>
+          ))}
+        </ul>
+      </aside>
+
       <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );

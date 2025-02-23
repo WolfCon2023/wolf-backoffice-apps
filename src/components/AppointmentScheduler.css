@@ -1,45 +1,166 @@
 /* 🎨 Main Container */
-.scheduler-container {
-  max-width: 600px;
+.scheduler-wrapper {
+  display: flex;
+  gap: 20px;
+  max-width: 1200px;
   margin: 40px auto;
   padding: 20px;
   background: white;
-  box-sizing: border-box;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
   border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  min-height: 70vh;
-  max-height: 85vh;
-  overflow-y: auto;
 }
 
-/* 🎨 Form Layout (Grid for Even Spacing) */
-.scheduler-form {
+/* 📅 Left Sidebar (Mini Calendar + Filter + Quick Notes) */
+.left-sidebar {
+  flex: 1;
+  max-width: 250px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.left-sidebar h2,
+.left-sidebar h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+/* 📆 Mini Calendar */
+.calendar-container {
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 📌 Upcoming Appointments */
+.upcoming-appointments {
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.upcoming-appointments ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.upcoming-appointments ul li {
+  font-size: 0.9rem;
+  padding: 5px;
+  background: white;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 🔍 User Filter */
+.filter-container {
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 📝 Quick Notes */
+.quick-notes-container {
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.quick-notes-container textarea {
+  width: 100%;
+  min-height: 100px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  resize: vertical;
+  background: #f8f9fa;
+}
+
+.quick-notes-container textarea:focus {
+  border-color: #0056b3;
+  background: white;
+}
+
+/* 📋 Appointment Scheduler Form */
+.scheduler-container {
+  flex: 2;
+  padding: 20px;
+  background: white;
+  border-radius: 10px;
+}
+
+/* 🔲 Two-Column Layout */
+.form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 15px;
-  width: 100%;
 }
 
-/* Full-width fields */
+/* 📝 Full-width Notes Field */
 .full-width {
   grid-column: span 2;
 }
 
-/* Input Styles */
-.scheduler-form input,
-.scheduler-form select,
-.scheduler-form textarea {
+/* 📌 Form Field Styling */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
   width: 100%;
-  padding: 12px;
-  box-sizing: border-box;
+  padding: 10px;
   border: 1px solid #ccc;
   border-radius: 6px;
   background: #f8f9fa;
 }
 
-/* Submit Button */
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #0056b3;
+  background: white;
+}
+
+/* 📅 Date Picker */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+/* ✅ Fix Dropdown Size */
+.css-1s2u09g-control {
+  min-height: 42px;
+}
+
+/* 📌 Button Styling */
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 .submit-button {
   background-color: #0056b3;
   color: white;
@@ -59,13 +180,43 @@
   transform: scale(1.05);
 }
 
-/* ✅ Responsive Design */
-@media (max-width: 600px) {
-  .scheduler-form {
+/* 📌 Responsive Design */
+@media (max-width: 1024px) {
+  .scheduler-wrapper {
+    flex-direction: column;
+  }
+
+  .form-grid {
     grid-template-columns: 1fr;
   }
 
   .full-width {
     grid-column: span 1;
+  }
+
+  .left-sidebar {
+    max-width: 100%;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .scheduler-container {
+    padding: 15px;
+  }
+
+  .scheduler-title {
+    font-size: 1.5rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+
+  .submit-button {
+    font-size: 0.9rem;
+    padding: 10px 15px;
   }
 }
