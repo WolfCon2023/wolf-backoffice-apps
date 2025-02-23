@@ -10,7 +10,7 @@
   border-radius: 10px;
 }
 
-/* 📅 Left Sidebar (Mini Calendar + Filter + Quick Notes) */
+/* 📅 Left Sidebar (Mini Calendar + Quick Notes) */
 .left-sidebar {
   flex: 1;
   max-width: 250px;
@@ -23,52 +23,16 @@
   gap: 15px;
 }
 
-.left-sidebar h2,
-.left-sidebar h3 {
-  font-size: 1.2rem;
-  margin-bottom: 10px;
-}
-
 /* 📆 Mini Calendar */
 .calendar-container {
   padding: 10px;
   background: white;
   border-radius: 10px;
   box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+  text-align: center;
 }
 
-/* 📌 Upcoming Appointments */
-.upcoming-appointments {
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.upcoming-appointments ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.upcoming-appointments ul li {
-  font-size: 0.9rem;
-  padding: 5px;
-  background: white;
-  margin-bottom: 5px;
-  border-radius: 5px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* 🔍 User Filter */
-.filter-container {
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* 📝 Quick Notes */
+/* 📋 Quick Notes */
 .quick-notes-container {
   padding: 10px;
   background: white;
@@ -78,7 +42,7 @@
 
 .quick-notes-container textarea {
   width: 100%;
-  min-height: 100px;
+  min-height: 80px;
   border: 1px solid #ccc;
   border-radius: 6px;
   padding: 10px;
@@ -180,6 +144,88 @@
   transform: scale(1.05);
 }
 
+/* 📌 Upcoming Appointments (Right Sidebar) */
+.right-sidebar {
+  flex: 1;
+  max-width: 250px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.upcoming-appointments {
+  padding: 10px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.upcoming-appointments ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.upcoming-appointments ul li {
+  font-size: 0.9rem;
+  padding: 5px;
+  background: white;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.upcoming-appointments ul li:hover {
+  background: #e9ecef;
+}
+
+/* 📌 Appointment Details Modal */
+.appointment-details-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 90%;
+  z-index: 1000;
+}
+
+.appointment-details-modal .modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.appointment-details-modal h2 {
+  margin: 0;
+}
+
+.appointment-details-modal button {
+  background-color: #dc3545;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  width: 100%;
+}
+
+.appointment-details-modal button:hover {
+  background-color: #c82333;
+}
+
 /* 📌 Responsive Design */
 @media (max-width: 1024px) {
   .scheduler-wrapper {
@@ -194,7 +240,8 @@
     grid-column: span 1;
   }
 
-  .left-sidebar {
+  .left-sidebar,
+  .right-sidebar {
     max-width: 100%;
     margin-bottom: 20px;
   }
