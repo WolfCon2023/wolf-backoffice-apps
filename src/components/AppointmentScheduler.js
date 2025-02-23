@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -6,14 +6,12 @@ import * as yup from "yup";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DatePicker from "react-datepicker";
 import Select from "react-select";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify"; 
 import "react-toastify/dist/ReactToastify.css";
 import "react-datepicker/dist/react-datepicker.css";
 import "./AppointmentScheduler.css";
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL ||
-  "https://wolf-backoffice-backend-development.up.railway.app/api";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
 
 // ✅ Form Validation Schema
 const schema = yup.object().shape({
@@ -23,13 +21,15 @@ const schema = yup.object().shape({
   contactName: yup.string().notRequired(),
   contactPhone: yup.string().notRequired(),
   contactEmail: yup.string().email("Invalid email").notRequired(),
-  scheduledBy: yup.string().required("User must be selected"),
+  scheduledBy: yup.object().shape({
+    value: yup.string().required("User must be selected"),
+  }),
   notes: yup.string().notRequired(),
 });
 
 const AppointmentScheduler = () => {
   const queryClient = useQueryClient();
-  
+
   const {
     register,
     handleSubmit,
@@ -41,7 +41,7 @@ const AppointmentScheduler = () => {
   });
 
   // ✅ Fetch Users with React Query
-  const { data: users, isLoading } = useQuery({
+  const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
@@ -58,22 +58,28 @@ const AppointmentScheduler = () => {
     mutationFn: async (appointmentData) => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token found");
-      const response = await axios.post(
-        `${API_BASE_URL}/appointments`,
-        appointmentData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+
+      // ✅ Convert `scheduledBy` object to string ID before sending
+      const formattedData = {
+        ...appointmentData,
+        scheduledBy: appointmentData.scheduledBy.value, // <-- FIX: Extract only `value`
+      };
+
+      console.log("📤 Sending Appointment Data:", formattedData);
+
+      const response = await axios.post(`${API_BASE_URL}/appointments`, formattedData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
       return response.data;
     },
     onSuccess: () => {
-      toast.success("Appointment scheduled successfully!");
+      toast.success("✅ Appointment scheduled successfully!");
       reset();
       queryClient.invalidateQueries(["appointments"]);
     },
     onError: (error) => {
-      toast.error(`Error: ${error.response?.data?.message || "Failed to schedule appointment"}`);
+      toast.error(`❌ Error: ${error.response?.data?.message || "Failed to schedule appointment"}`);
     },
   });
 
@@ -84,7 +90,7 @@ const AppointmentScheduler = () => {
       <div className="scheduler-scrollable">
         <form className="scheduler-form" onSubmit={handleSubmit(scheduleAppointment.mutate)}>
           {/* Title Input */}
-          <div className="form-group">
+          <div className="form-group full-width">
             <label>Title</label>
             <input {...register("title")} type="text" placeholder="Enter appointment title" />
             <p className="error">{errors.title?.message}</p>
@@ -134,7 +140,7 @@ const AppointmentScheduler = () => {
           </div>
 
           {/* Scheduled By (User Dropdown) */}
-          <div className="form-group">
+          <div className="form-group full-width">
             <label>Scheduled By</label>
             <Controller
               control={control}
@@ -142,24 +148,20 @@ const AppointmentScheduler = () => {
               render={({ field }) => (
                 <Select
                   {...field}
-                  options={
-                    isLoading
-                      ? [{ label: "Loading users...", value: "" }]
-                      : users.map((user) => ({
-                          label: `${user.firstName} ${user.lastName} (${user.email})`,
-                          value: user._id,
-                        }))
-                  }
+                  options={users.map(user => ({
+                    label: `${user.firstName} ${user.lastName} (${user.email})`,
+                    value: user._id,
+                  }))}
                   isLoading={isLoading}
                   placeholder="Select a user"
                 />
               )}
             />
-            <p className="error">{errors.scheduledBy?.message}</p>
+            <p className="error">{errors.scheduledBy?.value?.message}</p>
           </div>
 
           {/* Notes */}
-          <div className="form-group">
+          <div className="form-group full-width">
             <label>Notes</label>
             <textarea {...register("notes")} placeholder="Enter any notes" />
           </div>
@@ -172,6 +174,9 @@ const AppointmentScheduler = () => {
           </div>
         </form>
       </div>
+
+      {/* ✅ Toast Container to Display Messages */}
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };
