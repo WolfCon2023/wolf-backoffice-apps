@@ -74,9 +74,13 @@ const AppointmentScheduler = () => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token found");
 
+      // Calculate the start and end dates for upcoming appointments
+      const startDate = new Date().toISOString();
+      const endDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
+
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 10 },
+        params: { startDate, endDate },
       });
 
       return response.data;
@@ -214,7 +218,7 @@ const AppointmentScheduler = () => {
           ) : (
             <ul>
               {appointments.length > 0 ? (
-                appointments.map((appt) => (
+                appointments.slice(0, 10).map((appt) => (
                   <li key={appt._id} onClick={() => setSelectedAppointment(appt)}>
                     {new Date(appt.date).toLocaleDateString()} - {appt.title}
                   </li>
@@ -229,6 +233,36 @@ const AppointmentScheduler = () => {
 
       {/* ✅ Toast Container */}
       <ToastContainer position="top-right" autoClose={3000} />
+
+      {/* Appointment Details Modal */}
+      {selectedAppointment && (
+        <div className="appointment-details-modal">
+          <div className="modal-content">
+            <h2>{selectedAppointment.title}</h2>
+            <p>
+              <strong>Date:</strong> {new Date(selectedAppointment.date).toLocaleString()}
+            </p>
+            <p>
+              <strong>Location:</strong> {selectedAppointment.location}
+            </p>
+            <p>
+              <strong>Contact Name:</strong> {selectedAppointment.contactName}
+            </p>
+            <p>
+              <strong>Contact Phone:</strong> {selectedAppointment.contactPhone}
+            </p>
+            <p>
+              <strong>Contact Email:</strong> {selectedAppointment.contactEmail}
+            </p>
+            {selectedAppointment.notes && (
+              <p>
+                <strong>Notes:</strong> {selectedAppointment.notes}
+              </p>
+            )}
+            <button onClick={() => setSelectedAppointment(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
