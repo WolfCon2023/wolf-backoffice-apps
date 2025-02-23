@@ -1,8 +1,35 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import "./AppointmentsDashboard.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
+// Material‑UI imports
+import {
+  Box,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  Pagination,
+  MenuItem,
+} from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import RefreshIcon from "@mui/icons-material/Refresh";
+
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  "https://wolf-backoffice-backend-development.up.railway.app/api";
 
 const AppointmentsDashboard = () => {
   const [appointments, setAppointments] = useState([]);
@@ -10,14 +37,27 @@ const AppointmentsDashboard = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewMode, setViewMode] = useState("");
-  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
   const [isQueryResults, setIsQueryResults] = useState(false);
+
+  // Fetch users for the Scheduled By dropdown
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
+      const response = await axios.get(`${API_BASE_URL}/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+  });
 
   useEffect(() => {
     console.log("🔍 Component Mounted. Fetching appointments...");
     fetchAppointments();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   const fetchAppointments = async () => {
     try {
@@ -26,12 +66,20 @@ const AppointmentsDashboard = () => {
         console.warn("❌ No token found! Redirecting to login.");
         return;
       }
-
       console.log("🔍 Fetching appointments...");
+
+      // Use default date range to fetch all appointments
+      const defaultStartDate = new Date("1970-01-01").toISOString();
+      const defaultEndDate = new Date("2100-01-01").toISOString();
 
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { page: currentPage, limit: 50 },
+        params: {
+          page: currentPage,
+          limit: 10,
+          startDate: defaultStartDate,
+          endDate: defaultEndDate,
+        },
       });
 
       console.log("✅ API Response:", response.data);
@@ -41,14 +89,19 @@ const AppointmentsDashboard = () => {
         return;
       }
 
-      const filteredAppointments = response.data.appointments.filter(appt => !appt.toBeDeleted);
+      const filteredAppointments = response.data.appointments.filter(
+        (appt) => !appt.toBeDeleted
+      );
       console.log("✅ Appointments Retrieved:", filteredAppointments);
 
       setAppointments(filteredAppointments);
       setTotalPages(response.data.totalPages || 1);
       setIsQueryResults(false);
     } catch (error) {
-      console.error("❌ Error fetching appointments:", error.response?.data || error.message);
+      console.error(
+        "❌ Error fetching appointments:",
+        error.response?.data || error.message
+      );
     }
   };
 
@@ -86,7 +139,57 @@ const AppointmentsDashboard = () => {
       setAppointments(response.data);
       setIsQueryResults(true);
     } catch (error) {
-      console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
+      console.error(
+        "❌ Error querying historical appointments:",
+        error.response?.data || error.message
+      );
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No token found");
+        return;
+      }
+      const updatedAppointment = {
+        ...selectedAppointment,
+        date: new Date(selectedAppointment.date).toISOString(),
+      };
+      const response = await axios.put(
+        `${API_BASE_URL}/appointments/${selectedAppointment._id}`,
+        updatedAppointment,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log("Appointment saved", response.data);
+      fetchAppointments();
+      closeModal();
+    } catch (error) {
+      console.error(
+        "Error saving appointment",
+        error.response?.data || error.message
+      );
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No token found");
+        return;
+      }
+      await axios.delete(`${API_BASE_URL}/appointments/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("Appointment deleted");
+      fetchAppointments();
+    } catch (error) {
+      console.error(
+        "Error deleting appointment",
+        error.response?.data || error.message
+      );
     }
   };
 
@@ -104,104 +207,267 @@ const AppointmentsDashboard = () => {
     setViewMode("");
   };
 
-  return (
-    <div className="appointments-dashboard-container">
-      <h1>Appointments Dashboard</h1>
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
 
-      <div className="query-container">
-        <input type="date" value={queryRange.startDate} onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })} />
-        <input type="date" value={queryRange.endDate} onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })} />
-        <button onClick={handleQuery}>Query Historical Appointments</button>
-      </div>
+  // When returning to dashboard, reset page to 1 and clear query results
+  const handleBackToDashboard = () => {
+    setIsQueryResults(false);
+    setCurrentPage(1);
+    fetchAppointments();
+  };
+
+  return (
+    <Box className="appointments-dashboard-container">
+      {/* Navigation Bar */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+        {/* Left column: Appointment Scheduler with a slight left shift */}
+       {/* Navigation Bar */}
+       <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2 }}>
+          <Button component={Link} to="/schedule-appointment" variant="contained">
+            Appointment Scheduler
+          </Button>
+          <Button component={Link} to="/calendar" variant="contained">
+            Calendar
+          </Button>
+          <IconButton color="primary" onClick={fetchAppointments}>
+            <RefreshIcon />
+         </IconButton>
+        </Box>
+
+      </Box>
+
+      {/* Title centered */}
+      <Box sx={{ textAlign: "center", mb: 2 }}>
+        <h1>Appointments Dashboard</h1>
+      </Box>
+
+      {/* Query Section centered */}
+      <Box
+        className="query-container"
+        sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 2, mb: 2 }}
+      >
+        <TextField
+          type="date"
+          label="Start Date"
+          variant="outlined"
+          value={queryRange.startDate}
+          onChange={(e) =>
+            setQueryRange({ ...queryRange, startDate: e.target.value })
+          }
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          type="date"
+          label="End Date"
+          variant="outlined"
+          value={queryRange.endDate}
+          onChange={(e) =>
+            setQueryRange({ ...queryRange, endDate: e.target.value })
+          }
+          InputLabelProps={{ shrink: true }}
+        />
+        <Button variant="contained" onClick={handleQuery}>
+          Query Historical Appointments
+        </Button>
+      </Box>
 
       {isQueryResults && (
-        <button onClick={() => { setIsQueryResults(false); fetchAppointments(); }} className="back-button">
-          Back to Dashboard
-        </button>
+        <Box sx={{ textAlign: "center", mb: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleBackToDashboard}
+            className="back-button"
+          >
+            Back to Dashboard
+          </Button>
+        </Box>
       )}
 
-      <table className="appointments-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Date</th>
-            <th>Location</th>
-            <th>Scheduled By</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {appointments.map((appt) => (
-            <tr key={appt._id}>
-              <td>{appt.title}</td>
-              <td>{new Date(appt.date).toLocaleString()}</td>
-              <td>{appt.location}</td>
-              <td>{appt.scheduledBy}</td>
-              <td>
-                <button onClick={() => openModal(appt, "edit")}>Edit</button>
-                <button onClick={() => openModal(appt, "view")}>View</button>
-                <button onClick={() => setDeleteConfirmation(appt._id)}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Appointments Table */}
+      <TableContainer component={Paper}>
+        <Table className="appointments-table" aria-label="appointments table">
+          <TableHead>
+            <TableRow>
+              <TableCell>Title</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Location</TableCell>
+              <TableCell>Scheduled By</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {appointments.map((appt) => (
+              <TableRow key={appt._id}>
+                <TableCell>{appt.title}</TableCell>
+                <TableCell>{new Date(appt.date).toLocaleString()}</TableCell>
+                <TableCell>{appt.location}</TableCell>
+                <TableCell>
+                  {users.find((u) => u._id === appt.scheduledBy)
+                    ? `${users.find((u) => u._id === appt.scheduledBy).firstName} ${users.find((u) => u._id === appt.scheduledBy).lastName}`
+                    : appt.scheduledBy}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => openModal(appt, "edit")}
+                    sx={{ mr: 1 }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => openModal(appt, "view")}
+                    sx={{ mr: 1 }}
+                  >
+                    View
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    onClick={() => handleDelete(appt._id)}
+                  >
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      {/* ✅ MODAL DISPLAY LOGIC (Only shows when `selectedAppointment` is set) */}
-      {selectedAppointment && (
-        <div className="edit-container">
-          <div className="edit-box">
-            <button className="close-button" onClick={closeModal}>Close</button>
-            <h2>{viewMode === "edit" ? "Edit Appointment" : "View Appointment"}</h2>
-
-            <label>Title:</label>
-            <input 
-              type="text" 
-              name="title" 
-              value={selectedAppointment.title} 
-              disabled={viewMode === "view"} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, title: e.target.value })}
-            />
-
-            <label>Date:</label>
-            <input 
-              type="datetime-local" 
-              name="date" 
-              value={selectedAppointment.date} 
-              disabled={viewMode === "view"} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, date: e.target.value })}
-            />
-
-            <label>Location:</label>
-            <input 
-              type="text" 
-              name="location" 
-              value={selectedAppointment.location} 
-              disabled={viewMode === "view"} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, location: e.target.value })}
-            />
-
-            <label>Scheduled By:</label>
-            <input 
-              type="text" 
-              name="scheduledBy" 
-              value={selectedAppointment.scheduledBy} 
-              disabled 
-            />
-
-            <label>Notes:</label>
-            <textarea 
-              name="notes" 
-              value={selectedAppointment.notes} 
-              disabled={viewMode === "view"} 
-              onChange={(e) => setSelectedAppointment({ ...selectedAppointment, notes: e.target.value })}
-            />
-
-            {viewMode === "edit" && <button onClick={() => console.log("📝 Saving Appointment...", selectedAppointment)}>Save</button>}
-          </div>
-        </div>
+      {/* Pagination (only when not in query mode) */}
+      {!isQueryResults && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+          />
+        </Box>
       )}
-    </div>
+
+      {/* Modal / Dialog for Appointment Details */}
+      <Dialog
+        open={Boolean(selectedAppointment)}
+        onClose={closeModal}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {viewMode === "edit" ? "Edit Appointment" : "View Appointment"}
+          <IconButton
+            aria-label="close"
+            onClick={closeModal}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            margin="dense"
+            label="Title"
+            type="text"
+            fullWidth
+            value={selectedAppointment?.title || ""}
+            onChange={(e) =>
+              setSelectedAppointment({
+                ...selectedAppointment,
+                title: e.target.value,
+              })
+            }
+            InputProps={{ readOnly: viewMode === "view" }}
+          />
+          <TextField
+            margin="dense"
+            label="Date"
+            type="datetime-local"
+            fullWidth
+            value={selectedAppointment?.date || ""}
+            onChange={(e) =>
+              setSelectedAppointment({
+                ...selectedAppointment,
+                date: e.target.value,
+              })
+            }
+            InputLabelProps={{ shrink: true }}
+            InputProps={{ readOnly: viewMode === "view" }}
+          />
+          <TextField
+            margin="dense"
+            label="Location"
+            type="text"
+            fullWidth
+            value={selectedAppointment?.location || ""}
+            onChange={(e) =>
+              setSelectedAppointment({
+                ...selectedAppointment,
+                location: e.target.value,
+              })
+            }
+            InputProps={{ readOnly: viewMode === "view" }}
+          />
+          {/* Scheduled By as a dropdown */}
+          <TextField
+            select
+            margin="dense"
+            label="Scheduled By"
+            fullWidth
+            value={selectedAppointment?.scheduledBy || ""}
+            onChange={(e) =>
+              setSelectedAppointment({
+                ...selectedAppointment,
+                scheduledBy: e.target.value,
+              })
+            }
+            disabled={viewMode === "view"}
+          >
+            {users.map((user) => (
+              <MenuItem key={user._id} value={user._id}>
+                {`${user.firstName} ${user.lastName}`}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            margin="dense"
+            label="Notes"
+            type="text"
+            fullWidth
+            multiline
+            minRows={3}
+            value={selectedAppointment?.notes || ""}
+            onChange={(e) =>
+              setSelectedAppointment({
+                ...selectedAppointment,
+                notes: e.target.value,
+              })
+            }
+            InputProps={{ readOnly: viewMode === "view" }}
+          />
+        </DialogContent>
+        <DialogActions>
+          {viewMode === "edit" && (
+            <Button onClick={handleSave} variant="contained">
+              Save
+            </Button>
+          )}
+          <Button onClick={closeModal} variant="outlined">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

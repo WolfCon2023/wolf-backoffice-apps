@@ -24,7 +24,10 @@ const schema = yup.object().shape({
   location: yup.string().required("Location is required"),
   contactName: yup.string().required("Contact name is required"),
   contactPhone: yup.string().required("Contact phone is required"),
-  contactEmail: yup.string().email("Invalid email").required("Contact email is required"),
+  contactEmail: yup
+    .string()
+    .email("Invalid email")
+    .required("Contact email is required"),
   scheduledBy: yup
     .object()
     .shape({
@@ -39,15 +42,17 @@ const schema = yup.object().shape({
 const AppointmentScheduler = () => {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [quickNotes, setQuickNotes] = useState(localStorage.getItem("quickNotes") || "");
+  const [quickNotes, setQuickNotes] = useState(
+    localStorage.getItem("quickNotes") || ""
+  );
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   const {
     register,
     handleSubmit,
     control,
-    setValue, // ✅ Added to update the scheduledBy field manually
-    getValues, // ✅ Added to retrieve the current form values
+    setValue,
+    getValues,
     reset,
     formState: { errors },
   } = useForm({
@@ -95,7 +100,7 @@ const AppointmentScheduler = () => {
 
       const formattedData = {
         ...appointmentData,
-        scheduledBy: appointmentData.scheduledBy.value, // ✅ Ensure correct value is sent
+        scheduledBy: appointmentData.scheduledBy.value,
       };
 
       console.log("📤 Sending Appointment Data:", formattedData);
@@ -140,11 +145,11 @@ const AppointmentScheduler = () => {
 
         <form className="scheduler-form" onSubmit={handleSubmit(scheduleAppointment.mutate)}>
           <div className="form-grid">
-            {/* Left Column */}
-            <div className="form-column">
+            <div className="form-group">
               <label>Title</label>
               <input {...register("title")} type="text" placeholder="Enter title" />
-
+            </div>
+            <div className="form-group">
               <label>Date</label>
               <Controller
                 control={control}
@@ -159,10 +164,12 @@ const AppointmentScheduler = () => {
                   />
                 )}
               />
-
+            </div>
+            <div className="form-group">
               <label>Location</label>
               <input {...register("location")} type="text" placeholder="Enter location" />
-
+            </div>
+            <div className="form-group">
               <label>Scheduled By</label>
               <Controller
                 control={control}
@@ -177,29 +184,30 @@ const AppointmentScheduler = () => {
                     isLoading={usersLoading}
                     placeholder="Select user"
                     onChange={(selectedOption) => {
-                      setValue("scheduledBy", selectedOption); // ✅ Fix to update field correctly
+                      setValue("scheduledBy", selectedOption);
                     }}
-                    value={getValues("scheduledBy") || null} // ✅ Display the selected value
+                    value={getValues("scheduledBy") || null}
                   />
                 )}
               />
             </div>
-
-            {/* Right Column */}
-            <div className="form-column">
+            <div className="form-group">
               <label>Contact Name</label>
               <input {...register("contactName")} type="text" placeholder="Enter name" />
-
+            </div>
+            <div className="form-group">
               <label>Contact Phone</label>
               <input {...register("contactPhone")} type="text" placeholder="Enter phone" />
-
+            </div>
+            <div className="form-group">
               <label>Contact Email</label>
               <input {...register("contactEmail")} type="email" placeholder="Enter email" />
             </div>
+            <div className="form-group full-width">
+              <label>Notes</label>
+              <textarea {...register("notes")} placeholder="Enter notes" />
+            </div>
           </div>
-
-          <label>Notes</label>
-          <textarea {...register("notes")} placeholder="Enter notes" />
 
           <div className="button-container">
             <button type="submit" className="submit-button">

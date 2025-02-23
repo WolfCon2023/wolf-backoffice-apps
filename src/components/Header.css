@@ -30,7 +30,7 @@
 /* ✅ Dropdown Menu Container */
 .header-dropdown {
   position: absolute;
-  right: 40px; /* ✅ Manually moved left (Adjust as needed) */
+  right: 67px; /* ✅ Manually moved left (Adjust as needed) */
   top: 50%;
   transform: translateY(-50%);
   z-index: 2000;

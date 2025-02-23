@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@fullcalendar/adaptive": "^6.1.15",
     "@fullcalendar/bootstrap": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
@@ -13,6 +15,8 @@
     "@fullcalendar/resource-timeline": "^6.1.15",
     "@fullcalendar/timegrid": "^6.1.15",
     "@hookform/resolvers": "^4.1.1",
+    "@mui/icons-material": "^6.4.5",
+    "@mui/material": "^6.4.5",
     "@popperjs/core": "^2.11.8",
     "@tanstack/react-query": "^5.66.9",
     "axios": "^1.7.9",
@@ -63,7 +67,22 @@
     ]
   },
   "devDependencies": {
+    "eslint-config-react-app": "^7.0.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "typescript": "^4.9.5"
+  },
+  "eslintConfig": {
+    "plugins": [
+      "react-hooks"
+    ],
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "rules": {
+      "react-hooks/exhaustive-deps": "warn",
+      "react-hooks/rules-of-hooks": "error"
+    }
   },
   "description": "This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).",
   "main": "server.js",
