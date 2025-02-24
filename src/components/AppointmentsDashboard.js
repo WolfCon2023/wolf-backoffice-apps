@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import "./AppointmentsDashboard.css";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import "./AppointmentsDashboard.css";
 
-// Material‑UI imports
+// Material-UI imports
 import {
   Box,
   Button,
@@ -23,7 +23,6 @@ import {
   DialogActions,
   TextField,
   IconButton,
-  Grid,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -37,6 +36,8 @@ const AppointmentsDashboard = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewMode, setViewMode] = useState("");
   const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
+  const [isQueryResults, setIsQueryResults] = useState(false);
+  const [open, setOpen] = useState(false);
 
   // Fetch users for dropdown
   const { data: users = [] } = useQuery({
@@ -71,29 +72,31 @@ const AppointmentsDashboard = () => {
       if (!Array.isArray(response.data)) return;
 
       // Filter out deleted appointments
-      setAppointments(response.data.filter((appt) => !appt.toBeDeleted));
+      const filteredAppointments = response.data.filter((appt) => !appt.toBeDeleted);
+
+      setAppointments(filteredAppointments);
+      setIsQueryResults(false);
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
   };
 
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to mark this appointment as deleted?");
-    if (!confirmDelete) return;
-
+  const fetchAppointmentDetails = async (id, mode) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      await axios.put(
-        `${API_BASE_URL}/appointments/${id}`,
-        { toBeDeleted: true },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await axios.get(`${API_BASE_URL}/appointments/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      fetchAppointments();
+      if (response.data) {
+        setSelectedAppointment(response.data);
+        setViewMode(mode);
+        setOpen(true);
+      }
     } catch (error) {
-      console.error("❌ Error deleting appointment:", error.response?.data || error.message);
+      console.error("❌ Error fetching appointment details:", error.response?.data || error.message);
     }
   };
 
@@ -104,7 +107,7 @@ const AppointmentsDashboard = () => {
 
       const updatedAppointment = {
         ...selectedAppointment,
-        date: selectedAppointment.date ? new Date(selectedAppointment.date).toISOString() : null,
+        date: new Date(selectedAppointment.date).toISOString(),
       };
 
       await axios.put(
@@ -120,45 +123,27 @@ const AppointmentsDashboard = () => {
     }
   };
 
-  const openModal = (appointment, mode) => {
-    setSelectedAppointment({
-      ...appointment,
-      date: appointment.date ? new Date(appointment.date) : null,
-    });
-    setViewMode(mode);
-  };
+  const handleDelete = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-  const closeModal = () => {
-    setSelectedAppointment(null);
-    setViewMode("");
+      const confirmDelete = window.confirm("Are you sure you want to delete this appointment?");
+      if (!confirmDelete) return;
+
+      await axios.delete(`${API_BASE_URL}/appointments/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      fetchAppointments();
+    } catch (error) {
+      console.error("❌ Error deleting appointment", error.response?.data || error.message);
+    }
   };
 
   return (
     <Box className="appointments-dashboard-container">
-      {/* Header */}
       <Box className="dashboard-header">
-        <Box className="query-container">
-          <TextField
-            type="date"
-            label="Start Date"
-            variant="outlined"
-            value={queryRange.startDate}
-            onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            type="date"
-            label="End Date"
-            variant="outlined"
-            value={queryRange.endDate}
-            onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-          />
-          <Button variant="contained" onClick={fetchAppointments}>
-            Query Historical Appointments
-          </Button>
-        </Box>
-
         <h1 className="dashboard-title">Appointments Dashboard</h1>
 
         <Box className="nav-buttons">
@@ -174,7 +159,6 @@ const AppointmentsDashboard = () => {
         </Box>
       </Box>
 
-      {/* Table */}
       <TableContainer component={Paper}>
         <Table className="appointments-table">
           <TableHead>
@@ -194,42 +178,21 @@ const AppointmentsDashboard = () => {
                 <TableCell>{appt.location}</TableCell>
                 <TableCell>{users.find((u) => u._id === appt.scheduledBy)?.firstName || "Unknown"}</TableCell>
                 <TableCell>
-                  <Button size="small" variant="outlined" onClick={() => openModal(appt, "edit")}>Edit</Button>
-                  <Button size="small" variant="outlined" onClick={() => openModal(appt, "view")}>View</Button>
-                  <Button size="small" variant="outlined" color="error" onClick={() => handleDelete(appt._id)}>Delete</Button>
+                  <Button size="small" variant="outlined" onClick={() => fetchAppointmentDetails(appt._id, "edit")}>
+                    Edit
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => fetchAppointmentDetails(appt._id, "view")}>
+                    View
+                  </Button>
+                  <Button size="small" variant="outlined" color="error" onClick={() => handleDelete(appt._id)}>
+                    Delete
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* Modal for Edit/View */}
-      <Dialog open={!!selectedAppointment} onClose={closeModal} fullWidth maxWidth="sm">
-        <DialogTitle>
-          {viewMode === "edit" ? "Edit Appointment" : "View Appointment"}
-          <IconButton aria-label="close" onClick={closeModal} sx={{ position: "absolute", right: 8, top: 8 }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField label="Title" fullWidth value={selectedAppointment?.title || ""} disabled={viewMode === "view"} />
-            </Grid>
-            <Grid item xs={12}>
-              <DatePicker selected={selectedAppointment?.date} onChange={(date) => setSelectedAppointment({ ...selectedAppointment, date })} disabled={viewMode === "view"} />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField label="Location" fullWidth value={selectedAppointment?.location || ""} disabled={viewMode === "view"} />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          {viewMode === "edit" && <Button onClick={handleSave}>Save</Button>}
-          <Button onClick={closeModal}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
