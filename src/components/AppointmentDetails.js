@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import "./AppointmentDetails.css";
 import {
   Box,
   Button,
@@ -12,7 +12,6 @@ import {
   Typography,
   Paper,
 } from "@mui/material";
-import "./AppointmentDetails.css";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL ||
@@ -21,32 +20,12 @@ const API_BASE_URL =
 const AppointmentDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [appointment, setAppointment] = useState({
-    title: "",
-    date: null,
-    location: "",
-    contactName: "",
-    contactPhone: "",
-    contactEmail: "",
-    scheduledBy: "",
-    notes: "",
-  });
-
-  // Fetch Users for dropdown
-  const { data: users = [] } = useQuery({
-    queryKey: ["users"],
-    queryFn: async () => {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No token found");
-      const response = await axios.get(`${API_BASE_URL}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-  });
+  const [appointment, setAppointment] = useState(null);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     fetchAppointmentDetails();
+    fetchUsers();
   }, []);
 
   const fetchAppointmentDetails = async () => {
@@ -59,80 +38,112 @@ const AppointmentDetails = () => {
       });
 
       if (response.data) {
-        setAppointment({
-          ...response.data,
-          date: response.data.date ? new Date(response.data.date) : null,
-        });
+        setAppointment(response.data);
       }
     } catch (error) {
-      console.error("❌ Error fetching appointment details:", error.response?.data || error.message);
+      console.error("❌ Error fetching appointment details:", error);
     }
   };
 
-  const handleChange = (event) => {
-    setAppointment({
-      ...appointment,
-      [event.target.name]: event.target.value,
-    });
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await axios.get(`${API_BASE_URL}/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data) {
+        setUsers(response.data);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching users:", error);
+    }
   };
 
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) {
+        console.error("❌ No token found.");
+        alert("Session expired. Please log in again.");
+        navigate("/login");
+        return;
+      }
+
+      if (!appointment || !appointment._id) {
+        console.error("❌ No appointment ID found.");
+        alert("Error: Appointment ID is missing.");
+        return;
+      }
+
+      console.log("🔄 Sending update request for appointment:", appointment);
 
       const updatedAppointment = {
         ...appointment,
         date: appointment.date ? new Date(appointment.date).toISOString() : null,
       };
 
-      await axios.put(
-        `${API_BASE_URL}/appointments/${id}`,
+      const response = await axios.put(
+        `${API_BASE_URL}/appointments/${appointment._id}`,
         updatedAppointment,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
-      alert("✅ Appointment updated successfully!");
-      navigate("/appointments");
+      console.log("✅ Appointment updated successfully:", response.data);
+      alert("Appointment updated successfully!");
+
+      // Refresh the page to reflect the changes
+      navigate("/appointments"); 
+      window.location.reload();
+      
     } catch (error) {
-      console.error("❌ Error updating appointment:", error.response?.data || error.message);
-      alert("❌ Failed to update appointment.");
+      console.error("❌ Error saving appointment:", error.response?.data || error.message);
+      alert("Error updating appointment. Please try again.");
     }
   };
 
-  return (
-    <Box className="appointment-details-container">
-      <Paper className="appointment-details-paper">
-        <Typography variant="h4" className="appointment-details-title">
-          Edit Appointment
-        </Typography>
+  if (!appointment) {
+    return <Typography className="loading-text">Loading...</Typography>;
+  }
 
+  return (
+    <Paper className="appointment-details-container">
+      <Typography variant="h4" className="appointment-title">
+        Appointment Details
+      </Typography>
+      <Box className="form-container">
         <TextField
           label="Title"
-          name="title"
-          value={appointment.title}
-          onChange={handleChange}
+          variant="outlined"
           fullWidth
-          margin="normal"
+          value={appointment.title || ""}
+          onChange={(e) => setAppointment({ ...appointment, title: e.target.value })}
         />
-
         <DatePicker
-          selected={appointment.date}
+          selected={appointment.date ? new Date(appointment.date) : null}
           onChange={(date) => setAppointment({ ...appointment, date })}
-          className="date-picker"
           showTimeSelect
           dateFormat="Pp"
-          placeholderText="Select date"
+          className="date-picker"
         />
-
+        <TextField
+          label="Location"
+          variant="outlined"
+          fullWidth
+          value={appointment.location || ""}
+          onChange={(e) => setAppointment({ ...appointment, location: e.target.value })}
+        />
         <TextField
           select
           label="Scheduled By"
-          name="scheduledBy"
-          value={appointment.scheduledBy}
-          onChange={handleChange}
+          variant="outlined"
           fullWidth
-          margin="normal"
+          value={appointment.scheduledBy || ""}
+          onChange={(e) => setAppointment({ ...appointment, scheduledBy: e.target.value })}
         >
           {users.map((user) => (
             <MenuItem key={user._id} value={user._id}>
@@ -140,64 +151,47 @@ const AppointmentDetails = () => {
             </MenuItem>
           ))}
         </TextField>
-
-        <TextField
-          label="Location"
-          name="location"
-          value={appointment.location}
-          onChange={handleChange}
-          fullWidth
-          margin="normal"
-        />
-
         <TextField
           label="Contact Name"
-          name="contactName"
-          value={appointment.contactName}
-          onChange={handleChange}
+          variant="outlined"
           fullWidth
-          margin="normal"
+          value={appointment.contactName || ""}
+          onChange={(e) => setAppointment({ ...appointment, contactName: e.target.value })}
         />
-
         <TextField
           label="Contact Phone"
-          name="contactPhone"
-          value={appointment.contactPhone}
-          onChange={handleChange}
+          variant="outlined"
           fullWidth
-          margin="normal"
+          value={appointment.contactPhone || ""}
+          onChange={(e) => setAppointment({ ...appointment, contactPhone: e.target.value })}
         />
-
         <TextField
           label="Contact Email"
-          name="contactEmail"
-          value={appointment.contactEmail}
-          onChange={handleChange}
+          variant="outlined"
           fullWidth
-          margin="normal"
+          value={appointment.contactEmail || ""}
+          onChange={(e) => setAppointment({ ...appointment, contactEmail: e.target.value })}
         />
-
         <TextField
           label="Notes"
-          name="notes"
-          value={appointment.notes}
-          onChange={handleChange}
-          multiline
-          rows={3}
+          variant="outlined"
           fullWidth
-          margin="normal"
+          multiline
+          minRows={4}
+          value={appointment.notes || ""}
+          onChange={(e) => setAppointment({ ...appointment, notes: e.target.value })}
+          className="notes-field"
         />
-
-        <Box className="modal-buttons">
-          <Button variant="contained" color="primary" onClick={handleSave}>
-            Submit
-          </Button>
-          <Button variant="outlined" color="secondary" onClick={() => navigate("/appointments")}>
-            Cancel
-          </Button>
-        </Box>
-      </Paper>
-    </Box>
+      </Box>
+      <Box className="button-container">
+        <Button variant="contained" onClick={handleSave} className="save-button">
+          Save
+        </Button>
+        <Button variant="outlined" onClick={() => navigate("/appointments")}>
+          Cancel
+        </Button>
+      </Box>
+    </Paper>
   );
 };
 
