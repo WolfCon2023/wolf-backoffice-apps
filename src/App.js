@@ -1,13 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"; // ✅ Import React Query
-import jwtDecode from "jwt-decode"; 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import jwtDecode from "jwt-decode";
 import Login from "./components/Login";
 import AppointmentsDashboard from "./components/AppointmentsDashboard";
 import AppointmentScheduler from "./components/AppointmentScheduler";
 import Calendar from "./components/Calendar";
 import CustomerCRM from "./components/CustomerCRM";
 import CustomerDetails from "./components/CustomerDetails";
+import AppointmentDetails from "./components/AppointmentDetails"; // ✅ New component
 import Dashboard from "./components/Dashboard";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
@@ -47,6 +48,7 @@ function App() {
               <Route path="/calendar" element={authToken ? <Calendar /> : <Navigate to="/login" />} />
               <Route path="/customers" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
               <Route path="/customer/:id" element={authToken ? <CustomerDetails /> : <Navigate to="/login" />} />
+              <Route path="/appointment/:id" element={authToken ? <AppointmentDetails /> : <Navigate to="/login" />} /> {/* ✅ New route */}
             </Routes>
           </main>
           <Footer username={username} />

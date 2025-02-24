@@ -1,0 +1,78 @@
+/* 🔹 Main container styling */
+.appointment-details-container {
+    max-width: 900px;
+    margin: 60px auto;
+    padding: 20px;
+    background: white;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+  }
+  
+  /* 🔹 Title Styling */
+  .appointment-details-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  /* 🔹 Form container */
+  .appointment-details-paper {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  /* 🔹 Two-Column Layout for Fields */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    gap: 15px; /* Adds spacing between columns */
+  }
+  
+  /* 🔹 Full-width fields (for Notes) */
+  .full-width {
+    grid-column: span 2;
+  }
+  
+  /* 🔹 Standard Input Field Styling */
+  .appointment-details-paper .MuiTextField-root {
+    width: 100%;
+  }
+  
+  /* 🔹 Date Picker Styling - Adjusted to Match Other Inputs */
+  .date-picker-container {
+    width: 100%;
+  }
+  
+  .date-picker {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    background: #f8f9fa;
+    display: block;
+  }
+  
+  /* 🔹 Larger Notes Field */
+  .notes-field {
+    min-height: 120px; /* Adjust height for better visibility */
+    resize: vertical;
+  }
+  
+  /* 🔹 Button container */
+  .modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+  
+  /* 🔹 Submit and Cancel button styles */
+  .modal-buttons button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+  }
+  

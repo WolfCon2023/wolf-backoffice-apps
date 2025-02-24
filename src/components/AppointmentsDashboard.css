@@ -1,3 +1,4 @@
+/* 🔹 Aligns header elements */
 .dashboard-header {
   display: flex;
   align-items: center;
@@ -6,27 +7,55 @@
   margin-bottom: 20px;
 }
 
+/* 🔹 Centers the title */
 .dashboard-title {
-  font-size: 2rem !important; /* Change this value as needed */
+  font-size: 2rem !important;
   font-weight: bold;
   margin: 0;
   text-align: center;
   flex-grow: 1;
-  color: #000; /* Ensure visibility */
+  color: #000;
 }
 
+/* 🔹 Positions the search query tool at the top-left */
 .query-container {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 10px; /* Added margin to move the query boxes down */
+  margin-top: 10px; /* Ensures alignment */
 }
 
+/* 🔹 Ensures search inputs are visible */
 .query-container .MuiTextField-root {
-  margin-top: 5px; /* Fine-tuned spacing for better visibility */
+  margin-top: 5px;
+  min-width: 180px; /* Ensures better visibility */
 }
 
+/* 🔹 Positions the Appointment Scheduler & Calendar buttons at the top-right */
 .nav-buttons {
   display: flex;
   gap: 10px;
+}
+
+/* 🔹 Styles the appointment details view */
+.appointment-details-container {
+  max-width: 800px;
+  margin: 60px auto; /* Moves it down slightly */
+  padding: 20px;
+  background: white;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+/* 🔹 Ensures form inputs are readable */
+.appointment-details-container .MuiTextField-root {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* 🔹 Enhances the appearance of form buttons */
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
 }

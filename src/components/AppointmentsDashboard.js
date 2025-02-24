@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import "./AppointmentsDashboard.css";
 
 // Material-UI imports
@@ -17,14 +15,9 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   IconButton,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
 const API_BASE_URL =
@@ -33,11 +26,9 @@ const API_BASE_URL =
 
 const AppointmentsDashboard = () => {
   const [appointments, setAppointments] = useState([]);
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [viewMode, setViewMode] = useState("");
   const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
   const [isQueryResults, setIsQueryResults] = useState(false);
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Fetch users for dropdown
   const { data: users = [] } = useQuery({
@@ -81,45 +72,32 @@ const AppointmentsDashboard = () => {
     }
   };
 
-  const fetchAppointmentDetails = async (id, mode) => {
+  const handleQuery = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await axios.get(`${API_BASE_URL}/appointments/${id}`, {
+      if (!queryRange.startDate || !queryRange.endDate) {
+        alert("Please select both start and end dates.");
+        return;
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/appointments/history`, {
         headers: { Authorization: `Bearer ${token}` },
+        params: {
+          startDate: new Date(queryRange.startDate).toISOString(),
+          endDate: new Date(queryRange.endDate).toISOString(),
+        },
       });
 
-      if (response.data) {
-        setSelectedAppointment(response.data);
-        setViewMode(mode);
-        setOpen(true);
+      if (!Array.isArray(response.data) || response.data.length === 0) {
+        alert("No appointments found for the selected date range.");
       }
+
+      setAppointments(response.data);
+      setIsQueryResults(true);
     } catch (error) {
-      console.error("❌ Error fetching appointment details:", error.response?.data || error.message);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const updatedAppointment = {
-        ...selectedAppointment,
-        date: new Date(selectedAppointment.date).toISOString(),
-      };
-
-      await axios.put(
-        `${API_BASE_URL}/appointments/${selectedAppointment._id}`,
-        updatedAppointment,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      fetchAppointments();
-      closeModal();
-    } catch (error) {
-      console.error("❌ Error saving appointment", error.response?.data || error.message);
+      console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
     }
   };
 
@@ -137,13 +115,35 @@ const AppointmentsDashboard = () => {
 
       fetchAppointments();
     } catch (error) {
-      console.error("❌ Error deleting appointment", error.response?.data || error.message);
+      console.error("❌ Error deleting appointment:", error.response?.data || error.message);
     }
   };
 
   return (
     <Box className="appointments-dashboard-container">
       <Box className="dashboard-header">
+        <Box className="query-container">
+          <TextField
+            type="date"
+            label="Start Date"
+            variant="outlined"
+            value={queryRange.startDate}
+            onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            type="date"
+            label="End Date"
+            variant="outlined"
+            value={queryRange.endDate}
+            onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+          />
+          <Button variant="contained" onClick={handleQuery}>
+            Submit
+          </Button>
+        </Box>
+
         <h1 className="dashboard-title">Appointments Dashboard</h1>
 
         <Box className="nav-buttons">
@@ -178,12 +178,7 @@ const AppointmentsDashboard = () => {
                 <TableCell>{appt.location}</TableCell>
                 <TableCell>{users.find((u) => u._id === appt.scheduledBy)?.firstName || "Unknown"}</TableCell>
                 <TableCell>
-                  <Button size="small" variant="outlined" onClick={() => fetchAppointmentDetails(appt._id, "edit")}>
-                    Edit
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => fetchAppointmentDetails(appt._id, "view")}>
-                    View
-                  </Button>
+                  <Button size="small" variant="outlined" onClick={() => navigate(`/appointment/${appt._id}`)}>Edit/View</Button>
                   <Button size="small" variant="outlined" color="error" onClick={() => handleDelete(appt._id)}>
                     Delete
                   </Button>
