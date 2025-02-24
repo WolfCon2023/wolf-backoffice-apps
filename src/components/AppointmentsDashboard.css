@@ -1,67 +1,32 @@
-/* Scoped CSS for the Appointments Dashboard only */
-.appointments-dashboard-container {
-  background: #fdfdfd;
-  padding: 24px;
-}
-
-/* Navigation Bar at the top (right-aligned) */
-.appointments-dashboard-container .MuiBox-root:first-of-type {
-  /* This targets the first Box (navigation) within the container */
+.dashboard-header {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
-}
-
-/* Center the Title */
-.appointments-dashboard-container h1 {
-  text-align: center;
-  font-size: 2rem;
-  margin-bottom: 16px;
-  color: #333;
-}
-
-/* Query container: center content */
-.appointments-dashboard-container .query-container {
-  display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 20px;
 }
 
-/* Back button: centered */
-.appointments-dashboard-container .back-button {
-  margin: 0 auto 24px auto;
-  display: block;
-}
-
-/* Table: enforce a minimum width */
-.appointments-dashboard-container .appointments-table {
-  min-width: 650px;
-}
-
-/* Override MUI Table Head styles within the dashboard */
-.appointments-dashboard-container .MuiTableHead-root {
-  background: linear-gradient(135deg, #1976d2, #63a4ff);
-}
-
-.appointments-dashboard-container .MuiTableHead-root .MuiTableCell-root {
-  color: white;
+.dashboard-title {
+  font-size: 2rem !important; /* Change this value as needed */
   font-weight: bold;
+  margin: 0;
+  text-align: center;
+  flex-grow: 1;
+  color: #000; /* Ensure visibility */
 }
 
-/* Dialog adjustments for a clean look */
-.appointments-dashboard-container .MuiDialogContent-root {
-  padding: 16px;
-  background: #f9f9f9;
+.query-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px; /* Added margin to move the query boxes down */
 }
 
-.appointments-dashboard-container .MuiDialogActions-root {
-  padding: 8px 16px;
-  background: #f9f9f9;
+.query-container .MuiTextField-root {
+  margin-top: 5px; /* Fine-tuned spacing for better visibility */
 }
 
-/* Pagination styling */
-.appointments-dashboard-container .MuiPagination-root {
-  margin-top: 16px;
+.nav-buttons {
+  display: flex;
+  gap: 10px;
 }

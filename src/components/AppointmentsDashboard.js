@@ -3,6 +3,8 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import "./AppointmentsDashboard.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // Material‑UI imports
 import {
@@ -21,8 +23,7 @@ import {
   DialogActions,
   TextField,
   IconButton,
-  Pagination,
-  MenuItem,
+  Grid,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -33,14 +34,11 @@ const API_BASE_URL =
 
 const AppointmentsDashboard = () => {
   const [appointments, setAppointments] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewMode, setViewMode] = useState("");
   const [queryRange, setQueryRange] = useState({ startDate: "", endDate: "" });
-  const [isQueryResults, setIsQueryResults] = useState(false);
 
-  // Fetch users for the Scheduled By dropdown
+  // Fetch users for dropdown
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
@@ -55,99 +53,66 @@ const AppointmentsDashboard = () => {
 
   useEffect(() => {
     fetchAppointments();
-  }, [currentPage]);
+  }, []);
 
   const fetchAppointments = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        console.warn("❌ No token found! Redirecting to login.");
-        return;
-      }
-
-      console.log("🔍 Fetching appointments...");
-
-      const defaultStartDate = new Date("1970-01-01").toISOString();
-      const defaultEndDate = new Date("2100-01-01").toISOString();
+      if (!token) return;
 
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { startDate: defaultStartDate, endDate: defaultEndDate },
+        params: {
+          startDate: new Date("1970-01-01").toISOString(),
+          endDate: new Date("2100-01-01").toISOString(),
+        },
       });
 
-      console.log("✅ API Response:", response.data);
+      if (!Array.isArray(response.data)) return;
 
-      if (!response.data || !Array.isArray(response.data)) {
-        console.error("❌ Unexpected API response:", response.data);
-        return;
-      }
-
-      const filteredAppointments = response.data.filter((appt) => !appt.toBeDeleted);
-
-      setAppointments(filteredAppointments);
-      setTotalPages(1); // Adjust if backend adds pagination support
-      setIsQueryResults(false);
+      // Filter out deleted appointments
+      setAppointments(response.data.filter((appt) => !appt.toBeDeleted));
     } catch (error) {
       console.error("❌ Error fetching appointments:", error.response?.data || error.message);
     }
   };
 
-  const handleQuery = async () => {
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to mark this appointment as deleted?");
+    if (!confirmDelete) return;
+
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("❌ No token found. Cannot query historical appointments.");
-        return;
-      }
+      if (!token) return;
 
-      if (!queryRange.startDate || !queryRange.endDate) {
-        alert("Please select both start and end dates.");
-        return;
-      }
+      await axios.put(
+        `${API_BASE_URL}/appointments/${id}`,
+        { toBeDeleted: true },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      console.log("🔍 Querying historical appointments:", queryRange);
-
-      const startISO = new Date(queryRange.startDate).toISOString();
-      const endISO = new Date(queryRange.endDate).toISOString();
-
-      const response = await axios.get(`${API_BASE_URL}/appointments/history`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { startDate: startISO, endDate: endISO },
-      });
-
-      console.log("✅ Historical Appointments Response:", response.data);
-
-      if (!Array.isArray(response.data) || response.data.length === 0) {
-        alert("No appointments found for the selected date range.");
-      }
-
-      setAppointments(response.data);
-      setIsQueryResults(true);
+      fetchAppointments();
     } catch (error) {
-      console.error("❌ Error querying historical appointments:", error.response?.data || error.message);
+      console.error("❌ Error deleting appointment:", error.response?.data || error.message);
     }
   };
 
   const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        alert("No token found");
-        return;
-      }
+      if (!token) return;
 
       const updatedAppointment = {
         ...selectedAppointment,
-        date: new Date(selectedAppointment.date).toISOString(),
+        date: selectedAppointment.date ? new Date(selectedAppointment.date).toISOString() : null,
       };
 
-      const response = await axios.put(
-        `${API_BASE_URL}/appointments/update/${selectedAppointment._id}`,
+      await axios.put(
+        `${API_BASE_URL}/appointments/${selectedAppointment._id}`,
         updatedAppointment,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("✅ Appointment saved", response.data);
       fetchAppointments();
       closeModal();
     } catch (error) {
@@ -155,41 +120,58 @@ const AppointmentsDashboard = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("No token found");
-        return;
-      }
+  const openModal = (appointment, mode) => {
+    setSelectedAppointment({
+      ...appointment,
+      date: appointment.date ? new Date(appointment.date) : null,
+    });
+    setViewMode(mode);
+  };
 
-      // Instead of deleting, mark as `toBeDeleted: true`
-      await axios.put(
-        `${API_BASE_URL}/appointments/update/${id}`,
-        { toBeDeleted: true },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      console.log("✅ Appointment marked as deleted");
-      fetchAppointments();
-    } catch (error) {
-      console.error("❌ Error deleting appointment", error.response?.data || error.message);
-    }
+  const closeModal = () => {
+    setSelectedAppointment(null);
+    setViewMode("");
   };
 
   return (
     <Box className="appointments-dashboard-container">
-      {/* Title and Query Section */}
-      <Box sx={{ textAlign: "center", mb: 2 }}>
-        <h1>Appointments Dashboard</h1>
-      </Box>
+      {/* Header */}
+      <Box className="dashboard-header">
+        <Box className="query-container">
+          <TextField
+            type="date"
+            label="Start Date"
+            variant="outlined"
+            value={queryRange.startDate}
+            onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            type="date"
+            label="End Date"
+            variant="outlined"
+            value={queryRange.endDate}
+            onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+          />
+          <Button variant="contained" onClick={fetchAppointments}>
+            Query Historical Appointments
+          </Button>
+        </Box>
 
-      <Box className="query-container" sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 2 }}>
-        <TextField type="date" label="Start Date" variant="outlined" value={queryRange.startDate}
-          onChange={(e) => setQueryRange({ ...queryRange, startDate: e.target.value })} InputLabelProps={{ shrink: true }} />
-        <TextField type="date" label="End Date" variant="outlined" value={queryRange.endDate}
-          onChange={(e) => setQueryRange({ ...queryRange, endDate: e.target.value })} InputLabelProps={{ shrink: true }} />
-        <Button variant="contained" onClick={handleQuery}>Query Historical Appointments</Button>
+        <h1 className="dashboard-title">Appointments Dashboard</h1>
+
+        <Box className="nav-buttons">
+          <Button component={Link} to="/schedule-appointment" variant="contained">
+            Appointment Scheduler
+          </Button>
+          <Button component={Link} to="/calendar" variant="contained">
+            Calendar
+          </Button>
+          <IconButton color="primary" onClick={fetchAppointments}>
+            <RefreshIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       {/* Table */}
@@ -212,13 +194,42 @@ const AppointmentsDashboard = () => {
                 <TableCell>{appt.location}</TableCell>
                 <TableCell>{users.find((u) => u._id === appt.scheduledBy)?.firstName || "Unknown"}</TableCell>
                 <TableCell>
-                  <Button size="small" variant="outlined" onClick={() => handleDelete(appt._id)}>Delete</Button>
+                  <Button size="small" variant="outlined" onClick={() => openModal(appt, "edit")}>Edit</Button>
+                  <Button size="small" variant="outlined" onClick={() => openModal(appt, "view")}>View</Button>
+                  <Button size="small" variant="outlined" color="error" onClick={() => handleDelete(appt._id)}>Delete</Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Modal for Edit/View */}
+      <Dialog open={!!selectedAppointment} onClose={closeModal} fullWidth maxWidth="sm">
+        <DialogTitle>
+          {viewMode === "edit" ? "Edit Appointment" : "View Appointment"}
+          <IconButton aria-label="close" onClick={closeModal} sx={{ position: "absolute", right: 8, top: 8 }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField label="Title" fullWidth value={selectedAppointment?.title || ""} disabled={viewMode === "view"} />
+            </Grid>
+            <Grid item xs={12}>
+              <DatePicker selected={selectedAppointment?.date} onChange={(date) => setSelectedAppointment({ ...selectedAppointment, date })} disabled={viewMode === "view"} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField label="Location" fullWidth value={selectedAppointment?.location || ""} disabled={viewMode === "view"} />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          {viewMode === "edit" && <Button onClick={handleSave}>Save</Button>}
+          <Button onClick={closeModal}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

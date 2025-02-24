@@ -8,6 +8,9 @@
 # Ignore ESLint cache (but keep the config file)
 .eslintcache
 
+echo ".eslintrc.js" >> .gitignore
+echo ".eslintrc.json" >> .gitignore
+
 # testing
 /coverage
 

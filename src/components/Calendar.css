@@ -16,9 +16,9 @@
 }
 
 /* Calendar view adjustments */
-.calendar-view {
+/*.calendar-view {
   /* The BigCalendar component handles its own height; additional styling if needed */
-}
+/*}
 
 /* Customize the toolbar for a modern look */
 .rbc-toolbar {
