@@ -151,7 +151,7 @@ const AppointmentsDashboard = () => {
             Appointment Scheduler
           </Button>
           <Button component={Link} to="/calendar" variant="contained">
-            Calendar
+            Success Calendar
           </Button>
           <IconButton color="primary" onClick={fetchAppointments}>
             <RefreshIcon />

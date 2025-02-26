@@ -8,11 +8,11 @@ import DatePicker from "react-datepicker";
 import Select from "react-select";
 import MiniCalendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { toast, ToastContainer } from "react-toastify"; // Correct import
-import "react-toastify/dist/ReactToastify.css"; // Correct import for toastify
+import { toast, ToastContainer } from "react-toastify"; 
+import "react-toastify/dist/ReactToastify.css"; 
 import "react-datepicker/dist/react-datepicker.css";
-import { Button } from "@mui/material"; // Ensure Button is imported here
-import { Link } from "react-router-dom"; // Import Link for routing
+import { Button } from "@mui/material"; 
+import { Link } from "react-router-dom"; 
 import "./AppointmentScheduler.css";
 
 // Validation schema for form
@@ -22,27 +22,18 @@ const schema = yup.object().shape({
   location: yup.string().required("Location is required"),
   contactName: yup.string().required("Contact name is required"),
   contactPhone: yup.string().required("Contact phone is required"),
-  contactEmail: yup
-    .string()
-    .email("Invalid email")
-    .required("Contact email is required"),
-  scheduledBy: yup
-    .object()
-    .shape({
-      label: yup.string().required("User must be selected"),
-      value: yup.string().required("User must be selected"),
-    })
-    .nullable()
-    .required("User must be selected"),
+  contactEmail: yup.string().email("Invalid email").required("Contact email is required"),
+  scheduledBy: yup.object().shape({
+    label: yup.string().required("User must be selected"),
+    value: yup.string().required("User must be selected"),
+  }).nullable().required("User must be selected"),
   notes: yup.string().notRequired(),
 });
 
 const AppointmentScheduler = () => {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [quickNotes, setQuickNotes] = useState(
-    localStorage.getItem("quickNotes") || ""
-  );
+  const [quickNotes, setQuickNotes] = useState(localStorage.getItem("quickNotes") || "");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   const {
@@ -78,9 +69,7 @@ const AppointmentScheduler = () => {
       if (!token) throw new Error("No token found");
 
       const startDate = new Date().toISOString();
-      const endDate = new Date(
-        new Date().setFullYear(new Date().getFullYear() + 1)
-      ).toISOString();
+      const endDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
 
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -99,7 +88,7 @@ const AppointmentScheduler = () => {
 
       const formattedData = {
         ...appointmentData,
-        scheduledBy: appointmentData.scheduledBy.value,
+        scheduledBy: appointmentData.scheduledBy.value, // Ensure correct value is sent
       };
 
       const response = await axios.post(`${API_BASE_URL}/appointments`, formattedData, {
@@ -114,9 +103,7 @@ const AppointmentScheduler = () => {
       queryClient.invalidateQueries(["appointments"]);
     },
     onError: (error) => {
-      toast.error(
-        `❌ Error: ${error.response?.data?.message || "Failed to schedule appointment"}`
-      );
+      toast.error(`❌ Error: ${error.response?.data?.message || "Failed to schedule appointment"}`);
     },
   });
 
@@ -139,20 +126,10 @@ const AppointmentScheduler = () => {
 
         {/* Add buttons under Quick Notes */}
         <div className="button-container">
-          <Button
-            component={Link}
-            to="/appointments"
-            variant="contained"
-            size="small"
-          >
+          <Button component={Link} to="/appointments" variant="contained" size="small">
             Appointment Dashboard
           </Button>
-          <Button
-            component={Link}
-            to="/calendar"
-            variant="contained"
-            size="small"
-          >
+          <Button component={Link} to="/calendar" variant="contained" size="small">
             Success Calendar
           </Button>
         </div>
@@ -162,10 +139,7 @@ const AppointmentScheduler = () => {
       <div className="scheduler-container">
         <h1 className="scheduler-title">Business Appointment Scheduler</h1>
 
-        <form
-          className="scheduler-form"
-          onSubmit={handleSubmit(scheduleAppointment.mutate)}
-        >
+        <form className="scheduler-form" onSubmit={handleSubmit(scheduleAppointment.mutate)}>
           <div className="form-grid">
             <div className="form-group">
               <label>Title</label>
