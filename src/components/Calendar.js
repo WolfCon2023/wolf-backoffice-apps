@@ -114,13 +114,13 @@ Notes: ${event.resource.description}`;
       <div className="calendar-actions">
         {/* These buttons now navigate properly */}
         <Link to="/appointments" style={{ marginRight: "10px" }}>
-          <Button variant="contained">Appointment Dashboard</Button>
+          <Button variant="contained">Appointments Dashboard</Button>
         </Link>
         <Link to="/schedule-appointment">
           <Button variant="contained">Appointment Scheduler</Button>
         </Link>
       </div>
-      <h1 className="calendar-title">Appointments Calendar</h1>
+      <h1 className="calendar-title">Success Calendar</h1>
       {error && <div className="error-message">{error}</div>}
       <div className="calendar-view">
         <BigCalendar

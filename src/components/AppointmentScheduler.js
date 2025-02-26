@@ -8,16 +8,14 @@ import DatePicker from "react-datepicker";
 import Select from "react-select";
 import MiniCalendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast, ToastContainer } from "react-toastify"; // Correct import
+import "react-toastify/dist/ReactToastify.css"; // Correct import for toastify
 import "react-datepicker/dist/react-datepicker.css";
+import { Button } from "@mui/material"; // Ensure Button is imported here
+import { Link } from "react-router-dom"; // Import Link for routing
 import "./AppointmentScheduler.css";
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL ||
-  "https://wolf-backoffice-backend-development.up.railway.app/api";
-
-// ✅ Form Validation Schema
+// Validation schema for form
 const schema = yup.object().shape({
   title: yup.string().required("Title is required"),
   date: yup.date().required("Date is required"),
@@ -59,7 +57,7 @@ const AppointmentScheduler = () => {
     resolver: yupResolver(schema),
   });
 
-  // ✅ Fetch Users with React Query
+  // Fetch users with React Query
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
@@ -72,16 +70,17 @@ const AppointmentScheduler = () => {
     },
   });
 
-  // ✅ Fetch Upcoming Appointments (Next 10 Appointments)
+  // Fetch upcoming appointments
   const { data: appointments = [], isLoading: appointmentsLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No token found");
 
-      // Calculate the start and end dates for upcoming appointments
       const startDate = new Date().toISOString();
-      const endDate = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString();
+      const endDate = new Date(
+        new Date().setFullYear(new Date().getFullYear() + 1)
+      ).toISOString();
 
       const response = await axios.get(`${API_BASE_URL}/appointments`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -92,7 +91,7 @@ const AppointmentScheduler = () => {
     },
   });
 
-  // ✅ Mutation for Scheduling an Appointment
+  // Mutation for scheduling an appointment
   const scheduleAppointment = useMutation({
     mutationFn: async (appointmentData) => {
       const token = localStorage.getItem("token");
@@ -102,8 +101,6 @@ const AppointmentScheduler = () => {
         ...appointmentData,
         scheduledBy: appointmentData.scheduledBy.value,
       };
-
-      console.log("📤 Sending Appointment Data:", formattedData);
 
       const response = await axios.post(`${API_BASE_URL}/appointments`, formattedData, {
         headers: { Authorization: `Bearer ${token}` },
@@ -117,7 +114,9 @@ const AppointmentScheduler = () => {
       queryClient.invalidateQueries(["appointments"]);
     },
     onError: (error) => {
-      toast.error(`❌ Error: ${error.response?.data?.message || "Failed to schedule appointment"}`);
+      toast.error(
+        `❌ Error: ${error.response?.data?.message || "Failed to schedule appointment"}`
+      );
     },
   });
 
@@ -137,13 +136,36 @@ const AppointmentScheduler = () => {
           }}
           placeholder="Write quick notes here..."
         />
+
+        {/* Add buttons under Quick Notes */}
+        <div className="button-container">
+          <Button
+            component={Link}
+            to="/appointments"
+            variant="contained"
+            size="small"
+          >
+            Appointment Dashboard
+          </Button>
+          <Button
+            component={Link}
+            to="/calendar"
+            variant="contained"
+            size="small"
+          >
+            Success Calendar
+          </Button>
+        </div>
       </aside>
 
       {/* 📝 Appointment Form */}
       <div className="scheduler-container">
         <h1 className="scheduler-title">Business Appointment Scheduler</h1>
 
-        <form className="scheduler-form" onSubmit={handleSubmit(scheduleAppointment.mutate)}>
+        <form
+          className="scheduler-form"
+          onSubmit={handleSubmit(scheduleAppointment.mutate)}
+        >
           <div className="form-grid">
             <div className="form-group">
               <label>Title</label>
@@ -211,7 +233,9 @@ const AppointmentScheduler = () => {
 
           <div className="button-container">
             <button type="submit" className="submit-button">
-              {scheduleAppointment.isLoading ? "Scheduling..." : "Add Appointment"}
+              {scheduleAppointment.isLoading
+                ? "Scheduling..."
+                : "Add Appointment"}
             </button>
           </div>
         </form>
@@ -241,36 +265,6 @@ const AppointmentScheduler = () => {
 
       {/* ✅ Toast Container */}
       <ToastContainer position="top-right" autoClose={3000} />
-
-      {/* Appointment Details Modal */}
-      {selectedAppointment && (
-        <div className="appointment-details-modal">
-          <div className="modal-content">
-            <h2>{selectedAppointment.title}</h2>
-            <p>
-              <strong>Date:</strong> {new Date(selectedAppointment.date).toLocaleString()}
-            </p>
-            <p>
-              <strong>Location:</strong> {selectedAppointment.location}
-            </p>
-            <p>
-              <strong>Contact Name:</strong> {selectedAppointment.contactName}
-            </p>
-            <p>
-              <strong>Contact Phone:</strong> {selectedAppointment.contactPhone}
-            </p>
-            <p>
-              <strong>Contact Email:</strong> {selectedAppointment.contactEmail}
-            </p>
-            {selectedAppointment.notes && (
-              <p>
-                <strong>Notes:</strong> {selectedAppointment.notes}
-              </p>
-            )}
-            <button onClick={() => setSelectedAppointment(null)}>Close</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
