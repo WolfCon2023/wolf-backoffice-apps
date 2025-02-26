@@ -5,20 +5,52 @@
   padding: 10px;
   background: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  height: 80vh;  /* Set a fixed height for the entire container */
+  overflow: hidden;  /* Prevents overflow of the whole container */
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
 /* Title styling */
 .calendar-title {
   text-align: center;
-  font-size: 1.8rem;
+  font-size: 2rem;
   margin-bottom: 20px;
+  padding-top: 10px;  /* Added padding on top for better spacing */
+}
+
+/* Button Container (Positioned Top-Right) */
+.calendar-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  z-index: 10;  /* Make sure buttons stay above the calendar */
+}
+
+.calendar-actions button {
+  background-color: #0056b3;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 10px;
+}
+
+.calendar-actions button:hover {
+  background-color: #004494;
 }
 
 /* Calendar view adjustments */
-/*.calendar-view {
-  /* The BigCalendar component handles its own height; additional styling if needed */
-/*}
+.calendar-view {
+  flex-grow: 1;
+  overflow-y: auto;  /* Ensures the calendar content is scrollable */
+  padding-bottom: 20px;  /* Adds a bit of space below */
+  height: calc(100% - 70px);  /* Adjusted to fit the calendar in the remaining space */
+}
 
 /* Customize the toolbar for a modern look */
 .rbc-toolbar {
@@ -43,6 +75,17 @@
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .calendar-container {
-    width: 95%;
+    width: 100%;
+    padding: 5px;
+  }
+}
+
+@media (max-width: 600px) {
+  .calendar-title {
+    font-size: 1.5rem;
+  }
+  .calendar-actions button {
+    font-size: 0.9rem;
+    padding: 8px;
   }
 }
