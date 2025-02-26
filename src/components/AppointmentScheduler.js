@@ -15,6 +15,10 @@ import { Button } from "@mui/material";
 import { Link } from "react-router-dom"; 
 import "./AppointmentScheduler.css";
 
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  "https://wolf-backoffice-backend-development.up.railway.app/api";
+
 // Validation schema for form
 const schema = yup.object().shape({
   title: yup.string().required("Title is required"),
@@ -239,6 +243,35 @@ const AppointmentScheduler = () => {
 
       {/* ✅ Toast Container */}
       <ToastContainer position="top-right" autoClose={3000} />
+      {/* Appointment Details Modal */}
+      {selectedAppointment && (
+        <div className="appointment-details-modal">
+          <div className="modal-content">
+            <h2>{selectedAppointment.title}</h2>
+            <p>
+              <strong>Date:</strong> {new Date(selectedAppointment.date).toLocaleString()}
+            </p>
+            <p>
+              <strong>Location:</strong> {selectedAppointment.location}
+            </p>
+            <p>
+              <strong>Contact Name:</strong> {selectedAppointment.contactName}
+            </p>
+            <p>
+              <strong>Contact Phone:</strong> {selectedAppointment.contactPhone}
+            </p>
+            <p>
+              <strong>Contact Email:</strong> {selectedAppointment.contactEmail}
+            </p>
+            {selectedAppointment.notes && (
+              <p>
+                <strong>Notes:</strong> {selectedAppointment.notes}
+              </p>
+            )}
+            <button onClick={() => setSelectedAppointment(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
