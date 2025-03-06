@@ -55,7 +55,7 @@ const CustomerCRM = () => {
       const token = localStorage.getItem("token");
 
       // ✅ Debugging Logs
-      console.log("📡 Sending POST request to:", `${API_BASE_URL}/customers`);
+      console.log("📡 Sending POST request to:", `${API_BASE_URL}/customers`, customer);
       console.log("📡 Request Headers:", {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
