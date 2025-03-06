@@ -7,7 +7,7 @@ const CustomerDetails = () => {
   const [customer, setCustomer] = useState(null);
 
   useEffect(() => {
-    axios.get(`https://your-backend-url/api/customers/${id}`)
+    axios.get(`https://wolf-backoffice-backend-development.up.railway.app/api/customers/${id}`)
       .then(res => setCustomer(res.data))
       .catch(err => console.error("Error fetching customer details:", err));
   }, [id]);

@@ -46,7 +46,7 @@ function App() {
               <Route path="/appointments" element={authToken ? <AppointmentsDashboard /> : <Navigate to="/login" />} />
               <Route path="/schedule-appointment" element={authToken ? <AppointmentScheduler /> : <Navigate to="/login" />} />
               <Route path="/calendar" element={authToken ? <Calendar /> : <Navigate to="/login" />} />
-              <Route path="/customers" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
+              <Route path="/crm" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
               <Route path="/customer/:id" element={authToken ? <CustomerDetails /> : <Navigate to="/login" />} />
               <Route path="/appointment/:id" element={authToken ? <AppointmentDetails /> : <Navigate to="/login" />} /> {/* ✅ New route */}
             </Routes>
