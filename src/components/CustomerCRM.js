@@ -1,13 +1,16 @@
 import { useState } from "react";
-import axios from "axios";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
-  Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Typography, Container, Box, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Card, CardContent, MenuItem, Select, InputLabel, FormControl
+  Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Typography, Container, Box, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Card, CardContent, MenuItem, Select, InputLabel, FormControl, FormControlLabel, Checkbox, IconButton, Tooltip, Pagination
 } from "@mui/material";
+import EditIcon from '@mui/icons-material/Edit';
+import { FaCalendarAlt, FaClipboardList, FaUserFriends, FaUsers, FaPlusCircle } from "react-icons/fa";
+import { customerService } from '../services/customerService';
 import "./CustomerCRM.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, '') || "https://wolf-backoffice-backend-development.up.railway.app/api";
+// Constants
+const ITEMS_PER_PAGE = 20;
 
 // 🎯 Predefined Product Lines (Sorted Alphabetically)
 const PRODUCT_LINES = [
@@ -20,10 +23,27 @@ const PRODUCT_LINES = [
   "Software Development"
 ];
 
+// 🔍 Search Criteria Options
+const SEARCH_CRITERIA = [
+  { value: "firstName", label: "First Name" },
+  { value: "lastName", label: "Last Name" },
+  { value: "businessEmail", label: "Business Email" },
+  { value: "phoneNumber", label: "Phone Number" },
+  { value: "productLines", label: "Product Lines" },
+  { value: "highValue", label: "High Value" }
+];
+
 const CustomerCRM = () => {
+  // Initialize all state variables
   const [search, setSearch] = useState("");
-  const [customers, setCustomers] = useState([]);
+  const [searchCriteria, setSearchCriteria] = useState("firstName");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchResultsOpen, setSearchResultsOpen] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [page, setPage] = useState(1);
+  const [dialogTitle, setDialogTitle] = useState("");
   const [newCustomer, setNewCustomer] = useState({
     firstName: "",
     lastName: "",
@@ -31,91 +51,206 @@ const CustomerCRM = () => {
     phoneNumber: "",
     productLines: "",
     assignedRep: null,
+    highValue: false
   });
 
   const queryClient = useQueryClient();
 
-  // 🔍 Search customers
-  const handleSearch = async () => {
-    if (!search) return;
+  // Fetch all customers for stats
+  const { data: allCustomers, isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ["customers"],
+    queryFn: customerService.getAllCustomers
+  });
+
+  // Calculate high-value customers from all customers
+  const highValueCustomers = allCustomers?.filter(customer => customer.highValue) || [];
+
+  // Calculate pagination
+  const totalPages = Math.ceil((searchResults.length || 0) / ITEMS_PER_PAGE);
+  const paginatedResults = searchResults.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
+  );
+
+  // Handle page change
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
+
+  // Handle stats card click
+  const handleStatsClick = async (type) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_BASE_URL}/customers/search?query=${search}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCustomers(response.data);
+      let results;
+      if (type === 'total') {
+        results = await customerService.getAllCustomers();
+        setDialogTitle('All Customers');
+      } else if (type === 'highValue') {
+        results = (await customerService.getAllCustomers()).filter(customer => customer.highValue);
+        setDialogTitle('High-Value Customers');
+      }
+      setSearchResults(results || []);
+      setPage(1); // Reset to first page
+      setSearchResultsOpen(true);
     } catch (error) {
-      console.error("❌ Error fetching customers:", error.response?.data || error.message);
+      console.error("❌ Error fetching customers:", error);
+      setSearchResults([]);
     }
   };
 
-  // ✅ Add a new customer with logging
-  const addCustomerMutation = useMutation({
-    mutationFn: async (customer) => {
-      const token = localStorage.getItem("token");
-
-      // ✅ Debugging Logs
-      console.log("📡 Sending POST request to:", `${API_BASE_URL}/customers`, customer);
-      console.log("📡 Request Headers:", {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      });
-      console.log("📡 Request Payload:", JSON.stringify(customer));
-
-      try {
-        const response = await axios.post(`${API_BASE_URL}/customers`, customer, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-        });
-
-        console.log("✅ Customer added successfully:", response.data);
-        return response.data;
-      } catch (error) {
-        console.error("❌ Error adding customer:", error.response?.data || error.message);
-        throw error;
+  // 🔍 Search customers
+  const handleSearch = async () => {
+    try {
+      if (!search && searchCriteria !== 'highValue') {
+        const results = await customerService.getAllCustomers();
+        setSearchResults(results || []);
+        setDialogTitle('All Customers');
+      } else {
+        const results = await customerService.searchCustomers(searchCriteria, search);
+        setSearchResults(Array.isArray(results) ? results : []);
+        setDialogTitle('Search Results');
       }
-    },
+      setPage(1); // Reset to first page
+      setSearchResultsOpen(true);
+    } catch (error) {
+      console.error("❌ Error searching customers:", error);
+      setSearchResults([]);
+    }
+  };
+
+  // Handle search criteria change
+  const handleSearchCriteriaChange = (event) => {
+    const newCriteria = event.target.value;
+    setSearchCriteria(newCriteria);
+    
+    if (newCriteria === 'highValue') {
+      setSearch('true');
+      handleSearch();
+    } else {
+      setSearch('');
+    }
+  };
+
+  // Handle Enter key in search
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // ✅ Add a new customer
+  const addCustomerMutation = useMutation({
+    mutationFn: customerService.addCustomer,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       setOpen(false);
+      setNewCustomer({
+        firstName: "",
+        lastName: "",
+        businessEmail: "",
+        phoneNumber: "",
+        productLines: "",
+        assignedRep: null,
+        highValue: false
+      });
       handleSearch();
     },
     onError: (error) => {
-      console.error("❌ Mutation failed:", error.response?.data || error.message);
+      console.error("❌ Mutation failed:", error);
+    }
+  });
+
+  // ✅ Update customer
+  const updateCustomerMutation = useMutation({
+    mutationFn: ({ id, customer }) => customerService.updateCustomer(id, customer),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setEditDialogOpen(false);
+      setSelectedCustomer(null);
+      handleSearch();
+    },
+    onError: (error) => {
+      console.error("❌ Update mutation failed:", error);
     }
   });
 
   const handleAddCustomer = () => {
-    addCustomerMutation.mutate({
-      ...newCustomer,
-      assignedRep: newCustomer.assignedRep || null, // Ensure assignedRep is either a valid ID or null
+    if (!newCustomer.firstName || !newCustomer.lastName || !newCustomer.businessEmail || !newCustomer.phoneNumber || !newCustomer.productLines) {
+      alert("Please fill in all required fields");
+      return;
+    }
+    addCustomerMutation.mutate(newCustomer);
+  };
+
+  const handleUpdateCustomer = () => {
+    if (!selectedCustomer.firstName || !selectedCustomer.lastName || !selectedCustomer.businessEmail || !selectedCustomer.phoneNumber || !selectedCustomer.productLines) {
+      alert("Please fill in all required fields");
+      return;
+    }
+    updateCustomerMutation.mutate({
+      id: selectedCustomer._id,
+      customer: selectedCustomer
     });
   };
-  
+
+  const handleEditCustomer = (customer) => {
+    setSelectedCustomer({ ...customer });
+    setEditDialogOpen(true);
+  };
 
   return (
     <Container maxWidth="lg" className="customer-container">
-      <Typography variant="h4" sx={{ textAlign: "center", mt: 3 }}>
+      <Typography variant="h4" sx={{ textAlign: "center", mt: 3, mb: 4 }}>
         Customer Relationship Management (CRM)
       </Typography>
 
+      {/* 🔹 App Navigation */}
+      <nav className="app-navigation" aria-label="Main Navigation">
+        <ul>
+          <li>
+            <Link to="/appointments">
+              <FaClipboardList className="icon" /> Appointments Dashboard
+            </Link>
+          </li>
+          <li>
+            <Link to="/schedule-appointment">
+              <FaPlusCircle className="icon" /> Schedule Appointment
+            </Link>
+          </li>
+          <li>
+            <Link to="/calendar">
+              <FaCalendarAlt className="icon" /> Calendar
+            </Link>
+          </li>
+        </ul>
+      </nav>
+
       {/* 🔹 Quick Actions & Stats */}
-      <Grid container spacing={3} sx={{ mt: 3 }}>
+      <Grid 
+        container 
+        spacing={3} 
+        className="stats-grid"
+      >
         <Grid item xs={4}>
-          <Card className="crm-widget">
+          <Card 
+            className="crm-widget clickable"
+            onClick={() => handleStatsClick('total')}
+          >
             <CardContent>
               <Typography variant="h6">Total Customers</Typography>
-              <Typography variant="h4">{customers.length}</Typography>
+              <Typography variant="h4">{isLoadingCustomers ? "Loading..." : (allCustomers?.length || 0)}</Typography>
+              <Typography variant="body2" color="textSecondary">Click to view all customers</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={4}>
-          <Card className="crm-widget">
+          <Card 
+            className="crm-widget clickable"
+            onClick={() => handleStatsClick('highValue')}
+          >
             <CardContent>
               <Typography variant="h6">High-Value Clients</Typography>
-              <Typography variant="h4">5</Typography>
+              <Typography variant="h4">{isLoadingCustomers ? "Loading..." : highValueCustomers.length}</Typography>
+              <Typography variant="body2" color="textSecondary">Click to view high-value customers</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -131,16 +266,37 @@ const CustomerCRM = () => {
         </Grid>
       </Grid>
 
-      {/* 🔹 Search Bar */}
+      {/* 🔹 Enhanced Search Bar */}
       <Box className="search-container">
+        <FormControl sx={{ minWidth: 200, mr: 2 }}>
+          <InputLabel>Search By</InputLabel>
+          <Select
+            value={searchCriteria}
+            onChange={handleSearchCriteriaChange}
+            label="Search By"
+          >
+            {SEARCH_CRITERIA.map((criteria) => (
+              <MenuItem key={criteria.value} value={criteria.value}>
+                {criteria.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <TextField
-          label="Search Customers"
+          label="Search"
           variant="outlined"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyPress={handleKeyPress}
           fullWidth
+          disabled={searchCriteria === 'highValue'}
+          placeholder={searchCriteria === 'highValue' ? 'Click search to view high-value clients' : 'Enter search term...'}
         />
-        <Button variant="contained" onClick={handleSearch}>
+        <Button 
+          variant="contained" 
+          onClick={handleSearch}
+          disabled={!search && searchCriteria !== 'highValue'}
+        >
           Search
         </Button>
         <Button variant="contained" color="success" onClick={() => setOpen(true)}>
@@ -148,16 +304,117 @@ const CustomerCRM = () => {
         </Button>
       </Box>
 
+      {/* 🔍 Results Dialog with Pagination */}
+      <Dialog 
+        open={searchResultsOpen} 
+        onClose={() => setSearchResultsOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        className="results-dialog"
+      >
+        <DialogTitle>
+          {dialogTitle}
+          <Typography variant="subtitle1" color="textSecondary">
+            Showing {paginatedResults.length} of {searchResults.length} results
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {searchResults.length > 0 ? (
+            <>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>First Name</TableCell>
+                      <TableCell>Last Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Phone</TableCell>
+                      <TableCell>Product Line</TableCell>
+                      <TableCell>High Value</TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paginatedResults.map((customer) => (
+                      <TableRow key={customer._id}>
+                        <TableCell>{customer.firstName}</TableCell>
+                        <TableCell>{customer.lastName}</TableCell>
+                        <TableCell>{customer.businessEmail}</TableCell>
+                        <TableCell>{customer.phoneNumber}</TableCell>
+                        <TableCell>{customer.productLines}</TableCell>
+                        <TableCell>{customer.highValue ? "Yes" : "No"}</TableCell>
+                        <TableCell>
+                          <Tooltip title="Edit Customer">
+                            <IconButton onClick={() => {
+                              setSelectedCustomer(customer);
+                              setEditDialogOpen(true);
+                              setSearchResultsOpen(false);
+                            }}>
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1 }}>
+                  <Pagination 
+                    count={totalPages} 
+                    page={page} 
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="large"
+                  />
+                </Box>
+              )}
+            </>
+          ) : (
+            <Typography align="center" sx={{ py: 3 }}>
+              No customers found.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSearchResultsOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* 🆕 Add Customer Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Add New Customer</DialogTitle>
         <DialogContent>
-          <TextField label="First Name" fullWidth margin="dense" onChange={(e) => setNewCustomer({ ...newCustomer, firstName: e.target.value })} />
-          <TextField label="Last Name" fullWidth margin="dense" onChange={(e) => setNewCustomer({ ...newCustomer, lastName: e.target.value })} />
-          <TextField label="Email" fullWidth margin="dense" onChange={(e) => setNewCustomer({ ...newCustomer, businessEmail: e.target.value })} />
-          <TextField label="Phone Number" fullWidth margin="dense" onChange={(e) => setNewCustomer({ ...newCustomer, phoneNumber: e.target.value })} />
+          <TextField 
+            label="First Name" 
+            fullWidth 
+            margin="dense" 
+            value={newCustomer.firstName}
+            onChange={(e) => setNewCustomer({ ...newCustomer, firstName: e.target.value })} 
+          />
+          <TextField 
+            label="Last Name" 
+            fullWidth 
+            margin="dense" 
+            value={newCustomer.lastName}
+            onChange={(e) => setNewCustomer({ ...newCustomer, lastName: e.target.value })} 
+          />
+          <TextField 
+            label="Email" 
+            fullWidth 
+            margin="dense" 
+            value={newCustomer.businessEmail}
+            onChange={(e) => setNewCustomer({ ...newCustomer, businessEmail: e.target.value })} 
+          />
+          <TextField 
+            label="Phone Number" 
+            fullWidth 
+            margin="dense" 
+            value={newCustomer.phoneNumber}
+            onChange={(e) => setNewCustomer({ ...newCustomer, phoneNumber: e.target.value })} 
+          />
 
-          {/* 🔹 Product Line Dropdown */}
           <FormControl fullWidth margin="dense">
             <InputLabel>Product Line</InputLabel>
             <Select
@@ -171,10 +428,87 @@ const CustomerCRM = () => {
               ))}
             </Select>
           </FormControl>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={newCustomer.highValue}
+                onChange={(e) => setNewCustomer({ ...newCustomer, highValue: e.target.checked })}
+              />
+            }
+            label="High Value Customer"
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
           <Button onClick={handleAddCustomer} variant="contained">Add</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 🔄 Edit Customer Dialog */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+        <DialogTitle>Edit Customer</DialogTitle>
+        <DialogContent>
+          {selectedCustomer && (
+            <>
+              <TextField 
+                label="First Name" 
+                fullWidth 
+                margin="dense" 
+                value={selectedCustomer.firstName}
+                onChange={(e) => setSelectedCustomer({ ...selectedCustomer, firstName: e.target.value })} 
+              />
+              <TextField 
+                label="Last Name" 
+                fullWidth 
+                margin="dense" 
+                value={selectedCustomer.lastName}
+                onChange={(e) => setSelectedCustomer({ ...selectedCustomer, lastName: e.target.value })} 
+              />
+              <TextField 
+                label="Email" 
+                fullWidth 
+                margin="dense" 
+                value={selectedCustomer.businessEmail}
+                onChange={(e) => setSelectedCustomer({ ...selectedCustomer, businessEmail: e.target.value })} 
+              />
+              <TextField 
+                label="Phone Number" 
+                fullWidth 
+                margin="dense" 
+                value={selectedCustomer.phoneNumber}
+                onChange={(e) => setSelectedCustomer({ ...selectedCustomer, phoneNumber: e.target.value })} 
+              />
+
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Product Line</InputLabel>
+                <Select
+                  value={selectedCustomer.productLines}
+                  onChange={(e) => setSelectedCustomer({ ...selectedCustomer, productLines: e.target.value })}
+                >
+                  {PRODUCT_LINES.map((line) => (
+                    <MenuItem key={line} value={line}>
+                      {line}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={selectedCustomer.highValue}
+                    onChange={(e) => setSelectedCustomer({ ...selectedCustomer, highValue: e.target.checked })}
+                  />
+                }
+                label="High Value Customer"
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleUpdateCustomer} variant="contained">Update</Button>
         </DialogActions>
       </Dialog>
     </Container>
