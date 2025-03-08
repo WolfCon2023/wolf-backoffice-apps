@@ -1,269 +1,895 @@
-/* 🎨 Main Container */
+/* 🎨 Main Container Styles */
 .scheduler-wrapper {
-  display: flex;
-  gap: 20px;
-  max-width: 1200px;
-  margin: 40px auto;
-  padding: 20px;
-  background: white;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 280px 1fr 280px;
+  gap: var(--spacing-lg);
+  max-width: 1440px;
+  margin: var(--spacing-xl) auto;
+  padding: var(--spacing-lg);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius-lg);
+  min-height: calc(100vh - 64px);
 }
 
-/* 📅 Left Sidebar (Mini Calendar + Quick Notes) */
-.left-sidebar {
-  flex: 1;
-  max-width: 250px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 10px;
-  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+/* 🎨 Theme Variables */
+:root {
+  /* Color System */
+  --background-primary: #ffffff;
+  --background-secondary: #f8fafc;
+  --background-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+  --border-color: #e2e8f0;
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --error-color: #ef4444;
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --info-color: #3b82f6;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* Typography - Updated to industry standard sizes */
+  --font-size-xs: 0.75rem;  /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-md: 0.9375rem; /* 15px */
+  --font-size-lg: 1rem;    /* 16px */
+  --font-size-xl: 1.125rem; /* 18px */
+  --font-size-2xl: 1.25rem; /* 20px */
+  
+  /* Spacing - Adjusted for better density */
+  --spacing-xs: 0.25rem;  /* 4px */
+  --spacing-sm: 0.5rem;   /* 8px */
+  --spacing-md: 0.75rem;  /* 12px */
+  --spacing-lg: 1rem;     /* 16px */
+  --spacing-xl: 1.5rem;   /* 24px */
+  --spacing-2xl: 2rem;    /* 32px */
+  
+  /* Border Radius */
+  --border-radius-sm: 0.375rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
+  
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 📱 Sidebar Base Styles */
+.sidebar {
+  background: var(--background-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  height: fit-content;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 
-/* 📆 Mini Calendar */
-.calendar-container {
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+.sidebar h2, .sidebar h3 {
+  color: var(--text-primary);
+  margin: 0;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+/* 📅 Mini Calendar Styles */
+.mini-calendar {
+  width: 100% !important;
+  border: none !important;
+  border-radius: var(--border-radius-md) !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  background: var(--background-primary) !important;
+}
+
+.react-calendar__tile {
+  padding: var(--spacing-md) !important;
+  font-size: var(--font-size-sm) !important;
+  position: relative;
+  color: var(--text-primary) !important;
+  transition: var(--transition-fast) !important;
+}
+
+.react-calendar__tile:hover {
+  background: var(--background-tertiary) !important;
+}
+
+.react-calendar__tile--active {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
+
+.react-calendar__tile--now {
+  background: var(--background-secondary) !important;
+  color: var(--primary-color) !important;
+  font-weight: 600 !important;
+}
+
+.appointment-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: var(--font-size-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 📝 Quick Notes */
+.sidebar textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background: var(--background-primary);
+  resize: vertical;
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  transition: var(--transition-fast);
+  color: var(--text-primary);
+}
+
+.sidebar textarea:hover {
+  border-color: var(--text-tertiary);
+}
+
+.sidebar textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-light);
+  outline: none;
+}
+
+/* 📋 Main Form Container */
+.scheduler-container {
+  background: var(--background-primary);
+  border-radius: var(--border-radius-xl);
+  padding: var(--spacing-2xl);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+.scheduler-title {
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-2xl) 0;
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  letter-spacing: -0.025em;
   text-align: center;
 }
 
-/* 📋 Quick Notes */
-.quick-notes-container {
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.quick-notes-container textarea {
-  width: 100%;
-  min-height: 80px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 10px;
-  resize: vertical;
-  background: #f8f9fa;
-}
-
-.quick-notes-container textarea:focus {
-  border-color: #0056b3;
-  background: white;
-}
-
-/* 📋 Appointment Scheduler Form */
-.scheduler-container {
-  flex: 2;
-  padding: 20px;
-  background: white;
-  border-radius: 10px;
-}
-
-/* 🔲 Two-Column Layout */
+/* 📝 Form Grid */
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-2xl);
 }
 
-/* 📝 Full-width Notes Field */
-.full-width {
-  grid-column: span 2;
-}
-
-/* 📌 Form Field Styling */
 .form-group {
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+/* 📝 Form Labels */
 .form-group label {
-  font-size: 1rem;
-  font-weight: bold;
-  margin-bottom: 5px;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  letter-spacing: -0.025em;
 }
 
+.form-group label svg {
+  color: var(--primary-color);
+  font-size: var(--font-size-lg);
+}
+
+/* 📝 Form Inputs - Updated sizes */
 .form-group input,
 .form-group textarea,
-.form-group select {
+.form-group select,
+.react-datepicker__input-container input,
+.react-select__control {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #f8f9fa;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--background-primary);
+  transition: var(--transition-fast);
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 36px;
 }
 
-.form-group textarea {
-  min-height: 100px;
-  resize: vertical;
+.form-group input:hover,
+.form-group textarea:hover,
+.form-group select:hover,
+.react-datepicker__input-container input:hover,
+.react-select__control:hover {
+  border-color: var(--text-tertiary);
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
-  border-color: #0056b3;
-  background: white;
+.form-group textarea:focus,
+.form-group select:focus,
+.react-datepicker__input-container input:focus,
+.react-select__control--is-focused {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px var(--primary-light) !important;
+  outline: none;
 }
 
-/* 📅 Date Picker */
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* React Select Specific Styles */
+.react-select__control {
+  padding: 0 !important;
+  cursor: pointer;
+  min-height: 42px !important;
+  box-shadow: none !important;
+}
+
+.react-select__value-container {
+  padding: var(--spacing-md) !important;
+}
+
+.react-select__single-value {
+  color: var(--text-primary) !important;
+  margin: 0 !important;
+}
+
+.react-select__placeholder {
+  color: var(--text-tertiary) !important;
+  margin: 0 !important;
+}
+
+.react-select__input-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-primary) !important;
+}
+
+.react-select__indicators {
+  padding-right: var(--spacing-sm) !important;
+}
+
+.react-select__indicator-separator {
+  display: none !important;
+}
+
+.react-select__dropdown-indicator {
+  color: var(--text-tertiary) !important;
+  padding: 0 var(--spacing-sm) !important;
+}
+
+.react-select__dropdown-indicator:hover {
+  color: var(--text-primary) !important;
+}
+
+.react-select__menu {
+  background: var(--background-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-radius: var(--border-radius-md) !important;
+  margin-top: 4px !important;
+  z-index: 10;
+  overflow: hidden !important;
+}
+
+.react-select__menu-list {
+  padding: var(--spacing-xs) 0 !important;
+}
+
+.react-select__option {
+  padding: var(--spacing-md) var(--spacing-lg) !important;
+  color: var(--text-primary) !important;
+  cursor: pointer !important;
+  font-size: var(--font-size-md) !important;
+  background: transparent !important;
+}
+
+.react-select__option:active {
+  background: var(--primary-light) !important;
+}
+
+.react-select__option--is-focused {
+  background: var(--background-tertiary) !important;
+}
+
+.react-select__option--is-selected {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
+
+/* Date Picker Specific Styles */
 .react-datepicker-wrapper {
   width: 100%;
 }
 
-/* ✅ Fix Dropdown Size */
-.css-1s2u09g-control {
-  min-height: 42px;
+.react-datepicker {
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--border-radius-md) !important;
+  font-family: inherit !important;
+  background-color: var(--background-primary) !important;
+  box-shadow: var(--shadow-lg) !important;
 }
 
-/* 📌 Button Styling */
+.react-datepicker__header {
+  background-color: var(--background-secondary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  border-top-left-radius: var(--border-radius-md) !important;
+  border-top-right-radius: var(--border-radius-md) !important;
+  padding-top: var(--spacing-md) !important;
+}
+
+.react-datepicker__current-month {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+  font-size: var(--font-size-md) !important;
+}
+
+.react-datepicker__day {
+  color: var(--text-primary) !important;
+  border-radius: var(--border-radius-sm) !important;
+  transition: var(--transition-fast) !important;
+  width: 2rem !important;
+  line-height: 2rem !important;
+  margin: 0.166rem !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: var(--background-tertiary) !important;
+}
+
+.react-datepicker__day--selected {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background-color: var(--primary-light) !important;
+  color: var(--primary-color) !important;
+}
+
+.react-datepicker__time-container {
+  border-left: 1px solid var(--border-color) !important;
+  width: 100px !important;
+}
+
+.react-datepicker__time-box {
+  border-radius: 0 !important;
+  width: 100px !important;
+}
+
+.react-datepicker__time-list-item {
+  transition: var(--transition-fast) !important;
+  color: var(--text-primary) !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  padding: 0 var(--spacing-sm) !important;
+}
+
+.react-datepicker__time-list-item:hover {
+  background-color: var(--background-tertiary) !important;
+}
+
+.react-datepicker__time-list-item--selected {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+/* Error States for All Input Types */
+.form-group input.error,
+.form-group textarea.error,
+.form-group select.error,
+.react-select__control.error,
+.react-datepicker__input-container input.error {
+  border-color: var(--error-color);
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.error-message {
+  color: var(--error-color);
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-xs);
+  font-weight: 500;
+}
+
+/* 🔘 Buttons */
 .button-container {
   display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  margin-top: var(--spacing-xl);
+}
+
+.submit-button,
+.cancel-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  margin-top: 20px;
+  gap: var(--spacing-sm);
+  letter-spacing: -0.025em;
+  min-height: 36px;
 }
 
 .submit-button {
-  background-color: #0056b3;
+  background: var(--primary-color);
   color: white;
-  font-size: 1rem;
-  font-weight: bold;
-  padding: 12px 20px;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-  width: 100%;
-  max-width: 300px;
 }
 
-.submit-button:hover {
-  background-color: #004494;
-  transform: scale(1.05);
+.cancel-button {
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-/* 📌 Upcoming Appointments (Right Sidebar) */
-.right-sidebar {
-  flex: 1;
-  max-width: 250px;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 10px;
-  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+.submit-button:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.upcoming-appointments {
-  padding: 10px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+.cancel-button:hover {
+  background: var(--background-tertiary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.upcoming-appointments ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.submit-button:active:not(:disabled),
+.cancel-button:active {
+  transform: translateY(0);
 }
 
-.upcoming-appointments ul li {
-  font-size: 0.9rem;
-  padding: 5px;
-  background: white;
-  margin-bottom: 5px;
-  border-radius: 5px;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.upcoming-appointments ul li:hover {
-  background: #e9ecef;
+/* Dark mode adjustments for cancel button */
+@media (prefers-color-scheme: dark) {
+  .cancel-button {
+    background: var(--background-tertiary);
+    border-color: var(--border-color);
+  }
+  
+  .cancel-button:hover {
+    background: var(--background-primary);
+  }
 }
 
-/* 📌 Appointment Details Modal */
-.appointment-details-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-  max-width: 400px;
-  width: 90%;
-  z-index: 1000;
+/* 🌗 Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-primary: #0f172a;
+    --background-secondary: #1e293b;
+    --background-tertiary: #334155;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --border-color: #334155;
+    --primary-light: rgba(37, 99, 235, 0.1);
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select,
+  .react-datepicker__input-container input,
+  .react-select__control {
+    background: var(--background-secondary);
+  }
+
+  .react-select__menu,
+  .react-datepicker {
+    background: var(--background-secondary) !important;
+  }
+
+  .react-select__option {
+    background: var(--background-secondary) !important;
+  }
+
+  .react-select__option:active {
+    background: var(--background-tertiary) !important;
+  }
+
+  .react-select__single-value {
+    color: var(--text-primary) !important;
+  }
+
+  .react-select__placeholder {
+    color: var(--text-tertiary) !important;
+  }
+
+  .react-datepicker__header {
+    background-color: var(--background-tertiary) !important;
+  }
+
+  .react-datepicker__day:hover,
+  .react-datepicker__time-list-item:hover {
+    background-color: var(--background-tertiary) !important;
+  }
 }
 
-.appointment-details-modal .modal-content {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.appointment-details-modal h2 {
-  margin: 0;
-}
-
-.appointment-details-modal button {
-  background-color: #dc3545;
-  color: white;
-  font-size: 1rem;
-  font-weight: bold;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.3s ease;
-  width: 100%;
-}
-
-.appointment-details-modal button:hover {
-  background-color: #c82333;
-}
-
-/* 📌 Responsive Design */
-@media (max-width: 1024px) {
+/* 📱 Responsive Design */
+@media (max-width: 1200px) {
   .scheduler-wrapper {
-    flex-direction: column;
+    grid-template-columns: 240px 1fr 240px;
+    margin: var(--spacing-md);
+  }
+}
+
+@media (max-width: 992px) {
+  .scheduler-wrapper {
+    grid-template-columns: 1fr;
+    margin: var(--spacing-md);
+  }
+
+  .sidebar {
+    max-width: none;
   }
 
   .form-grid {
     grid-template-columns: 1fr;
   }
-
-  .full-width {
-    grid-column: span 1;
-  }
-
-  .left-sidebar,
-  .right-sidebar {
-    max-width: 100%;
-    margin-bottom: 20px;
-  }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 576px) {
+  .scheduler-wrapper {
+    margin: 0;
+    padding: var(--spacing-md);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
   .scheduler-container {
-    padding: 15px;
+    padding: var(--spacing-lg);
   }
 
-  .scheduler-title {
-    font-size: 1.5rem;
-  }
-
-  .form-group input,
-  .form-group textarea {
-    font-size: 0.9rem;
-    padding: 8px;
+  .button-container {
+    flex-direction: column;
   }
 
   .submit-button {
-    font-size: 0.9rem;
-    padding: 10px 15px;
+    width: 100%;
   }
 }
+
+/* ♿ Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --primary-color: #0000ff;
+    --error-color: #ff0000;
+    --success-color: #008000;
+    --border-color: #000000;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select,
+  .react-select__control {
+    border-width: 2px;
+  }
+
+  .submit-button {
+    border: 2px solid #000000;
+  }
+}
+
+/* 📅 Upcoming Appointments - Updated for better interaction */
+.upcoming-appointments {
+  background: var(--background-primary);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.upcoming-appointments .section-header {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--background-secondary);
+}
+
+.upcoming-appointments .section-header h4 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.upcoming-appointments .section-header h4 svg {
+  font-size: 1rem;
+  color: var(--primary-color);
+}
+
+.appointments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.appointments-list li {
+  padding: 6px var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition-fast);
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.appointments-list li:last-child {
+  border-bottom: none;
+}
+
+.appointments-list li:hover {
+  background: var(--background-secondary);
+}
+
+.appointment-info {
+  flex: 1;
+  min-width: 0;
+  margin-right: var(--spacing-sm);
+}
+
+.appointment-primary {
+  margin-bottom: var(--spacing-xs);
+}
+
+.appointment-title {
+  font-size: 0.875rem !important;
+  font-weight: 450 !important;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.appointment-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--text-secondary);
+  font-size: 0.8rem !important;
+  line-height: 1.2;
+}
+
+.appointment-meta svg {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+}
+
+.location-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.appointment-secondary {
+  display: flex;
+  gap: var(--spacing-sm);
+  font-size: 0.8rem !important;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.appointment-date {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.appointment-time {
+  color: var(--text-tertiary);
+}
+
+.appointment-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0.7;
+  transition: var(--transition-fast);
+}
+
+.appointments-list li:hover .appointment-actions {
+  opacity: 1;
+}
+
+.edit-button, .delete-button {
+  padding: 4px !important;
+}
+
+.edit-button svg, .delete-button svg {
+  font-size: 0.875rem !important;
+}
+
+.loading-state {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.loading-state p {
+  margin: var(--spacing-sm) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.no-appointments {
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* 🎭 Modal Styles - Updated for better visibility and interaction */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: modalOverlayFadeIn 200ms ease-out;
+}
+
+@keyframes modalOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.appointment-details-modal {
+  position: relative;
+  background: var(--background-primary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-xl);
+  width: 90%;
+  max-width: 480px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+  animation: modalFadeIn 200ms ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  font-size: var(--font-size-xl);
+  margin: 0;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.modal-close-button:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-content {
+  font-size: var(--font-size-sm);
+}
+
+.modal-content p {
+  margin: var(--spacing-sm) 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.modal-content strong {
+  color: var(--text-primary);
+  font-weight: 500;
+  display: inline-block;
+  min-width: 100px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xl);
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .appointment-details-modal {
+    background: var(--background-secondary);
+  }
+} 

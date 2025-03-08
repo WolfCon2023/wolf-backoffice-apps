@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaUserCircle } from "react-icons/fa";
+import { FaUserCircle, FaDesktop } from "react-icons/fa";
 import "./Header.css";
 
 const Header = ({ username, setAuthToken }) => {
@@ -54,7 +54,7 @@ const Header = ({ username, setAuthToken }) => {
           </button>
 
           <ul className="dropdown-menu">
-            <li onClick={() => handleNavigate("/dashboard")}>🏠 Home</li>
+            <li onClick={() => handleNavigate("/dashboard")}> <FaDesktop /> Dashboard</li>
             <li onClick={handleLogout}>🚪 Logout</li>
           </ul>
         </div>

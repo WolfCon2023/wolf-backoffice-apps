@@ -8,13 +8,23 @@ import AppointmentScheduler from "./components/AppointmentScheduler";
 import Calendar from "./components/Calendar";
 import CustomerCRM from "./components/CustomerCRM";
 import CustomerDetails from "./components/CustomerDetails";
-import AppointmentDetails from "./components/AppointmentDetails"; // ✅ New component
+import AppointmentDetails from "./components/AppointmentDetails";
 import Dashboard from "./components/Dashboard";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
+import Analytics from "./components/Analytics";
+import BusinessMetrics from "./components/BusinessMetrics";
 
-// ✅ Create a new QueryClient instance
-const queryClient = new QueryClient();
+// Create a QueryClient instance with configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 function App() {
   const [authToken, setAuthToken] = useState(localStorage.getItem("token") || "");
@@ -34,7 +44,7 @@ function App() {
   }, [authToken]);
 
   return (
-    <QueryClientProvider client={queryClient}> {/* ✅ Wrap App in QueryClientProvider */}
+    <QueryClientProvider client={queryClient}>
       <Router>
         <div className="app-container">
           <Header username={username} setAuthToken={setAuthToken} />
@@ -48,7 +58,9 @@ function App() {
               <Route path="/calendar" element={authToken ? <Calendar /> : <Navigate to="/login" />} />
               <Route path="/crm" element={authToken ? <CustomerCRM /> : <Navigate to="/login" />} />
               <Route path="/customer/:id" element={authToken ? <CustomerDetails /> : <Navigate to="/login" />} />
-              <Route path="/appointment/:id" element={authToken ? <AppointmentDetails /> : <Navigate to="/login" />} /> {/* ✅ New route */}
+              <Route path="/appointment/:id" element={authToken ? <AppointmentDetails /> : <Navigate to="/login" />} />
+              <Route path="/analytics" element={authToken ? <Analytics /> : <Navigate to="/login" />} />
+              <Route path="/analytics/metrics" element={authToken ? <BusinessMetrics /> : <Navigate to="/login" />} />
             </Routes>
           </main>
           <Footer username={username} />
@@ -58,4 +70,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 

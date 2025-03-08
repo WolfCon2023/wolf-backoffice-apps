@@ -1,0 +1,37 @@
+.business-metrics-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .business-metrics-container h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+  }
+  
+  .metric-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .metric-card h3 {
+    color: #444;
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .business-metrics-container {
+      padding: 10px;
+    }
+  
+    .metric-card {
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+  } 

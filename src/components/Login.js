@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { API_BASE_URL } from "../config";
-import "./Login.css"; // ✅ New CSS file for styling
+import { handleHttpError } from "../utils";
+import "./Login.css";
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
 
 const Login = ({ setAuthToken }) => {
   const [email, setEmail] = useState("");
@@ -12,6 +14,7 @@ const Login = ({ setAuthToken }) => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
 
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
@@ -25,7 +28,8 @@ const Login = ({ setAuthToken }) => {
         navigate("/dashboard");
       }, 100);
     } catch (error) {
-      setError(error.response?.data?.message || "Login failed. Please try again.");
+      const errorMessage = handleHttpError(error, "Login");
+      setError(errorMessage);
     }
   };
 
@@ -34,8 +38,20 @@ const Login = ({ setAuthToken }) => {
       <div className="login-box">
         <h1>Login</h1>
         <form onSubmit={handleLogin}>
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input 
+            type="email" 
+            placeholder="Email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            required 
+          />
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+          />
           <button type="submit">Login</button>
         </form>
         {error && <p className="error-text">{error}</p>}
@@ -44,4 +60,4 @@ const Login = ({ setAuthToken }) => {
   );
 };
 
-export default Login;
+export default Login; 
