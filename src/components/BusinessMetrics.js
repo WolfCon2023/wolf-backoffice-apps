@@ -13,12 +13,16 @@ import {
 } from 'recharts';
 import { AnalyticsService } from '../services';
 import { toast } from 'react-toastify';
+import { Button, Typography } from '@mui/material';
+import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import './BusinessMetrics.css';
 
 const BusinessMetrics = () => {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -43,7 +47,19 @@ const BusinessMetrics = () => {
 
   return (
     <div className="business-metrics-container">
-      <h2>Business Metrics Dashboard</h2>
+      <div className="metrics-header">
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/analytics')}
+          sx={{ mb: 2 }}
+        >
+          Back to Analytics Dashboard
+        </Button>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Business Metrics
+        </Typography>
+      </div>
 
       {/* Appointments Trend */}
       <div className="metric-card">

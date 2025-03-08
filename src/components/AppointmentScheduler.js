@@ -107,6 +107,59 @@ const AppointmentScheduler = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Move users query to the top and ensure it's initialized before use
+  const { data: usersData = [], isLoading: usersLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Please log in to access the appointment scheduler");
+        navigate('/login');
+        return [];
+      }
+      try {
+        const response = await api.get('/users');
+        
+        // If response is already an array, use it directly
+        if (Array.isArray(response)) {
+          return response.map(user => ({
+            value: user._id?.toString().replace(/"/g, ''),
+            label: user.firstName && user.lastName 
+              ? `${user.firstName} ${user.lastName}`
+              : user.email || 'Unknown User'
+          }));
+        }
+
+        // Handle response.data
+        let usersData = response?.data;
+        if (!Array.isArray(usersData)) {
+          usersData = usersData?.users || usersData?.data || [];
+        }
+
+        return usersData.map(user => ({
+          value: user._id?.toString().replace(/"/g, ''),
+          label: user.firstName && user.lastName 
+            ? `${user.firstName} ${user.lastName}`
+            : user.email || 'Unknown User'
+        }));
+      } catch (error) {
+        ErrorLogger.logToFile(error, 'AppointmentScheduler:fetchUsers');
+        return [];
+      }
+    },
+    onError: (error) => {
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        navigate('/login');
+      } else {
+        toast.error(`Failed to fetch users: ${error.message}`);
+      }
+    },
+    retry: 2,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 30 * 60 * 1000,
+  });
+
   const {
     register,
     handleSubmit,
@@ -130,104 +183,43 @@ const AppointmentScheduler = () => {
     setIsRecurring(watchIsRecurring);
   }, [watchIsRecurring]);
 
-  // Add useEffect to handle token validation
+  // Token validation effect
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Please log in to access the appointment scheduler");
       navigate('/login');
-      return;
     }
   }, [navigate]);
 
-  // Fetch users query
-  const { data: users = [], isLoading: usersLoading } = useQuery({
-    queryKey: ["users"],
-    queryFn: async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        toast.error("Please log in to access the appointment scheduler");
-        navigate('/login');
-        return [];
-      }
-      try {
-        console.log('Fetching users...'); // Debug log
-        const response = await api.get('/users');
-        
-        console.log('Users API Response:', response); // Debug log
-        
-        // If response is already an array, use it directly
-        if (Array.isArray(response)) {
-          const formattedUsers = response.map(user => ({
-            value: user._id?.toString().replace(/"/g, ''),
-            label: user.firstName && user.lastName 
-              ? `${user.firstName} ${user.lastName}`
-              : user.email || 'Unknown User'
-          }));
-          return formattedUsers;
-        }
+  // Handle edit appointment data effect - now depends on usersData being loaded
+  useEffect(() => {
+    const editAppointmentData = localStorage.getItem('editAppointment');
+    if (!editAppointmentData || !usersData || usersData.length === 0) return;
 
-        // Handle response.data
-        let usersData = response?.data;
-        if (!usersData) {
-          console.error('No data in response');
-          return [];
-        }
+    try {
+      const appointmentData = JSON.parse(editAppointmentData);
+      setIsEditMode(true);
+      
+      // Find the matching user from the usersData array
+      const scheduledByUser = usersData.find(user => 
+        user.value === (appointmentData.scheduledBy?.value || appointmentData.scheduledBy)
+      );
 
-        // If data is already an array, use it
-        if (Array.isArray(usersData)) {
-          const formattedUsers = usersData.map(user => ({
-            value: user._id?.toString().replace(/"/g, ''),
-            label: user.firstName && user.lastName 
-              ? `${user.firstName} ${user.lastName}`
-              : user.email || 'Unknown User'
-          }));
-          return formattedUsers;
-        }
-
-        // Handle nested data
-        if (typeof usersData === 'object') {
-          usersData = usersData.users || usersData.data || [];
-        }
-
-        console.log('Raw users data:', usersData); // Debug log
-
-        const formattedUsers = usersData.map(user => ({
-          value: user._id?.toString().replace(/"/g, ''),
-          label: user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}`
-            : user.email || 'Unknown User'
-        }));
-
-        console.log('Formatted users:', formattedUsers); // Debug log
-        return formattedUsers;
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        console.error('Error details:', {
-          message: error.message,
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data,
-          headers: error.response?.headers
+      if (scheduledByUser) {
+        reset({
+          ...appointmentData,
+          date: new Date(appointmentData.date),
+          scheduledBy: scheduledByUser
         });
-        ErrorLogger.logToFile(error, 'AppointmentScheduler:fetchUsers');
-        throw error;
       }
-    },
-    onError: (error) => {
-      console.error('Query error:', error);
-      if (error.response?.status === 401) {
-        toast.error("Session expired. Please log in again.");
-        navigate('/login');
-      } else {
-        toast.error(`Failed to fetch users: ${error.message}`);
-        ErrorLogger.logToFile(error, 'AppointmentScheduler:usersQuery');
-      }
-    },
-    retry: 2,
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
-  });
+      localStorage.removeItem('editAppointment');
+    } catch (error) {
+      console.error('Error parsing edit appointment data:', error);
+      ErrorLogger.logToFile(error, 'AppointmentScheduler:parseEditData');
+      toast.error('Failed to load appointment data for editing');
+    }
+  }, [usersData, reset]);
 
   // Add useEffect to fetch appointments on mount
   useEffect(() => {
@@ -676,6 +668,33 @@ const AppointmentScheduler = () => {
             >
               Analytics
             </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<EventIcon />}
+              component={Link}
+              to="/appointments"
+            >
+              Appointments
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<PersonIcon />}
+              component={Link}
+              to="/crm"
+            >
+              Clients
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<NotesIcon />}
+              component={Link}
+              to="/notes"
+            >
+              Notes
+            </Button>
           </div>
         </div>
 
@@ -705,27 +724,36 @@ const AppointmentScheduler = () => {
 
             {/* Statistics Summary */}
             <div className="metrics-grid">
-              <div className="metric">
+              <div className="metric stat-card">
                 <h4>Today's Stats</h4>
-                <div className="stat-item">
-                  <span>Total: {statistics.today?.total || 0}</span>
-                  <span>Completed: {statistics.today?.completed || 0}</span>
+                <div className="stat-content">
+                  <div className="stat-value">{statistics.today?.total || 0}</div>
+                  <div className="stat-label">Total Appointments</div>
+                  <div className="stat-secondary">
+                    <span>{statistics.today?.completed || 0} completed</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="metric">
+              <div className="metric stat-card">
                 <h4>This Week</h4>
-                <div className="stat-item">
-                  <span>Total: {statistics.week?.total || 0}</span>
-                  <span>Avg/Day: {statistics.week?.average || 0}</span>
+                <div className="stat-content">
+                  <div className="stat-value">{statistics.week?.total || 0}</div>
+                  <div className="stat-label">Total Appointments</div>
+                  <div className="stat-secondary">
+                    <span>Avg {statistics.week?.average || 0}/day</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="metric">
+              <div className="metric stat-card">
                 <h4>Revenue</h4>
-                <div className="stat-item">
-                  <span>Monthly: ${revenue.monthly || 0}</span>
-                  <span>Growth: {revenue.growth || 0}%</span>
+                <div className="stat-content">
+                  <div className="stat-value">${revenue.monthly || 0}</div>
+                  <div className="stat-label">Monthly Revenue</div>
+                  <div className="stat-secondary">
+                    <span>{revenue.growth > 0 ? '+' : ''}{revenue.growth || 0}% growth</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1093,7 +1121,7 @@ const AppointmentScheduler = () => {
                 render={({ field }) => (
                   <Select
                     {...field}
-                    options={users}
+                    options={usersData}
                     isLoading={usersLoading}
                     placeholder={usersLoading ? "Loading users..." : "Select user"}
                     className={errors.scheduledBy ? "error" : ""}
@@ -1116,7 +1144,7 @@ const AppointmentScheduler = () => {
                 )}
               />
               {errors.scheduledBy && <span className="error-message">{errors.scheduledBy.message}</span>}
-              {users.length === 0 && !usersLoading && (
+              {usersData.length === 0 && !usersLoading && (
                 <span className="error-message">No users available. Please check your connection.</span>
               )}
             </div>

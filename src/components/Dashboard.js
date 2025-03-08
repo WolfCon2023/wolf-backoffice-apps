@@ -68,6 +68,17 @@ const Dashboard = () => {
                   </div>
                 </Link>
               </li>
+              <li>
+                <Link to="/analytics" className="app-card analytics">
+                  <div className="card-icon">
+                    <FaChartLine className="icon" />
+                  </div>
+                  <div className="card-content">
+                    <h3>Analytics</h3>
+                    <p>Business insights and metrics</p>
+                  </div>
+                </Link>
+              </li>
             </ul>
           </nav>
         </section>
@@ -75,10 +86,6 @@ const Dashboard = () => {
         <section className="quick-actions">
           <h2>Quick Actions</h2>
           <div className="action-grid">
-            <Link to="/analytics" className="quick-action-card">
-              <FaChartLine />
-              <span>Analytics</span>
-            </Link>
             <Link to="/settings" className="quick-action-card">
               <FaCog />
               <span>Settings</span>

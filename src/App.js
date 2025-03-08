@@ -14,6 +14,9 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import Analytics from "./components/Analytics";
 import BusinessMetrics from "./components/BusinessMetrics";
+import AppointmentTrends from './components/AppointmentTrends';
+import CustomerInsights from './components/CustomerInsights';
+import LocationPerformance from './components/LocationPerformance';
 
 // Create a QueryClient instance with configuration
 const queryClient = new QueryClient({
@@ -61,6 +64,18 @@ function App() {
               <Route path="/appointment/:id" element={authToken ? <AppointmentDetails /> : <Navigate to="/login" />} />
               <Route path="/analytics" element={authToken ? <Analytics /> : <Navigate to="/login" />} />
               <Route path="/analytics/metrics" element={authToken ? <BusinessMetrics /> : <Navigate to="/login" />} />
+              <Route 
+                path="/analytics/appointments/trends" 
+                element={authToken ? <AppointmentTrends /> : <Navigate to="/login" />} 
+              />
+              <Route 
+                path="/analytics/customers/insights" 
+                element={authToken ? <CustomerInsights /> : <Navigate to="/login" />} 
+              />
+              <Route 
+                path="/analytics/locations/performance" 
+                element={authToken ? <LocationPerformance /> : <Navigate to="/login" />} 
+              />
             </Routes>
           </main>
           <Footer username={username} />

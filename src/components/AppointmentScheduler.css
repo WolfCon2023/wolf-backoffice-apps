@@ -892,4 +892,76 @@
   .appointment-details-modal {
     background: var(--background-secondary);
   }
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #0056b3;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.stat-secondary {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.metrics-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.metrics-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+.view-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+}
+
+.view-toggle button {
+  flex: 0 1 auto;
+  min-width: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .view-toggle {
+    grid-template-columns: repeat(2, 1fr);
+  }
 } 

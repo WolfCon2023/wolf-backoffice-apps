@@ -1,81 +1,150 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AnalyticsService } from '../services/AnalyticsService';
+import { Link } from 'react-router-dom';
+import {
+  Button,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
+} from '@mui/material';
+import {
+  Assessment as AssessmentIcon,
+  TrendingUp as TrendingUpIcon,
+  People as PeopleIcon,
+  LocationOn as LocationIcon,
+  Download as DownloadIcon
+} from '@mui/icons-material';
+import { AnalyticsService } from '../services';
 import { toast } from 'react-toastify';
 import './Analytics.css';
 
 const Analytics = () => {
-  const navigate = useNavigate();
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [exporting, setExporting] = useState(false);
 
-  const getMonthDateRange = () => {
-    const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return { startDate, endDate };
-  };
+  const handleExportReport = async () => {
+    if (!startDate || !endDate) {
+      toast.error('Please select both start and end dates');
+      return;
+    }
 
-  const handleExportMonthlyReport = async () => {
     try {
-      setIsExporting(true);
-      const dateRange = getMonthDateRange();
-      await AnalyticsService.exportAnalyticsReport('monthly', dateRange, {
-        format: 'pdf',
-        includeCharts: true
+      setExporting(true);
+      await AnalyticsService.exportAnalyticsReport('monthly', { 
+        startDate: new Date(startDate),
+        endDate: new Date(endDate)
       });
-      toast.success('Monthly report generated successfully');
+      toast.success('Report exported successfully');
+      setExportDialogOpen(false);
     } catch (error) {
-      console.error('Export error:', error);
-      toast.error(error.message || 'Failed to generate monthly report');
+      toast.error(error.message || 'Failed to export report');
     } finally {
-      setIsExporting(false);
+      setExporting(false);
     }
   };
 
+  // Get today's date in YYYY-MM-DD format for max date
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <div className="analytics-container">
-      <h2>Analytics Dashboard</h2>
-      
-      <div className="analytics-actions">
-        <button
-          className="btn btn-primary"
-          onClick={() => navigate('/analytics/metrics')}
+      <div className="analytics-header">
+        <Typography variant="h4" component="h1" gutterBottom>
+          Analytics Dashboard
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<DownloadIcon />}
+          onClick={() => setExportDialogOpen(true)}
         >
-          View Business Metrics
-        </button>
-        
-        <button
-          className="btn btn-secondary"
-          onClick={handleExportMonthlyReport}
-          disabled={isExporting}
-        >
-          {isExporting ? 'Generating Monthly Report...' : 'Generate Monthly Report'}
-        </button>
+          Export Monthly Report
+        </Button>
       </div>
 
-      <div className="analytics-summary">
-        <div className="summary-card">
-          <h3>Quick Stats</h3>
-          <p>View comprehensive business metrics including:</p>
-          <ul>
-            <li>Appointment Trends</li>
-            <li>Revenue Analysis</li>
-            <li>Customer Distribution</li>
-            <li>Location Performance</li>
-          </ul>
-        </div>
+      <div className="analytics-grid">
+        <Link to="/analytics/metrics" className="analytics-card">
+          <AssessmentIcon className="card-icon" />
+          <div className="card-content">
+            <h3>Business Metrics</h3>
+            <p>View key performance indicators</p>
+          </div>
+        </Link>
 
-        <div className="summary-card">
-          <h3>Export Options</h3>
-          <p>Generate detailed reports with:</p>
-          <ul>
-            <li>Appointment Statistics</li>
-            <li>Revenue Breakdown</li>
-            <li>Customer Insights</li>
-            <li>Performance Metrics</li>
-          </ul>
-        </div>
+        <Link to="/analytics/appointments/trends" className="analytics-card">
+          <TrendingUpIcon className="card-icon" />
+          <div className="card-content">
+            <h3>Appointment Trends</h3>
+            <p>Analyze appointment patterns</p>
+          </div>
+        </Link>
+
+        <Link to="/analytics/customers/insights" className="analytics-card">
+          <PeopleIcon className="card-icon" />
+          <div className="card-content">
+            <h3>Customer Insights</h3>
+            <p>Understand customer behavior</p>
+          </div>
+        </Link>
+
+        <Link to="/analytics/locations/performance" className="analytics-card">
+          <LocationIcon className="card-icon" />
+          <div className="card-content">
+            <h3>Location Performance</h3>
+            <p>Compare location metrics</p>
+          </div>
+        </Link>
       </div>
+
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onClose={() => setExportDialogOpen(false)}>
+        <DialogTitle>Export Monthly Report</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Select date range for the report
+          </Typography>
+          <div className="date-picker-container">
+            <TextField
+              type="date"
+              label="Start Date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ max: endDate || today }}
+              fullWidth
+            />
+            <TextField
+              type="date"
+              label="End Date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: startDate, max: today }}
+              fullWidth
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setExportDialogOpen(false)}
+            disabled={exporting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleExportReport}
+            variant="contained"
+            color="primary"
+            disabled={!startDate || !endDate || exporting}
+          >
+            {exporting ? 'Exporting...' : 'Export'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

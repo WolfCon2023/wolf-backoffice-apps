@@ -2,16 +2,17 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* ✅ Ensures title stays centered, menu aligned right */
-  background-color: #0056b3;
+  justify-content: space-between;
+  background: linear-gradient(to right, #004a99, #0056b3);
   color: white;
   padding: 6px 20px;
   height: 45px;
   position: fixed;
   top: 0;
-  left: 0; /* ✅ Flush left */
-  width: 100vw; /* ✅ Ensures it spans the full width */
+  left: 0;
+  width: 100vw;
   z-index: 1500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* ✅ Title Perfectly Centered */
@@ -23,14 +24,16 @@
   white-space: nowrap;
   position: absolute;
   left: 50%;
-  transform: translateX(-50%); /* ✅ Centers the text */
+  transform: translateX(-50%);
   margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.3px;
 }
 
 /* ✅ Dropdown Menu Container */
 .header-dropdown {
   position: absolute;
-  right: 67px; /* ✅ Manually moved left (Adjust as needed) */
+  right: 67px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 2000;
@@ -44,17 +47,24 @@
   color: white;
   font-size: 1.2rem;
   padding: 5px;
+  transition: transform 0.2s ease;
+  border-radius: 50%;
+}
+
+.dropdown-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
 }
 
 /* 📜 Dropdown Menu */
 .dropdown-menu {
   position: absolute;
-  right: 10px; /* ✅ Manually moved left (Adjust value as needed) */
-  top: 45px; /* ✅ Appears below button */
+  right: 10px;
+  top: 45px;
   background: white;
-  color: black;
-  border-radius: 5px;
-  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.2);
+  color: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   list-style: none;
   padding: 10px;
   min-width: 140px;
@@ -62,7 +72,8 @@
   display: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease-in-out, visibility 0.3s;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* ✅ Show Dropdown on Click */
@@ -71,6 +82,7 @@
   display: block;
   opacity: 1;
   visibility: visible;
+  transform: translateY(0);
 }
 
 /* ✅ Dropdown Items */
@@ -78,25 +90,30 @@
   padding: 10px;
   text-align: left;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* 🚀 Hover Effect */
 .dropdown-menu li:hover {
   background: #f0f0f0;
+  color: #0056b3;
 }
 
 /* ✅ Prevent Header Overlapping Content */
 .main-content {
-  margin-top: 55px; /* ✅ Creates space below the header */
+  margin-top: 55px;
 }
 
 /* 📱 Mobile Adjustments */
 @media (max-width: 768px) {
   .header {
     flex-direction: row;
-    justify-content: space-between; /* ✅ Ensures title stays centered */
+    justify-content: space-between;
     height: auto;
   }
 
@@ -110,3 +127,102 @@
     margin-right: 10px;
   }
 }
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #0056b3;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.logo:hover {
+  color: #003d82;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.nav-links a {
+  color: #666;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: #0056b3;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.username {
+  color: #666;
+  font-weight: 500;
+}
+
+.logout-button {
+  padding: 0.5rem 1rem;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: #d32f2f;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .nav-links {
+    gap: 1rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .header {
+    background-color: #2a2a2a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .logo {
+    color: #66b2ff;
+  }
+
+  .logo:hover {
+    color: #99ccff;
+  }
+
+  .nav-links a {
+    color: #ccc;
+  }
+
+  .nav-links a:hover {
+    color: #66b2ff;
+  }
+
+  .username {
+    color: #ccc;
+  }
+} 

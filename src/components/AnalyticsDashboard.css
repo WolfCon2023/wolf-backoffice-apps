@@ -1,0 +1,48 @@
+.analytics-dashboard {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  
+  .dashboard-header {
+    margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .dashboard-header h1 {
+    margin: 16px 0;
+    color: #1a237e;
+  }
+  
+  .analytics-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .card-icon {
+    margin-bottom: 16px;
+    color: #1a237e;
+  }
+  
+  .card-icon svg {
+    font-size: 48px;
+  }
+  
+  @media (max-width: 768px) {
+    .analytics-dashboard {
+      padding: 16px;
+    }
+  
+    .dashboard-header {
+      margin-bottom: 24px;
+    }
+  
+    .card-icon svg {
+      font-size: 36px;
+    }
+  } 

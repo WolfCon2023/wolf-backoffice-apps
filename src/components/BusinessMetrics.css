@@ -1,37 +1,42 @@
 .business-metrics-container {
-    padding: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.metrics-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.metrics-header h1 {
+  margin: 16px 0;
+}
+
+.metric-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .business-metrics-container {
+    padding: 16px;
   }
-  
-  .business-metrics-container h2 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 30px;
-  }
-  
+
   .metric-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    margin-bottom: 30px;
+    padding: 16px;
+    margin-bottom: 16px;
   }
-  
-  .metric-card h3 {
-    color: #444;
-    margin-bottom: 20px;
-    font-size: 1.2rem;
-  }
-  
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .business-metrics-container {
-      padding: 10px;
-    }
-  
-    .metric-card {
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-  } 
+} 

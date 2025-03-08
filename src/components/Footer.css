@@ -4,25 +4,66 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  background-color: #333;
+  background: linear-gradient(to right, #2c2c2c, #333333);
   color: white;
-  padding: 6px 20px; /* ✅ Keeps spacing consistent */
+  padding: 6px 20px;
   font-size: 0.9rem;
   height: 45px;
   z-index: 1000;
   display: flex;
-  justify-content: space-between; /* ✅ Keeps text properly aligned */
+  justify-content: space-between;
   align-items: center;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ Company Text */
+.footer p {
+  margin: 0;
+  opacity: 0.9;
+  letter-spacing: 0.3px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 24px;
 }
 
 /* ✅ Adjusted "Logged in as" Text */
 .footer-username {
   font-size: 0.8rem;
-  opacity: 0.8;
+  opacity: 0.9;
   text-align: right;
-  max-width: 180px; /* ✅ Prevents excessive shifting */
-  white-space: nowrap; /* ✅ Ensures text stays in one line */
-  overflow: hidden; /* ✅ Prevents accidental overflow */
-  text-overflow: ellipsis; /* ✅ Adds "..." if text is too long */
-  margin-right: 24px; /* ✅ Moves text slightly to the left */
+  white-space: nowrap;
+  padding-left: 24px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  margin-left: auto;
 }
+
+/* 📱 Mobile Adjustments */
+@media (max-width: 768px) {
+  .footer {
+    padding: 8px 16px;
+  }
+
+  .footer p {
+    padding-right: 16px;
+  }
+
+  .footer-username {
+    font-size: 0.8rem;
+    padding-left: 16px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .footer {
+    background: linear-gradient(to right, #1a1a1a, #2a2a2a);
+  }
+
+  .footer-username {
+    border-left-color: rgba(255, 255, 255, 0.15);
+  }
+} 
