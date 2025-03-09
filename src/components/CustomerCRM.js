@@ -199,7 +199,7 @@ const CustomerCRM = () => {
   };
 
   return (
-    <Container maxWidth="lg" className="customer-container">
+    <Container maxWidth="lg" className="customer-container" sx={{ mb: 8 }}>
       <Typography variant="h4" sx={{ textAlign: "center", mt: 3, mb: 4 }}>
         Customer Relationship Management (CRM)
       </Typography>
@@ -254,12 +254,7 @@ const CustomerCRM = () => {
 
         {/* Upcoming Meetings Card */}
         <Grid item xs={12} md={6}>
-          <Card 
-            className="crm-widget"
-            component={Link}
-            to="/appointments"
-            sx={{ textDecoration: 'none' }}
-          >
+          <Card className="crm-widget">
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <AssessmentIcon sx={{ fontSize: '20px', color: '#666', mr: 1 }} />
@@ -274,10 +269,12 @@ const CustomerCRM = () => {
                 View and manage schedules
               </Typography>
               <Button 
+                component={Link}
+                to="/calendar"
                 variant="contained"
-                sx={{ mt: 2, width: 'auto', alignSelf: 'flex-start' }}
+                sx={{ mt: 2 }}
               >
-                Open Calendar
+                OPEN CALENDAR
               </Button>
             </CardContent>
           </Card>
@@ -559,4 +556,4 @@ const CustomerCRM = () => {
   );
 };
 
-export default CustomerCRM; 
+export default CustomerCRM;
