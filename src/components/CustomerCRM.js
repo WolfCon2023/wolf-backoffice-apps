@@ -199,7 +199,7 @@ const CustomerCRM = () => {
   };
 
   return (
-    <Container maxWidth="lg" className="customer-container" sx={{ mb: 8 }}>
+    <Container maxWidth="lg" className="customer-container" sx={{ mb: 12 }}>
       <Typography variant="h4" sx={{ textAlign: "center", mt: 3, mb: 4 }}>
         Customer Relationship Management (CRM)
       </Typography>
@@ -271,8 +271,17 @@ const CustomerCRM = () => {
               <Button 
                 component={Link}
                 to="/calendar"
-                variant="contained"
-                sx={{ mt: 2 }}
+                sx={{ 
+                  mt: 2,
+                  backgroundColor: 'transparent',
+                  '&:hover': {
+                    backgroundColor: 'transparent',
+                    textDecoration: 'underline'
+                  },
+                  color: '#1976d2',
+                  padding: 0,
+                  fontWeight: 500
+                }}
               >
                 OPEN CALENDAR
               </Button>
