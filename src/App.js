@@ -17,6 +17,8 @@ import BusinessMetrics from "./components/BusinessMetrics";
 import AppointmentTrends from './components/AppointmentTrends';
 import CustomerInsights from './components/CustomerInsights';
 import LocationPerformance from './components/LocationPerformance';
+import Settings from './components/Settings';
+import Help from './components/Help';
 
 // Create a QueryClient instance with configuration
 const queryClient = new QueryClient({
@@ -76,6 +78,9 @@ function App() {
                 path="/analytics/locations/performance" 
                 element={authToken ? <LocationPerformance /> : <Navigate to="/login" />} 
               />
+              <Route path="/settings" element={authToken ? <Settings /> : <Navigate to="/login" />} />
+              <Route path="/help" element={authToken ? <Help /> : <Navigate to="/login" />} />
+              <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
           <Footer username={username} />

@@ -1,0 +1,72 @@
+.customer-details {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .details-header {
+    display: flex;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .customer-details .MuiPaper-root {
+    height: 100%;
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .customer-details .MuiPaper-root:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .customer-details .MuiListItem-root {
+    padding: 12px 0;
+  }
+  
+  .customer-details .MuiListItemText-primary {
+    font-size: 0.875rem;
+    color: #666;
+    font-weight: 500;
+  }
+  
+  .customer-details .MuiListItemText-secondary {
+    font-size: 1rem;
+    color: #333;
+  }
+  
+  .customer-details .MuiDivider-root {
+    margin: 16px 0;
+  }
+  
+  .customer-details .MuiChip-root {
+    height: 24px;
+  }
+  
+  .customer-details .MuiChip-icon {
+    color: #ffd700;
+    font-size: 1rem;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 600px) {
+    .customer-details {
+      padding: 16px;
+    }
+  
+    .details-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+  
+    .details-header .MuiBox-root {
+      width: 100%;
+      justify-content: space-between;
+    }
+  
+    .details-header .MuiButton-root {
+      flex: 1;
+    }
+  } 

@@ -283,16 +283,6 @@ const Calendar = () => {
             <Button
               size="small"
               variant="text"
-              startIcon={<DashboardIcon />}
-              component={Link}
-              to="/dashboard"
-              sx={{ mx: 1 }}
-            >
-              Dashboard
-            </Button>
-            <Button
-              size="small"
-              variant="text"
               startIcon={<EventIcon />}
               component={Link}
               to="/appointments"

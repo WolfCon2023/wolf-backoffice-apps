@@ -1,313 +1,148 @@
-/* 🎨 Customer CRM Styles */
-
-/* 🔹 Center the page content */
 .customer-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    min-height: calc(100vh - 120px);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Title styles */
-.customer-container h4 {
-    font-size: 1.75rem; /* Reduced from default h4 size */
-    margin-bottom: 1.5rem;
-    color: #333;
-    font-weight: 500;
-}
-
-/* 🔹 App Navigation */
-.app-navigation {
-    margin-bottom: 40px;
-    text-align: center;
-}
-
-.app-navigation ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    padding: 2rem;
+    min-height: calc(100vh - 64px);
+    background-color: #f5f5f5;
+  }
+  
+  .stats-grid {
     display: flex;
     gap: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.app-navigation li {
-    flex: 0 1 auto;
-    min-width: 200px;
-}
-
-.app-navigation a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 20px;
+    margin-bottom: 2rem;
+  }
+  
+  .crm-widget {
     background: #ffffff;
-    border-radius: 8px;
-    text-decoration: none;
-    color: #007bff;
-    transition: all 0.3s ease;
-    border: 1px solid #007bff;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.app-navigation a:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
-    background: #007bff;
-    color: #ffffff;
-}
-
-.app-navigation .icon {
-    margin-right: 8px;
-    font-size: 1rem;
-}
-
-/* 🔹 Stats Section */
-.stats-grid {
-    margin-bottom: 40px !important;
-}
-
-/* 🔹 CRM Widgets - Quick Stats */
-.crm-widget {
-    text-align: center;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
-    background: #ffffff;
-    transition: all 0.3s ease;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-/* Clickable Stats Cards */
-.crm-widget.clickable {
+    transition: all 0.2s ease;
+  }
+  
+  .crm-widget.clickable {
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.crm-widget.clickable:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 16px rgba(0, 123, 255, 0.15);
-}
-
-.crm-widget h6 {
+  }
+  
+  .crm-widget.clickable:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .crm-widget .MuiCardContent-root {
+    padding: 1.5rem;
+  }
+  
+  .crm-widget .MuiTypography-subtitle1 {
     color: #666;
-    margin-bottom: 8px;
     font-size: 0.875rem;
     font-weight: 500;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
-}
-
-.crm-widget h4 {
-    color: #007bff;
-    font-weight: 600;
-    font-size: 2rem;
-    margin: 12px 0;
-}
-
-.crm-widget .MuiTypography-body2 {
+  }
+  
+  .crm-widget .MuiTypography-h3 {
+    font-size: 2.5rem;
+    color: #1976d2;
+    margin: 1rem 0;
+    font-weight: 400;
+  }
+  
+  .crm-widget .MuiTypography-body2 {
     color: #666;
-    margin-top: 8px;
-    font-size: 0.813rem;
-    opacity: 0.8;
-}
-
-/* 🔹 Search Container */
-.search-container {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.05);
-    margin-bottom: 24px;
-}
-
-.search-container .MuiFormControl-root {
-    margin: 0;
-}
-
-.search-container .MuiButton-root {
-    height: 40px;
-    min-width: 100px;
     font-size: 0.875rem;
-}
-
-/* 🔹 Results Dialog */
-.results-dialog .MuiDialog-paper {
-    min-width: 80vw !important;
-    max-width: 90vw !important;
-    max-height: 85vh !important;
-}
-
-.results-dialog .MuiDialogTitle-root {
-    background: #f8f9fa;
-    padding: 16px 24px;
-    border-bottom: 1px solid #eee;
-    font-size: 1.25rem;
-}
-
-.results-dialog .MuiDialogContent-root {
-    padding: 0 !important;
-}
-
-/* 🔹 Table in Dialog */
-.results-dialog .MuiTableContainer-root {
-    max-height: calc(85vh - 200px);
-    overflow: auto;
-}
-
-.results-dialog .MuiTable-root {
-    background: white;
-    min-width: 100%;
-}
-
-.results-dialog .MuiTableHead-root {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background: #007bff;
-}
-
-.results-dialog .MuiTableHead-root .MuiTableCell-root {
-    background: #007bff;
-    color: white;
-    font-weight: 600;
-    padding: 12px 16px;
-    font-size: 0.875rem;
-    white-space: nowrap;
-}
-
-.results-dialog .MuiTableBody-root .MuiTableCell-root {
-    padding: 12px 16px;
-    font-size: 0.875rem;
-    border-bottom: 1px solid #eee;
-}
-
-.results-dialog .MuiTableRow-root:hover {
-    background: #f5f5f5;
-    transition: background 0.2s ease-in-out;
-}
-
-/* 🔹 Pagination */
-.MuiPagination-root {
-    padding: 16px;
-    background: #fff;
-    border-top: 1px solid #eee;
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-}
-
-.MuiPagination-ul {
-    justify-content: center;
-}
-
-/* 🔹 Action Buttons */
-.MuiButton-root {
+  }
+  
+  .crm-widget .MuiButton-contained {
     text-transform: none;
-    padding: 6px 16px;
+    font-weight: 400;
+    background-color: #1976d2;
+  }
+  
+  .crm-widget .MuiButton-outlined {
+    text-transform: none;
+    font-weight: 400;
+    color: #1976d2;
+    border-color: #1976d2;
+  }
+  
+  .crm-widget .MuiButton-outlined:hover {
+    background-color: rgba(25, 118, 210, 0.04);
+  }
+  
+  /* Search section styling */
+  .MuiSelect-select {
     font-size: 0.875rem;
-}
-
-.MuiIconButton-root {
-    color: #007bff;
-    transition: all 0.2s ease;
-}
-
-.MuiIconButton-root:hover {
-    background-color: rgba(0, 123, 255, 0.1);
-    transform: scale(1.1);
-}
-
-/* Dialog Form Fields */
-.MuiDialog-paper .MuiTextField-root,
-.MuiDialog-paper .MuiFormControl-root {
+  }
+  
+  .MuiTextField-root input {
+    font-size: 0.875rem;
+  }
+  
+  .MuiButton-root {
+    text-transform: none;
+    font-weight: 400;
+  }
+  
+  /* Dialog styling */
+  .results-dialog .MuiDialog-paper {
+    max-width: 90vw;
+  }
+  
+  .results-dialog .MuiDialogTitle-root {
+    background: #f5f5f5;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  }
+  
+  .results-dialog .MuiTableHead-root {
+    background: #f5f5f5;
+  }
+  
+  .results-dialog .MuiTableCell-head {
+    font-weight: 500;
+    color: #666;
+  }
+  
+  /* Icons styling */
+  .icon {
+    font-size: 20px;
+    margin-right: 8px;
+    color: #5f6368;
+  }
+  
+  /* Stats card header */
+  .stats-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
     margin-bottom: 16px;
-}
-
-.MuiDialog-paper .MuiInputLabel-root {
-    font-size: 0.875rem;
-}
-
-.MuiDialog-paper .MuiInputBase-root {
-    font-size: 0.875rem;
-}
-
-.MuiDialog-paper .MuiFormControlLabel-label {
-    font-size: 0.875rem;
-}
-
-/* 🔹 Responsive Design */
-@media (max-width: 768px) {
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Card content alignment */
+  .crm-widget .MuiBox-root {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  /* View Calendar link styling */
+  .crm-widget a {
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 960px) {
     .customer-container {
-        padding: 16px;
+      padding: 1rem;
     }
-
-    .app-navigation {
-        margin-bottom: 32px;
+    
+    .crm-widget .MuiTypography-h3 {
+      font-size: 2rem;
     }
-
-    .app-navigation ul {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .app-navigation li {
-        width: 100%;
-    }
-
-    .app-navigation a {
-        padding: 8px 16px;
-        font-size: 0.875rem;
-    }
-
+    
     .stats-grid {
-        margin-bottom: 32px !important;
+      flex-direction: column;
     }
-
-    .crm-widget h4 {
-        font-size: 1.75rem;
-    }
-
-    .crm-widget h6 {
-        font-size: 0.813rem;
-    }
-
-    .search-container {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 16px;
-        gap: 8px;
-    }
-
-    .search-container .MuiButton-root {
-        width: 100%;
-        height: 40px;
-    }
-}
-
-/* 🔹 Animation */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.MuiDialog-paper {
-    animation: fadeIn 0.3s ease-out;
-}
+  } 

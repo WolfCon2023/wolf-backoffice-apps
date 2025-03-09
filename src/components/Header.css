@@ -2,32 +2,44 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   background: linear-gradient(to right, #004a99, #0056b3);
   color: white;
-  padding: 6px 20px;
+  padding: 0 20px;
   height: 45px;
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 100%;
   z-index: 1500;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.header-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 0 20px;
+}
+
 /* ✅ Title Perfectly Centered */
 .header-title {
-  font-size: 1rem;
-  font-weight: bold;
-  color: white;
-  text-align: center;
-  white-space: nowrap;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-  letter-spacing: 0.3px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.header-title:hover {
+  opacity: 0.9;
+  color: white;
+  text-decoration: none;
 }
 
 /* ✅ Dropdown Menu Container */
@@ -126,15 +138,18 @@
   .header-dropdown {
     margin-right: 10px;
   }
-}
 
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  .header-content {
+    padding-right: 10px;
+  }
+
+  .user-section {
+    gap: 8px;
+  }
+
+  .username {
+    font-size: 0.8rem;
+  }
 }
 
 .logo {
@@ -150,60 +165,43 @@
 }
 
 .nav-links {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-}
-
-.nav-links a {
-  color: #666;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-
-.nav-links a:hover {
-  color: #0056b3;
+  visibility: hidden; /* Hide nav links since they're not in the reference image */
 }
 
 .user-section {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .username {
-  color: #666;
-  font-weight: 500;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 400;
 }
 
 .logout-button {
-  padding: 0.5rem 1rem;
+  padding: 4px 12px;
   background-color: #f44336;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 400;
   transition: background-color 0.2s;
+  margin-left: 8px;
 }
 
 .logout-button:hover {
   background-color: #d32f2f;
 }
 
-/* Responsive design */
-@media (max-width: 1024px) {
-  .nav-links {
-    gap: 1rem;
-  }
-}
-
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .header {
-    background-color: #2a2a2a;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(to right, #004a99, #0056b3);
   }
 
   .logo {
@@ -214,15 +212,44 @@
     color: #99ccff;
   }
 
-  .nav-links a {
-    color: #ccc;
+  .MuiMenu-paper {
+    background-color: #333 !important;
   }
 
-  .nav-links a:hover {
-    color: #66b2ff;
+  .MuiMenuItem-root {
+    color: #fff !important;
   }
 
-  .username {
-    color: #ccc;
+  .MuiMenuItem-root:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
   }
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .nav-links {
+    gap: 1rem;
+  }
+}
+
+.dashboard-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.dashboard-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-decoration: none;
+}
+
+.dashboard-link svg {
+  margin-top: -2px;
 } 

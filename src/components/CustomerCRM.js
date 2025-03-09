@@ -1,11 +1,12 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
   Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Typography, Container, Box, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Card, CardContent, MenuItem, Select, InputLabel, FormControl, FormControlLabel, Checkbox, IconButton, Tooltip, Pagination
 } from "@mui/material";
 import EditIcon from '@mui/icons-material/Edit';
-import { FaCalendarAlt, FaClipboardList, FaUserFriends, FaUsers, FaPlusCircle } from "react-icons/fa";
+import { FaCalendarAlt, FaClipboardList, FaUserFriends, FaUsers, FaPlusCircle, FaChartLine, FaUserTie, FaIndustry } from "react-icons/fa";
+import { Assessment as AssessmentIcon, TrendingUp as TrendingUpIcon } from '@mui/icons-material';
 import { customerService } from '../services/customerService';
 import "./CustomerCRM.css";
 
@@ -203,103 +204,156 @@ const CustomerCRM = () => {
         Customer Relationship Management (CRM)
       </Typography>
 
-      {/* 🔹 App Navigation */}
-      <nav className="app-navigation" aria-label="Main Navigation">
-        <ul>
-          <li>
-            <Link to="/appointments">
-              <FaClipboardList className="icon" /> Appointments Dashboard
-            </Link>
-          </li>
-          <li>
-            <Link to="/schedule-appointment">
-              <FaPlusCircle className="icon" /> Schedule Appointment
-            </Link>
-          </li>
-          <li>
-            <Link to="/calendar">
-              <FaCalendarAlt className="icon" /> Calendar
-            </Link>
-          </li>
-        </ul>
-      </nav>
-
-      {/* 🔹 Quick Actions & Stats */}
-      <Grid 
-        container 
-        spacing={3} 
-        className="stats-grid"
-      >
-        <Grid item xs={4}>
+      {/* Stats Cards */}
+      <Grid container spacing={3}>
+        {/* Total Customers Card */}
+        <Grid item xs={12} md={6}>
           <Card 
             className="crm-widget clickable"
             onClick={() => handleStatsClick('total')}
           >
             <CardContent>
-              <Typography variant="h6">Total Customers</Typography>
-              <Typography variant="h4">{isLoadingCustomers ? "Loading..." : (allCustomers?.length || 0)}</Typography>
-              <Typography variant="body2" color="textSecondary">Click to view all customers</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <FaUsers style={{ fontSize: '20px', color: '#666', marginRight: '8px' }} />
+                <Typography variant="subtitle1" color="textSecondary">
+                  TOTAL CUSTOMERS
+                </Typography>
+              </Box>
+              <Typography variant="h3" sx={{ my: 2, color: '#1976d2' }}>
+                {isLoadingCustomers ? "Loading..." : (allCustomers?.length || 0)}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                View complete customer list
+              </Typography>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={4}>
+
+        {/* High Value Clients Card */}
+        <Grid item xs={12} md={6}>
           <Card 
             className="crm-widget clickable"
             onClick={() => handleStatsClick('highValue')}
           >
             <CardContent>
-              <Typography variant="h6">High-Value Clients</Typography>
-              <Typography variant="h4">{isLoadingCustomers ? "Loading..." : highValueCustomers.length}</Typography>
-              <Typography variant="body2" color="textSecondary">Click to view high-value customers</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <FaUserTie style={{ fontSize: '20px', color: '#666', marginRight: '8px' }} />
+                <Typography variant="subtitle1" color="textSecondary">
+                  HIGH-VALUE CLIENTS
+                </Typography>
+              </Box>
+              <Typography variant="h3" sx={{ my: 2, color: '#1976d2' }}>
+                {isLoadingCustomers ? "Loading..." : highValueCustomers.length}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                View high-value customer details
+              </Typography>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={4}>
+
+        {/* Upcoming Meetings Card */}
+        <Grid item xs={12} md={6}>
+          <Card 
+            className="crm-widget"
+            component={Link}
+            to="/appointments"
+            sx={{ textDecoration: 'none' }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <AssessmentIcon sx={{ fontSize: '20px', color: '#666', mr: 1 }} />
+                <Typography variant="subtitle1" color="textSecondary">
+                  UPCOMING MEETINGS
+                </Typography>
+              </Box>
+              <Typography variant="h3" sx={{ my: 2, color: '#1976d2' }}>
+                Appointments
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                View and manage schedules
+              </Typography>
+              <Button 
+                variant="contained"
+                sx={{ mt: 2, width: 'auto', alignSelf: 'flex-start' }}
+              >
+                Open Calendar
+              </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Analytics Links */}
+        <Grid item xs={12} md={6}>
           <Card className="crm-widget">
             <CardContent>
-              <Typography variant="h6">Upcoming Meetings</Typography>
-              <Button variant="contained" component={Link} to="/schedule-appointment">
-                Schedule Meeting
-              </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <TrendingUpIcon sx={{ fontSize: '20px', color: '#666', mr: 1 }} />
+                <Typography variant="subtitle1" color="textSecondary">
+                  ANALYTICS
+                </Typography>
+              </Box>
+              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Button
+                  component={Link}
+                  to="/analytics/customers/insights"
+                  variant="outlined"
+                >
+                  Customer Insights
+                </Button>
+                <Button
+                  component={Link}
+                  to="/analytics/appointments/trends"
+                  variant="outlined"
+                >
+                  Appointment Trends
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* 🔹 Enhanced Search Bar */}
-      <Box className="search-container">
-        <FormControl sx={{ minWidth: 200, mr: 2 }}>
-          <InputLabel>Search By</InputLabel>
-          <Select
-            value={searchCriteria}
-            onChange={handleSearchCriteriaChange}
-            label="Search By"
-          >
-            {SEARCH_CRITERIA.map((criteria) => (
-              <MenuItem key={criteria.value} value={criteria.value}>
-                {criteria.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      {/* Search Section */}
+      <Box sx={{ mt: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Typography variant="body2" color="textSecondary">
+          Search By
+        </Typography>
+        <Select
+          size="small"
+          value={searchCriteria}
+          onChange={handleSearchCriteriaChange}
+          sx={{ minWidth: 120 }}
+        >
+          {SEARCH_CRITERIA.map((criteria) => (
+            <MenuItem key={criteria.value} value={criteria.value}>
+              {criteria.label}
+            </MenuItem>
+          ))}
+        </Select>
         <TextField
-          label="Search"
-          variant="outlined"
+          size="small"
+          placeholder="Search..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyPress={handleKeyPress}
-          fullWidth
           disabled={searchCriteria === 'highValue'}
-          placeholder={searchCriteria === 'highValue' ? 'Click search to view high-value clients' : 'Enter search term...'}
+          sx={{ flexGrow: 1 }}
         />
         <Button 
-          variant="contained" 
+          variant="contained"
+          size="small"
           onClick={handleSearch}
           disabled={!search && searchCriteria !== 'highValue'}
         >
           Search
         </Button>
-        <Button variant="contained" color="success" onClick={() => setOpen(true)}>
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={() => setOpen(true)}
+        >
           Add Customer
         </Button>
       </Box>
@@ -345,11 +399,7 @@ const CustomerCRM = () => {
                         <TableCell>{customer.highValue ? "Yes" : "No"}</TableCell>
                         <TableCell>
                           <Tooltip title="Edit Customer">
-                            <IconButton onClick={() => {
-                              setSelectedCustomer(customer);
-                              setEditDialogOpen(true);
-                              setSearchResultsOpen(false);
-                            }}>
+                            <IconButton onClick={() => handleEditCustomer(customer)}>
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
@@ -383,108 +433,103 @@ const CustomerCRM = () => {
       </Dialog>
 
       {/* 🆕 Add Customer Dialog */}
-      <Dialog open={open} onClose={() => setOpen(false)}>
+      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add New Customer</DialogTitle>
         <DialogContent>
-          <TextField 
-            label="First Name" 
-            fullWidth 
-            margin="dense" 
-            value={newCustomer.firstName}
-            onChange={(e) => setNewCustomer({ ...newCustomer, firstName: e.target.value })} 
-          />
-          <TextField 
-            label="Last Name" 
-            fullWidth 
-            margin="dense" 
-            value={newCustomer.lastName}
-            onChange={(e) => setNewCustomer({ ...newCustomer, lastName: e.target.value })} 
-          />
-          <TextField 
-            label="Email" 
-            fullWidth 
-            margin="dense" 
-            value={newCustomer.businessEmail}
-            onChange={(e) => setNewCustomer({ ...newCustomer, businessEmail: e.target.value })} 
-          />
-          <TextField 
-            label="Phone Number" 
-            fullWidth 
-            margin="dense" 
-            value={newCustomer.phoneNumber}
-            onChange={(e) => setNewCustomer({ ...newCustomer, phoneNumber: e.target.value })} 
-          />
-
-          <FormControl fullWidth margin="dense">
-            <InputLabel>Product Line</InputLabel>
-            <Select
-              value={newCustomer.productLines}
-              onChange={(e) => setNewCustomer({ ...newCustomer, productLines: e.target.value })}
-            >
-              {PRODUCT_LINES.map((line) => (
-                <MenuItem key={line} value={line}>
-                  {line}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={newCustomer.highValue}
-                onChange={(e) => setNewCustomer({ ...newCustomer, highValue: e.target.checked })}
-              />
-            }
-            label="High Value Customer"
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField 
+              label="First Name" 
+              fullWidth 
+              value={newCustomer.firstName}
+              onChange={(e) => setNewCustomer({ ...newCustomer, firstName: e.target.value })} 
+            />
+            <TextField 
+              label="Last Name" 
+              fullWidth 
+              value={newCustomer.lastName}
+              onChange={(e) => setNewCustomer({ ...newCustomer, lastName: e.target.value })} 
+            />
+            <TextField 
+              label="Email" 
+              fullWidth 
+              type="email"
+              value={newCustomer.businessEmail}
+              onChange={(e) => setNewCustomer({ ...newCustomer, businessEmail: e.target.value })} 
+            />
+            <TextField 
+              label="Phone Number" 
+              fullWidth 
+              value={newCustomer.phoneNumber}
+              onChange={(e) => setNewCustomer({ ...newCustomer, phoneNumber: e.target.value })} 
+            />
+            <FormControl fullWidth>
+              <InputLabel>Product Line</InputLabel>
+              <Select
+                value={newCustomer.productLines}
+                onChange={(e) => setNewCustomer({ ...newCustomer, productLines: e.target.value })}
+                label="Product Line"
+              >
+                {PRODUCT_LINES.map((line) => (
+                  <MenuItem key={line} value={line}>
+                    {line}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={newCustomer.highValue}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, highValue: e.target.checked })}
+                />
+              }
+              label="High Value Customer"
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddCustomer} variant="contained">Add</Button>
+          <Button onClick={handleAddCustomer} variant="contained" color="primary">Add</Button>
         </DialogActions>
       </Dialog>
 
       {/* 🔄 Edit Customer Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Customer</DialogTitle>
         <DialogContent>
           {selectedCustomer && (
-            <>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
               <TextField 
                 label="First Name" 
                 fullWidth 
-                margin="dense" 
                 value={selectedCustomer.firstName}
                 onChange={(e) => setSelectedCustomer({ ...selectedCustomer, firstName: e.target.value })} 
               />
               <TextField 
                 label="Last Name" 
                 fullWidth 
-                margin="dense" 
                 value={selectedCustomer.lastName}
                 onChange={(e) => setSelectedCustomer({ ...selectedCustomer, lastName: e.target.value })} 
               />
               <TextField 
                 label="Email" 
                 fullWidth 
-                margin="dense" 
+                type="email"
                 value={selectedCustomer.businessEmail}
                 onChange={(e) => setSelectedCustomer({ ...selectedCustomer, businessEmail: e.target.value })} 
               />
               <TextField 
                 label="Phone Number" 
                 fullWidth 
-                margin="dense" 
                 value={selectedCustomer.phoneNumber}
                 onChange={(e) => setSelectedCustomer({ ...selectedCustomer, phoneNumber: e.target.value })} 
               />
-
-              <FormControl fullWidth margin="dense">
+              <FormControl fullWidth>
                 <InputLabel>Product Line</InputLabel>
                 <Select
                   value={selectedCustomer.productLines}
                   onChange={(e) => setSelectedCustomer({ ...selectedCustomer, productLines: e.target.value })}
+                  label="Product Line"
                 >
                   {PRODUCT_LINES.map((line) => (
                     <MenuItem key={line} value={line}>
@@ -493,7 +538,6 @@ const CustomerCRM = () => {
                   ))}
                 </Select>
               </FormControl>
-
               <FormControlLabel
                 control={
                   <Checkbox
@@ -503,16 +547,16 @@ const CustomerCRM = () => {
                 }
                 label="High Value Customer"
               />
-            </>
+            </Box>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleUpdateCustomer} variant="contained">Update</Button>
+          <Button onClick={handleUpdateCustomer} variant="contained" color="primary">Update</Button>
         </DialogActions>
       </Dialog>
     </Container>
   );
 };
 
-export default CustomerCRM;
+export default CustomerCRM; 

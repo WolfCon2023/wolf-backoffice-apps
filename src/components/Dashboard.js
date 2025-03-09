@@ -7,7 +7,8 @@ import {
   FaPlusCircle,
   FaChartLine,
   FaCog,
-  FaQuestionCircle
+  FaQuestionCircle,
+  FaEnvelope
 } from "react-icons/fa";
 import './Dashboard.css';
 
@@ -56,6 +57,20 @@ const Dashboard = () => {
                     <p>View and manage schedule</p>
                   </div>
                 </Link>
+              </li>
+              <li>
+                <a href="https://mail.vitalinc.net/" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   className="app-card email">
+                  <div className="card-icon">
+                    <FaEnvelope className="icon" />
+                  </div>
+                  <div className="card-content">
+                    <h3>Email/Chat</h3>
+                    <p>Access Zimbra webmail</p>
+                  </div>
+                </a>
               </li>
               <li>
                 <Link to="/crm" className="app-card warning">

@@ -1,0 +1,32 @@
+.MuiTab-root {
+    text-transform: none !important;
+    min-height: 64px !important;
+  }
+  
+  .MuiTab-root .MuiSvgIcon-root {
+    margin-bottom: 4px;
+  }
+  
+  /* Dark mode support */
+  @media (prefers-color-scheme: dark) {
+    .MuiPaper-root {
+      background-color: #2a2a2a !important;
+      color: #fff !important;
+    }
+  
+    .MuiDivider-root {
+      border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+  
+    .MuiTab-root {
+      color: rgba(255, 255, 255, 0.7) !important;
+    }
+  
+    .MuiTab-root.Mui-selected {
+      color: #90caf9 !important;
+    }
+  
+    .MuiTabs-indicator {
+      background-color: #90caf9 !important;
+    }
+  } 

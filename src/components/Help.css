@@ -1,0 +1,139 @@
+.help-feature-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .help-feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .help-feature-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #1976d2, #2196f3);
+    transform: scaleX(0);
+    transition: transform 0.2s ease-in-out;
+    transform-origin: left;
+  }
+  
+  .help-feature-card:hover::after {
+    transform: scaleX(1);
+  }
+  
+  /* FAQ Accordion Styles */
+  .MuiAccordion-root {
+    border-radius: 8px !important;
+    margin-bottom: 8px !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  }
+  
+  .MuiAccordion-root:before {
+    display: none;
+  }
+  
+  .MuiAccordionSummary-root {
+    padding: 0 16px !important;
+    min-height: 56px !important;
+  }
+  
+  .MuiAccordionSummary-root:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  .MuiAccordionSummary-content {
+    margin: 12px 0 !important;
+  }
+  
+  .MuiAccordionDetails-root {
+    padding: 16px !important;
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+  
+  /* Quick Tips Styles */
+  .quick-tip-item {
+    padding: 8px 0;
+    transition: background-color 0.2s ease;
+  }
+  
+  .quick-tip-item:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+  
+  /* Support Section Styles */
+  .support-section {
+    background: linear-gradient(45deg, #1976d2, #2196f3);
+  }
+  
+  .support-link {
+    transition: opacity 0.2s ease;
+  }
+  
+  .support-link:hover {
+    opacity: 0.8;
+  }
+  
+  /* Dark Mode Support */
+  @media (prefers-color-scheme: dark) {
+    .help-feature-card {
+      background-color: #2a2a2a !important;
+    }
+  
+    .MuiAccordion-root {
+      background-color: #2a2a2a !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+  
+    .MuiAccordionSummary-root:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+  
+    .MuiAccordionDetails-root {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+  
+    .quick-tip-item:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+  
+    .support-section {
+      background: linear-gradient(45deg, #1565c0, #1976d2);
+    }
+  
+    .help-feature-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+  }
+  
+  /* Animation for Feature Cards */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .main-features-grid {
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  /* Responsive Adjustments */
+  @media (max-width: 600px) {
+    .MuiAccordionSummary-root {
+      padding: 0 12px !important;
+    }
+  
+    .MuiAccordionDetails-root {
+      padding: 12px !important;
+    }
+  } 
