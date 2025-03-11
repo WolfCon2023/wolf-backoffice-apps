@@ -19,6 +19,12 @@ import CustomerInsights from './components/CustomerInsights';
 import LocationPerformance from './components/LocationPerformance';
 import Settings from './components/Settings';
 import Help from './components/Help';
+// Import StratFlow components
+import Projects from './components/Projects';
+import Teams from './components/Teams';
+import Roadmap from './components/Roadmap';
+import StratflowDashboard from './components/StratflowDashboard';
+import DashboardLayout from './components/DashboardLayout';
 
 // Create a QueryClient instance with configuration
 const queryClient = new QueryClient({
@@ -47,6 +53,17 @@ function App() {
       }
     }
   }, [authToken]);
+
+  // Helper function to wrap routes that need the DashboardLayout
+  const withDashboardLayout = (Component) => {
+    return authToken ? (
+      <DashboardLayout>
+        <Component />
+      </DashboardLayout>
+    ) : (
+      <Navigate to="/login" />
+    );
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -80,6 +97,13 @@ function App() {
               />
               <Route path="/settings" element={authToken ? <Settings /> : <Navigate to="/login" />} />
               <Route path="/help" element={authToken ? <Help /> : <Navigate to="/login" />} />
+
+              {/* StratFlow Routes */}
+              <Route path="/projects" element={withDashboardLayout(StratflowDashboard)} />
+              <Route path="/projects/list" element={withDashboardLayout(Projects)} />
+              <Route path="/teams" element={withDashboardLayout(Teams)} />
+              <Route path="/roadmap" element={withDashboardLayout(Roadmap)} />
+              
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

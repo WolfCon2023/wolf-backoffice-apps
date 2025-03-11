@@ -8,7 +8,8 @@ import {
   FaChartLine,
   FaCog,
   FaQuestionCircle,
-  FaEnvelope
+  FaEnvelope,
+  FaTasks,
 } from "react-icons/fa";
 import './Dashboard.css';
 
@@ -91,6 +92,17 @@ const Dashboard = () => {
                   <div className="card-content">
                     <h3>Analytics</h3>
                     <p>Business insights and metrics</p>
+                  </div>
+                </Link>
+              </li>
+              <li>
+                <Link to="/projects" className="app-card stratflow">
+                  <div className="card-icon">
+                    <FaTasks className="icon" />
+                  </div>
+                  <div className="card-content">
+                    <h3>StratFlow</h3>
+                    <p>Project and team management</p>
                   </div>
                 </Link>
               </li>

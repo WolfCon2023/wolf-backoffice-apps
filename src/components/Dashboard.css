@@ -132,6 +132,11 @@
   color: #7b1fa2;
 }
 
+.app-card.stratflow .card-icon {
+  background-color: #e8eaf6;
+  color: #2563eb;
+}
+
 /* ⚡ Quick Actions */
 .quick-actions {
   margin-top: 40px;
@@ -251,6 +256,10 @@
 
   .app-card.email .card-icon {
     background-color: rgba(63, 81, 181, 0.2);
+  }
+
+  .app-card.stratflow .card-icon {
+    background-color: rgba(37, 99, 235, 0.2);
   }
 
   .quick-action-card {
