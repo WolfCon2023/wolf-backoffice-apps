@@ -18,6 +18,8 @@ import {
   MenuItem,
   useTheme,
   useMediaQuery,
+  Tooltip,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -31,6 +33,7 @@ import {
   AccountCircle as AccountCircleIcon,
   CalendarToday as CalendarIcon,
   Assessment as AssessmentIcon,
+  TrendingUp as QuickMetricsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -85,6 +88,8 @@ const navigationItems = [
   { text: 'Projects', icon: <AssignmentIcon />, path: '/projects/list' },
   { text: 'Teams', icon: <GroupIcon />, path: '/teams' },
   { text: 'Roadmap', icon: <TimelineIcon />, path: '/roadmap' },
+  { text: 'Backlog', icon: <AssignmentIcon />, path: '/backlog' },
+  { text: 'Metrics', icon: <AssessmentIcon />, path: '/metrics' },
   { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar' },
   { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
@@ -144,6 +149,22 @@ const DashboardLayout = ({ children }) => {
           >
             StratFlow
           </Typography>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<QuickMetricsIcon />}
+            onClick={() => navigate('/metrics')}
+            sx={{
+              mr: 2,
+              textTransform: 'none',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+              },
+            }}
+          >
+            Metrics
+          </Button>
           <IconButton color="inherit">
             <NotificationsIcon />
           </IconButton>

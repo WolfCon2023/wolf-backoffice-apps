@@ -1,13 +1,6 @@
-import axios from 'axios';
-import { api, handleHttpError, createErrorMessage } from '../utils';
-import { ErrorLogger } from './ErrorLogger';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, '') || "https://wolf-backoffice-backend-development.up.railway.app/api";
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem("token");
-  return { Authorization: `Bearer ${token}` };
-};
+import { api } from './apiConfig';
+import { createErrorMessage } from "../utils";
+import { ErrorLogger } from "./ErrorLogger";
 
 class SprintService {
   constructor() {
@@ -23,45 +16,76 @@ class SprintService {
   getCachedData(key) {
     const cached = this.cache.get(key);
     if (!cached) return null;
-    
     const { data, timestamp } = cached;
     if (Date.now() - timestamp > this.cacheTimeout) {
       this.cache.delete(key);
       return null;
     }
-    
     return data;
   }
 
   setCachedData(key, data) {
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now()
-    });
+    this.cache.set(key, { data, timestamp: Date.now() });
   }
 
   async getAllSprints() {
-    const cacheKey = 'allSprints';
+    const cacheKey = "allSprints";
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
 
     try {
-      console.log('📡 Fetching all sprints...');
-      const response = await axios.get(`${API_BASE_URL}/sprints`, {
-        headers: getAuthHeader()
-      });
-      console.log('✅ API Response:', response);
-      this.setCachedData(cacheKey, response.data);
-      return Array.isArray(response.data) ? response.data : [];
+      console.log("📡 Fetching all sprints from projects...");
+      // Get all projects
+      const projectsResponse = await api.get('/projects');
+      const projects = projectsResponse.data;
+      
+      console.log('📊 Project data structure:', JSON.stringify(projects, null, 2));
+      
+      // Create synthetic sprints for projects
+      const allSprints = projects.map(project => {
+        console.log(`Processing project ${project.id}:`, project);
+        
+        // Calculate sprint dates based on project dates
+        const startDate = new Date(project.startDate);
+        const endDate = new Date(project.targetEndDate);
+        const sprintDuration = 14 * 24 * 60 * 60 * 1000; // 2 weeks in milliseconds
+        const totalDuration = endDate.getTime() - startDate.getTime();
+        const numberOfSprints = Math.max(1, Math.ceil(totalDuration / sprintDuration));
+        
+        // Create sprints to cover the project duration
+        return Array.from({ length: numberOfSprints }, (_, index) => {
+          const sprintStartDate = new Date(startDate.getTime() + (index * sprintDuration));
+          const sprintEndDate = new Date(Math.min(
+            sprintStartDate.getTime() + sprintDuration,
+            endDate.getTime()
+          ));
+          
+          const sprint = {
+            id: `sprint-${project._id}-${index + 1}`,
+            name: `${project.name} Sprint ${index + 1}`,
+            projectId: project._id,
+            projectName: project.name,
+            startDate: sprintStartDate.toISOString(),
+            endDate: sprintEndDate.toISOString(),
+            status: 'PLANNED',
+            metrics: {
+              totalStoryPoints: Math.round(project.metrics?.totalStoryPoints / numberOfSprints) || 0,
+              completedStoryPoints: 0,
+              velocity: project.metrics?.velocity || 0
+            }
+          };
+          
+          console.log(`✅ Created synthetic sprint for project ${project._id}:`, sprint);
+          return sprint;
+        });
+      }).flat();
+      
+      console.log('✅ Sprints processed:', allSprints);
+      this.setCachedData(cacheKey, allSprints);
+      return allSprints;
     } catch (error) {
-      console.error('❌ Error fetching all sprints:', error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
-      this.logError(error, 'getAllSprints');
-      throw new Error(`Failed to fetch sprints: ${errorMessage}`);
+      this.logError(error, "getAllSprints");
+      return [];
     }
   }
 
@@ -72,92 +96,53 @@ class SprintService {
 
     try {
       console.log(`📡 Fetching sprint ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/sprints/${id}`, {
-        headers: getAuthHeader()
-      });
-      console.log('✅ Sprint fetched:', response.data);
+      const response = await api.get(`/sprints/${id}`);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
-      console.error(`❌ Error fetching sprint ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
-      this.logError(error, 'getSprint');
-      throw new Error(`Failed to fetch sprint: ${errorMessage}`);
+      this.logError(error, "getSprint");
+      throw new Error(`Failed to fetch sprint: ${createErrorMessage(error)}`);
     }
   }
 
   async createSprint(sprintData) {
     try {
       console.log('📡 Creating new sprint:', sprintData);
-      const response = await axios.post(`${API_BASE_URL}/sprints`, sprintData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
+      const response = await api.post('/sprints', sprintData);
       console.log('✅ Sprint created:', response.data);
       this.cache.delete('allSprints');
       return response.data;
     } catch (error) {
-      console.error('❌ Error creating sprint:', error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'createSprint');
-      throw new Error(`Failed to create sprint: ${errorMessage}`);
+      throw new Error(`Failed to create sprint: ${createErrorMessage(error)}`);
     }
   }
 
   async updateSprint(id, sprintData) {
     try {
       console.log(`📡 Updating sprint ${id}:`, sprintData);
-      const response = await axios.put(`${API_BASE_URL}/sprints/${id}`, sprintData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
+      const response = await api.put(`/sprints/${id}`, sprintData);
       console.log('✅ Sprint updated:', response.data);
       this.cache.delete('allSprints');
       this.cache.delete(`sprint:${id}`);
       return response.data;
     } catch (error) {
-      console.error(`❌ Error updating sprint ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'updateSprint');
-      throw new Error(`Failed to update sprint: ${errorMessage}`);
+      throw new Error(`Failed to update sprint: ${createErrorMessage(error)}`);
     }
   }
 
   async deleteSprint(id) {
     try {
       console.log(`📡 Deleting sprint ${id}`);
-      const response = await axios.delete(`${API_BASE_URL}/sprints/${id}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.delete(`/sprints/${id}`);
       console.log('✅ Sprint deleted:', response.data);
       this.cache.delete('allSprints');
       this.cache.delete(`sprint:${id}`);
       return response.data;
     } catch (error) {
-      console.error(`❌ Error deleting sprint ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'deleteSprint');
-      throw new Error(`Failed to delete sprint: ${errorMessage}`);
+      throw new Error(`Failed to delete sprint: ${createErrorMessage(error)}`);
     }
   }
 
@@ -168,9 +153,7 @@ class SprintService {
 
     try {
       console.log(`📡 Fetching stories for sprint ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/sprints/${id}/stories`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/sprints/${id}/stories`);
       console.log('✅ Sprint stories fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
@@ -189,9 +172,7 @@ class SprintService {
   async addStoryToSprint(sprintId, storyId) {
     try {
       console.log(`📡 Adding story ${storyId} to sprint ${sprintId}...`);
-      const response = await axios.post(`${API_BASE_URL}/sprints/${sprintId}/stories/${storyId}`, null, {
-        headers: getAuthHeader()
-      });
+      const response = await api.post(`/sprints/${sprintId}/stories/${storyId}`);
       console.log('✅ Story added to sprint:', response.data);
       this.cache.delete(`sprint:${sprintId}`);
       this.cache.delete(`sprintStories:${sprintId}`);
@@ -211,9 +192,7 @@ class SprintService {
   async removeStoryFromSprint(sprintId, storyId) {
     try {
       console.log(`📡 Removing story ${storyId} from sprint ${sprintId}...`);
-      const response = await axios.delete(`${API_BASE_URL}/sprints/${sprintId}/stories/${storyId}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.delete(`/sprints/${sprintId}/stories/${storyId}`);
       console.log('✅ Story removed from sprint:', response.data);
       this.cache.delete(`sprint:${sprintId}`);
       this.cache.delete(`sprintStories:${sprintId}`);
@@ -236,15 +215,10 @@ class SprintService {
       if (!startData.startDate) throw new Error('Start date is required');
       if (!startData.endDate) throw new Error('End date is required');
 
-      const response = await axios.post(`${API_BASE_URL}/sprints/${id}/start`, {
+      const response = await api.post(`/sprints/${id}/start`, {
         ...startData,
         status: 'IN_PROGRESS',
         startedAt: new Date().toISOString()
-      }, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
       });
       console.log('✅ Sprint started:', response.data);
       this.cache.delete(`sprint:${id}`);
@@ -264,15 +238,10 @@ class SprintService {
   async completeSprint(id, completeData) {
     try {
       console.log(`📡 Completing sprint ${id}:`, completeData);
-      const response = await axios.post(`${API_BASE_URL}/sprints/${id}/complete`, {
+      const response = await api.post(`/sprints/${id}/complete`, {
         ...completeData,
         status: 'COMPLETED',
         completedAt: new Date().toISOString()
-      }, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
       });
       console.log('✅ Sprint completed:', response.data);
       this.cache.delete(`sprint:${id}`);
@@ -296,9 +265,7 @@ class SprintService {
 
     try {
       console.log(`📡 Fetching metrics for sprint ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/sprints/${id}/metrics`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/sprints/${id}/metrics`);
       console.log('✅ Sprint metrics fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
@@ -321,9 +288,7 @@ class SprintService {
 
     try {
       console.log(`📡 Fetching burndown for sprint ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/sprints/${id}/burndown`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/sprints/${id}/burndown`);
       console.log('✅ Sprint burndown fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;

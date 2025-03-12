@@ -1,57 +1,6 @@
-import axios from 'axios';
-import { handleHttpError, createErrorMessage } from '../utils';
+import { api } from './apiConfig';
+import { createErrorMessage } from '../utils';
 import { ErrorLogger } from './ErrorLogger';
-
-// Add request interceptor
-axios.interceptors.request.use(
-  config => {
-    console.log('🔍 Request:', {
-      method: config.method,
-      url: config.url,
-      headers: config.headers,
-      data: config.data
-    });
-    return config;
-  },
-  error => {
-    console.error('❌ Request Error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor
-axios.interceptors.response.use(
-  response => {
-    console.log('✅ Response:', {
-      status: response.status,
-      headers: response.headers,
-      data: response.data
-    });
-    return response;
-  },
-  error => {
-    console.error('❌ Response Error:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      config: error.config
-    });
-    return Promise.reject(error);
-  }
-);
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, '');
-if (!API_BASE_URL) {
-  throw new Error('REACT_APP_API_BASE_URL is not defined in environment variables');
-}
-
-console.log('🔧 API_BASE_URL:', API_BASE_URL);
-console.log('🔧 Environment:', process.env.NODE_ENV);
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem("token");
-  return { Authorization: `Bearer ${token}` };
-};
 
 class ProjectService {
   constructor() {
@@ -90,33 +39,15 @@ class ProjectService {
     if (cached) return cached;
 
     try {
-      const url = `${API_BASE_URL}/projects`;
-      console.log('🔧 Making request to:', url);
-      console.log('🔧 With headers:', getAuthHeader());
-      
-      const response = await axios.get(url, {
-        headers: getAuthHeader()
-      });
-      
+      console.log('📡 Fetching all projects...');
+      const response = await api.get('/projects');
       console.log('✅ API Response:', response);
       this.setCachedData(cacheKey, response.data);
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error('❌ Error fetching all projects:', error);
-      console.error('❌ Error details:', {
-        url: `${API_BASE_URL}/projects`,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
-      
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getAllProjects');
-      throw new Error(`Failed to fetch projects: ${errorMessage}`);
+      throw new Error(`Failed to fetch projects: ${createErrorMessage(error)}`);
     }
   }
 
@@ -127,108 +58,58 @@ class ProjectService {
 
     try {
       console.log(`📡 Fetching project ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/projects/${id}`);
       console.log('✅ Project fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching project ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getProjectById');
-      throw new Error(`Failed to fetch project: ${errorMessage}`);
+      throw new Error(`Failed to fetch project: ${createErrorMessage(error)}`);
     }
   }
 
   async createProject(projectData) {
     try {
       console.log('📡 Creating new project with data:', projectData);
-      const url = `${API_BASE_URL}/projects`;
-      console.log('🔧 Making POST request to:', url);
-      console.log('🔧 With headers:', {
-        ...getAuthHeader(),
-        "Content-Type": "application/json"
-      });
-      
-      const response = await axios.post(url, projectData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
-      
+      const response = await api.post('/projects', projectData);
       console.log('✅ Project created successfully:', response.data);
       this.cache.delete('allProjects');
       return response.data;
     } catch (error) {
       console.error('❌ Error creating project:', error);
-      console.error('❌ Error details:', {
-        url: `${API_BASE_URL}/projects`,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: error.config
-      });
-      
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'createProject');
-      throw new Error(`Failed to create project: ${errorMessage}`);
+      throw new Error(`Failed to create project: ${createErrorMessage(error)}`);
     }
   }
 
   async updateProject(id, projectData) {
     try {
       console.log(`📡 Updating project ${id}:`, projectData);
-      const response = await axios.put(`${API_BASE_URL}/projects/${id}`, projectData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
+      const response = await api.put(`/projects/${id}`, projectData);
       console.log('✅ Project updated:', response.data);
       this.cache.delete('allProjects');
       this.cache.delete(`project:${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating project ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'updateProject');
-      throw new Error(`Failed to update project: ${errorMessage}`);
+      throw new Error(`Failed to update project: ${createErrorMessage(error)}`);
     }
   }
 
   async deleteProject(id) {
     try {
       console.log(`📡 Deleting project ${id}`);
-      const response = await axios.delete(`${API_BASE_URL}/projects/${id}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.delete(`/projects/${id}`);
       console.log('✅ Project deleted:', response.data);
       this.cache.delete('allProjects');
       this.cache.delete(`project:${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error deleting project ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'deleteProject');
-      throw new Error(`Failed to delete project: ${errorMessage}`);
+      throw new Error(`Failed to delete project: ${createErrorMessage(error)}`);
     }
   }
 
@@ -239,21 +120,14 @@ class ProjectService {
 
     try {
       console.log(`📡 Fetching metrics for project ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/metrics`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/projects/${id}/metrics`);
       console.log('✅ Project metrics fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching project metrics ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getProjectMetrics');
-      throw new Error(`Failed to fetch project metrics: ${errorMessage}`);
+      throw new Error(`Failed to fetch project metrics: ${createErrorMessage(error)}`);
     }
   }
 
@@ -264,21 +138,14 @@ class ProjectService {
 
     try {
       console.log(`📡 Fetching epics for project ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/epics`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/projects/${id}/epics`);
       console.log('✅ Project epics fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching project epics ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getProjectEpics');
-      throw new Error(`Failed to fetch project epics: ${errorMessage}`);
+      throw new Error(`Failed to fetch project epics: ${createErrorMessage(error)}`);
     }
   }
 
@@ -289,21 +156,14 @@ class ProjectService {
 
     try {
       console.log(`📡 Fetching stories for project ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/stories`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/projects/${id}/stories`);
       console.log('✅ Project stories fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching project stories ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getProjectStories');
-      throw new Error(`Failed to fetch project stories: ${errorMessage}`);
+      throw new Error(`Failed to fetch project stories: ${createErrorMessage(error)}`);
     }
   }
 
@@ -314,27 +174,19 @@ class ProjectService {
 
     try {
       console.log(`📡 Fetching sprints for project ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/sprints`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/projects/${id}/sprints`);
       console.log('✅ Project sprints fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching project sprints ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getProjectSprints');
-      throw new Error(`Failed to fetch project sprints: ${errorMessage}`);
+      throw new Error(`Failed to fetch project sprints: ${createErrorMessage(error)}`);
     }
   }
 
   async refreshProjectCache(id) {
     try {
-      // Clear specific project caches
       this.cache.delete('allProjects');
       this.cache.delete(`project:${id}`);
       this.cache.delete(`projectMetrics:${id}`);
@@ -342,13 +194,11 @@ class ProjectService {
       this.cache.delete(`projectStories:${id}`);
       this.cache.delete(`projectSprints:${id}`);
       
-      // Refetch project data
       await this.getProjectById(id);
       return true;
     } catch (error) {
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'refreshProjectCache');
-      throw new Error(`Failed to refresh project cache: ${errorMessage}`);
+      throw new Error(`Failed to refresh project cache: ${createErrorMessage(error)}`);
     }
   }
 }

@@ -1,13 +1,6 @@
-import axios from 'axios';
-import { api, handleHttpError, createErrorMessage } from '../utils';
+import { api } from './apiConfig';
+import { createErrorMessage } from '../utils';
 import { ErrorLogger } from './ErrorLogger';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL?.replace(/\/$/, '') || "https://wolf-backoffice-backend-development.up.railway.app/api";
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem("token");
-  return { Authorization: `Bearer ${token}` };
-};
 
 class TeamService {
   constructor() {
@@ -46,22 +39,68 @@ class TeamService {
     if (cached) return cached;
 
     try {
-      console.log('📡 Fetching all teams...');
-      const response = await axios.get(`${API_BASE_URL}/teams`, {
-        headers: getAuthHeader()
-      });
-      console.log('✅ API Response:', response);
-      this.setCachedData(cacheKey, response.data);
-      return Array.isArray(response.data) ? response.data : [];
+      console.log('📡 Fetching all teams from projects...');
+      // Get all projects
+      const projectsResponse = await api.get('/projects');
+      const projects = projectsResponse.data || [];
+      
+      console.log('📊 Project data structure:', JSON.stringify(projects, null, 2));
+      
+      // Create synthetic teams for projects
+      const allTeams = projects.map(project => {
+        if (!project) return null;
+        
+        const projectId = project._id || project.id;
+        const projectName = project.name || 'Unnamed Project';
+        
+        console.log(`Processing project ${projectId}:`, project);
+        
+        // Create a synthetic team based on project data
+        const team = {
+          id: `team-${projectId}`,
+          name: `${projectName} Team`,
+          description: `Team for ${projectName}`,
+          projectId: projectId,
+          projectName: projectName,
+          capacity: 5,
+          status: 'ACTIVE',
+          members: [],
+          metrics: {
+            velocity: project.metrics?.velocity || 0,
+            completedStoryPoints: project.metrics?.completedStoryPoints || 0,
+            totalStoryPoints: project.metrics?.totalStoryPoints || 0,
+            avgCycleTime: project.metrics?.avgCycleTime || 0
+          }
+        };
+
+        // Add owner as team member if available
+        if (project.owner) {
+          const owner = project.owner;
+          team.members.push({
+            id: owner._id || owner.id || `user-${Date.now()}`,
+            name: owner.name || owner.email || 'Team Lead',
+            email: owner.email || '',
+            role: 'TEAM_LEAD',
+            availability: 100,
+            avatar: owner.avatar || '',
+            status: 'ACTIVE',
+            joinedAt: project.startDate || new Date().toISOString(),
+            skills: owner.skills || [],
+            title: owner.title || 'Team Lead'
+          });
+        }
+        
+        console.log(`✅ Created synthetic team for project ${projectId}:`, team);
+        return team;
+      }).filter(Boolean); // Remove any null teams
+      
+      console.log('✅ Teams processed:', allTeams);
+      this.setCachedData(cacheKey, allTeams);
+      return allTeams;
     } catch (error) {
       console.error('❌ Error fetching all teams:', error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getAllTeams');
-      throw new Error(`Failed to fetch teams: ${errorMessage}`);
+      return [];
     }
   }
 
@@ -72,46 +111,28 @@ class TeamService {
 
     try {
       console.log(`📡 Fetching team ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/teams/${id}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/teams/${id}`);
       console.log('✅ Team fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching team ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getTeam');
-      throw new Error(`Failed to fetch team: ${errorMessage}`);
+      throw new Error(`Failed to fetch team: ${createErrorMessage(error)}`);
     }
   }
 
   async createTeam(teamData) {
     try {
       console.log('📡 Creating new team:', teamData);
-      const response = await axios.post(`${API_BASE_URL}/teams`, teamData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
+      const response = await api.post('/teams', teamData);
       console.log('✅ Team created:', response.data);
-      // Invalidate teams cache
       this.cache.delete('allTeams');
       return response.data;
     } catch (error) {
       console.error('❌ Error creating team:', error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'createTeam');
-      throw new Error(`Failed to create team: ${errorMessage}`);
+      throw new Error(`Failed to create team: ${createErrorMessage(error)}`);
     }
   }
 
@@ -122,30 +143,19 @@ class TeamService {
         throw new Error('Team name is required');
       }
 
-      const response = await axios.put(`${API_BASE_URL}/teams/${id}`, {
+      const response = await api.put(`/teams/${id}`, {
         ...teamData,
         updatedAt: new Date().toISOString()
-      }, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
       });
       console.log('✅ Team updated:', response.data);
-      // Invalidate related caches
       this.cache.delete('allTeams');
       this.cache.delete(`team:${id}`);
       this.cache.delete(`teamMembers:${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating team ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'updateTeam');
-      throw new Error(`Failed to update team: ${errorMessage}`);
+      throw new Error(`Failed to update team: ${createErrorMessage(error)}`);
     }
   }
 
@@ -220,44 +230,28 @@ class TeamService {
   async assignProjectToTeam(teamId, projectId) {
     try {
       console.log(`📡 Assigning project ${projectId} to team ${teamId}`);
-      const response = await axios.post(`${API_BASE_URL}/teams/${teamId}/projects/${projectId}`, null, {
-        headers: getAuthHeader()
-      });
+      const response = await api.post(`/teams/${teamId}/projects/${projectId}`);
       console.log('✅ Project assigned to team:', response.data);
-      // Invalidate related caches
       this.cache.delete(`team:${teamId}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error assigning project to team:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'assignProjectToTeam');
-      throw new Error(`Failed to assign project to team: ${errorMessage}`);
+      throw new Error(`Failed to assign project to team: ${createErrorMessage(error)}`);
     }
   }
 
   async removeProjectFromTeam(teamId, projectId) {
     try {
       console.log(`📡 Removing project ${projectId} from team ${teamId}`);
-      const response = await axios.delete(`${API_BASE_URL}/teams/${teamId}/projects/${projectId}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.delete(`/teams/${teamId}/projects/${projectId}`);
       console.log('✅ Project removed from team:', response.data);
-      // Invalidate related caches
       this.cache.delete(`team:${teamId}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error removing project from team:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'removeProjectFromTeam');
-      throw new Error(`Failed to remove project from team: ${errorMessage}`);
+      throw new Error(`Failed to remove project from team: ${createErrorMessage(error)}`);
     }
   }
 
@@ -269,25 +263,14 @@ class TeamService {
         throw new Error(`Role must be one of: ${validRoles.join(', ')}`);
       }
 
-      const response = await axios.put(`${API_BASE_URL}/teams/${teamId}/members/${userId}/role`, { role }, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
+      const response = await api.put(`/teams/${teamId}/members/${userId}/role`, { role });
       console.log('✅ Team member role updated:', response.data);
-      // Invalidate related caches
       this.cache.delete(`teamMembers:${teamId}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating team member role:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'updateTeamMemberRole');
-      throw new Error(`Failed to update team member role: ${errorMessage}`);
+      throw new Error(`Failed to update team member role: ${createErrorMessage(error)}`);
     }
   }
 
@@ -298,48 +281,29 @@ class TeamService {
         throw new Error('Availability must be a number between 0 and 100');
       }
 
-      const response = await axios.put(`${API_BASE_URL}/teams/${teamId}/members/${userId}/availability`, { availability }, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
+      const response = await api.put(`/teams/${teamId}/members/${userId}/availability`, { availability });
       console.log('✅ Team member availability updated:', response.data);
-      // Invalidate related caches
       this.cache.delete(`teamMembers:${teamId}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating team member availability:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'updateTeamMemberAvailability');
-      throw new Error(`Failed to update team member availability: ${errorMessage}`);
+      throw new Error(`Failed to update team member availability: ${createErrorMessage(error)}`);
     }
   }
 
   async deleteTeam(id) {
     try {
       console.log(`📡 Deleting team ${id}`);
-      const response = await axios.delete(`${API_BASE_URL}/teams/${id}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.delete(`/teams/${id}`);
       console.log('✅ Team deleted:', response.data);
-      // Invalidate related caches
       this.cache.delete('allTeams');
       this.cache.delete(`team:${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error deleting team ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'deleteTeam');
-      throw new Error(`Failed to delete team: ${errorMessage}`);
+      throw new Error(`Failed to delete team: ${createErrorMessage(error)}`);
     }
   }
 
@@ -350,70 +314,44 @@ class TeamService {
 
     try {
       console.log(`📡 Fetching members for team ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/teams/${id}/members`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/teams/${id}/members`);
       console.log('✅ Team members fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching team members ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getTeamMembers');
-      throw new Error(`Failed to fetch team members: ${errorMessage}`);
+      throw new Error(`Failed to fetch team members: ${createErrorMessage(error)}`);
     }
   }
 
   async addTeamMember(id, userData) {
     try {
       console.log(`📡 Adding member to team ${id}:`, userData);
-      const response = await axios.post(`${API_BASE_URL}/teams/${id}/members`, userData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "application/json"
-        }
-      });
+      const response = await api.post(`/teams/${id}/members`, userData);
       console.log('✅ Team member added:', response.data);
-      // Invalidate related caches
       this.cache.delete(`team:${id}`);
       this.cache.delete(`teamMembers:${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error adding team member:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'addTeamMember');
-      throw new Error(`Failed to add team member: ${errorMessage}`);
+      throw new Error(`Failed to add team member: ${createErrorMessage(error)}`);
     }
   }
 
   async removeTeamMember(teamId, userId) {
     try {
       console.log(` Removing member ${userId} from team ${teamId}`);
-      const response = await axios.delete(`${API_BASE_URL}/teams/${teamId}/members/${userId}`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.delete(`/teams/${teamId}/members/${userId}`);
       console.log('✅ Team member removed:', response.data);
-      // Invalidate related caches
       this.cache.delete(`team:${teamId}`);
       this.cache.delete(`teamMembers:${teamId}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error removing team member:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'removeTeamMember');
-      throw new Error(`Failed to remove team member: ${errorMessage}`);
+      throw new Error(`Failed to remove team member: ${createErrorMessage(error)}`);
     }
   }
 
@@ -424,21 +362,14 @@ class TeamService {
 
     try {
       console.log(`📡 Fetching metrics for team ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/teams/${id}/metrics`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/teams/${id}/metrics`);
       console.log('✅ Team metrics fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching team metrics ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getTeamMetrics');
-      throw new Error(`Failed to fetch team metrics: ${errorMessage}`);
+      throw new Error(`Failed to fetch team metrics: ${createErrorMessage(error)}`);
     }
   }
 
@@ -449,40 +380,30 @@ class TeamService {
 
     try {
       console.log(`📡 Fetching velocity for team ${id}...`);
-      const response = await axios.get(`${API_BASE_URL}/teams/${id}/velocity`, {
-        headers: getAuthHeader()
-      });
+      const response = await api.get(`/teams/${id}/velocity`);
       console.log('✅ Team velocity fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching team velocity ${id}:`, error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'getTeamVelocity');
-      throw new Error(`Failed to fetch team velocity: ${errorMessage}`);
+      throw new Error(`Failed to fetch team velocity: ${createErrorMessage(error)}`);
     }
   }
 
   async refreshTeamCache(id) {
     try {
-      // Clear specific team caches
       this.cache.delete('allTeams');
       this.cache.delete(`team:${id}`);
       this.cache.delete(`teamMembers:${id}`);
       this.cache.delete(`teamMetrics:${id}`);
       this.cache.delete(`teamVelocity:${id}`);
       
-      // Refetch team data
       await this.getTeam(id);
       return true;
     } catch (error) {
-      const errorMessage = createErrorMessage(error);
       this.logError(error, 'refreshTeamCache');
-      throw new Error(`Failed to refresh team cache: ${errorMessage}`);
+      throw new Error(`Failed to refresh team cache: ${createErrorMessage(error)}`);
     }
   }
 }

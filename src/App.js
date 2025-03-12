@@ -25,6 +25,8 @@ import Teams from './components/Teams';
 import Roadmap from './components/Roadmap';
 import StratflowDashboard from './components/StratflowDashboard';
 import DashboardLayout from './components/DashboardLayout';
+import Backlog from './components/Backlog';
+import Metrics from './components/Metrics';
 
 // Create a QueryClient instance with configuration
 const queryClient = new QueryClient({
@@ -103,6 +105,8 @@ function App() {
               <Route path="/projects/list" element={withDashboardLayout(Projects)} />
               <Route path="/teams" element={withDashboardLayout(Teams)} />
               <Route path="/roadmap" element={withDashboardLayout(Roadmap)} />
+              <Route path="/backlog" element={withDashboardLayout(Backlog)} />
+              <Route path="/metrics" element={withDashboardLayout(Metrics)} />
               
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
