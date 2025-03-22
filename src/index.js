@@ -4,6 +4,21 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Suppress only WebSocket connection errors in development
+// This will hide the noisy connection errors but keep API errors visible
+if (process.env.NODE_ENV === 'development') {
+  const originalConsoleError = console.error;
+  console.error = (...args) => {
+    if (typeof args[0] === 'string' && 
+        (args[0].includes('WebSocket connection') || 
+         args[0].includes('WebSocketClient'))) {
+      // Skip logging WebSocket errors
+      return;
+    }
+    originalConsoleError(...args);
+  };
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

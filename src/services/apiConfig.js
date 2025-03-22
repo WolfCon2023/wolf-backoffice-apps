@@ -85,8 +85,15 @@ api.interceptors.response.use(
     
     console.error('❌ Response Error:', errorResponse);
 
+    // Check for CORS errors
+    const isCorsError = error.message.includes('Network Error') && !error.response;
+    
     // Handle specific error cases
-    if (error.response?.status === 500) {
+    if (isCorsError) {
+      console.warn('🔒 CORS issue detected - this is expected in development environments');
+      error.isCorsError = true;
+      error.message = 'CORS policy prevented this request';
+    } else if (error.response?.status === 500) {
       console.error('Server Error Details:', {
         message: error.response?.data?.message,
         error: error.response?.data?.error,
@@ -116,4 +123,38 @@ api.interceptors.response.use(
   }
 );
 
-export { api, API_BASE_URL }; 
+/**
+ * Create a simple fetch request that avoids CORS preflight
+ * This uses the Fetch API directly instead of Axios to bypass OPTIONS
+ * @param {string} endpoint - The API endpoint to check (without base URL)
+ * @returns {Promise<boolean>} - Whether the endpoint exists
+ */
+const simpleFetch = async (endpoint) => {
+  try {
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.log(`🔍 Simple fetch check: ${url}`);
+    
+    // Get the auth token from localStorage
+    const token = localStorage.getItem("token");
+    
+    // Use a direct fetch with GET method and minimal headers
+    // This should avoid triggering a preflight OPTIONS request in most cases
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : undefined
+      },
+      mode: 'cors', // This is the default
+    });
+    
+    // Just check if the endpoint exists (any response other than 404)
+    console.log(`✅ Simple fetch response: ${response.status}`);
+    return response.status !== 404;
+  } catch (error) {
+    console.warn(`❌ Simple fetch failed: ${error.message}`);
+    return false;
+  }
+};
+
+export { api, API_BASE_URL, simpleFetch }; 

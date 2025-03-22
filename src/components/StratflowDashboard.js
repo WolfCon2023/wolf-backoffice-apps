@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Container,
@@ -75,6 +75,7 @@ import taskService from '../services/taskService';
 import defectService from '../services/defectService';
 import { userService } from '../services/userService';
 import { Link as RouterLink } from 'react-router-dom';
+import apiHealthService from '../services/apiHealthService';
 
 ChartJS.register(
   CategoryScale,
@@ -90,6 +91,7 @@ ChartJS.register(
 const StratflowDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState([]);
+  const mountedRef = useRef(false);
   const [projectMetrics, setProjectMetrics] = useState({
     total: 0,
     active: 0,
@@ -152,6 +154,8 @@ const StratflowDashboard = () => {
     capacity: 5,
     status: 'ACTIVE',
   });
+  const [apiHealth, setApiHealth] = useState({});
+  const [showApiStatus, setShowApiStatus] = useState(false);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -165,265 +169,305 @@ const StratflowDashboard = () => {
   };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        let projects = [], teams = [], sprints = [], stories = [], tasks = [], defects = [];
+    // Prevent duplicate API calls in StrictMode
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    
+    // Check API health first to identify which endpoints are implemented
+    const checkApiHealth = async () => {
+      console.group('🔍 API Health Check');
+      console.log('Checking API endpoint health...');
+      
+      const endpoints = [
+        '/projects',
+        '/teams',
+        '/sprints',
+        '/stories',
+        '/tasks',
+        '/defects'
+      ];
+      
+      const healthResults = await apiHealthService.checkMultipleEndpoints(endpoints);
+      apiHealthService.logApiHealthSummary(healthResults);
+      
+      setApiHealth(healthResults);
+      console.groupEnd();
+      
+      // Continue with data fetching
+      fetchDashboardData(healthResults);
+    };
+    
+    const fetchDashboardData = async (healthStatus) => {
+      console.group('📊 StratFlow Dashboard - Data Fetching');
+      console.time('dashboardDataFetch');
+      
+      setLoading(true);
+      
+      // Create data containers
+      let projects = [], teams = [], sprints = [], stories = [], tasks = [], defects = [];
+      let apiStatus = {
+        projects: { success: false, error: null, count: 0 },
+        teams: { success: false, error: null, count: 0 },
+        sprints: { success: false, error: null, count: 0 },
+        stories: { success: false, error: null, count: 0 },
+        tasks: { success: false, error: null, count: 0 },
+        defects: { success: false, error: null, count: 0 }
+      };
 
-        // Fetch backlog data
-        try {
-          stories = await storyService.getAllStories();
-          tasks = await taskService.getAllTasks();
-          defects = await defectService.getAllDefects();
-
-          // Calculate backlog metrics
-          const backlogMetricsData = {
-            stories: {
-              total: stories.length,
-              byStatus: stories.reduce((acc, story) => {
-                acc[story.status] = (acc[story.status] || 0) + 1;
-                return acc;
-              }, {}),
-              byType: stories.reduce((acc, story) => {
-                acc[story.type] = (acc[story.type] || 0) + 1;
-                return acc;
-              }, {}),
-            },
-            tasks: {
-              total: tasks.length,
-              byStatus: tasks.reduce((acc, task) => {
-                acc[task.status] = (acc[task.status] || 0) + 1;
-                return acc;
-              }, {}),
-              byPriority: tasks.reduce((acc, task) => {
-                acc[task.priority] = (acc[task.priority] || 0) + 1;
-                return acc;
-              }, {}),
-            },
-            defects: {
-              total: defects.length,
-              bySeverity: defects.reduce((acc, defect) => {
-                acc[defect.severity] = (acc[defect.severity] || 0) + 1;
-                return acc;
-              }, {}),
-              byStatus: defects.reduce((acc, defect) => {
-                acc[defect.status] = (acc[defect.status] || 0) + 1;
-                return acc;
-              }, {}),
-            },
-          };
-          setBacklogMetrics(backlogMetricsData);
-
-          // Update overall metrics
-          setMetrics(prev => ({
-            ...prev,
-            totalStories: stories.length,
-            totalTasks: tasks.length,
-            totalDefects: defects.length,
-          }));
-        } catch (error) {
-          console.error('Error fetching backlog data:', error);
-          setBacklogMetrics({
-            stories: { total: 0, byStatus: {}, byType: {} },
-            tasks: { total: 0, byStatus: {}, byPriority: {} },
-            defects: { total: 0, bySeverity: {}, byStatus: {} },
-          });
-          setMetrics(prev => ({
-            ...prev,
-            totalStories: 0,
-            totalTasks: 0,
-            totalDefects: 0,
-          }));
+      // Modify the fetchWithRetry function to check for CORS unknown status
+      const fetchWithRetry = async (fetchFn, entityName, maxRetries = 2, retryDelay = 1000) => {
+        // Skip fetch if we already know the endpoint doesn't exist
+        const endpoint = `/${entityName}`;
+        const healthResult = healthStatus[endpoint];
+        
+        // If health check returned definitively unavailable (not just CORS unknown)
+        if (healthResult && healthResult.available === false) {
+          console.warn(`⚠️ Skipping ${entityName} fetch - endpoint not implemented`);
+          return [];
+        }
+        
+        // If health status is unknown due to CORS, we'll try anyway
+        if (healthResult && healthResult.available === null) {
+          console.warn(`⚠️ ${entityName} status unknown due to CORS - attempting fetch anyway`);
         }
 
-        try {
-          projects = await projectService.getAllProjects();
-          // Calculate project metrics
-          const projectMetricsData = {
-            total: projects.length,
-            active: projects.filter(p => p.status === 'ACTIVE').length,
-            completed: projects.filter(p => p.status === 'COMPLETED').length,
-            onHold: projects.filter(p => p.status === 'ON_HOLD').length,
-          };
-          setProjectMetrics(projectMetricsData);
-
-          // Calculate project progress
-          const progressData = projects.map(project => ({
-            name: project.name || 'Unnamed Project',
-            completed: project.progress || 0,
-            remaining: 100 - (project.progress || 0),
-          }));
-          setProjectProgress(progressData);
-
-          // Set recent projects with safe date handling
-          const sortedProjects = [...projects]
-            .filter(p => p && p.createdAt) // Only include projects with valid dates
-            .sort((a, b) => {
-              const dateA = new Date(a.createdAt);
-              const dateB = new Date(b.createdAt);
-              return isNaN(dateA.getTime()) || isNaN(dateB.getTime()) ? 0 : dateB - dateA;
-            })
-            .slice(0, 5);
-          setRecentProjects(sortedProjects);
-
-          // Update metrics with project data
-          setMetrics(prev => ({
-            ...prev,
-            totalProjects: projects.length,
-            activeProjects: projects.filter(p => p.status === 'ACTIVE').length,
-          }));
-        } catch (error) {
-          console.error('Error fetching projects:', error);
-          setProjectMetrics({
-            total: 0,
-            active: 0,
-            completed: 0,
-            onHold: 0,
-          });
-          setProjectProgress([]);
-          setRecentProjects([]);
-          setMetrics(prev => ({
-            ...prev,
-            totalProjects: 0,
-            activeProjects: 0,
-          }));
+        let retries = 0;
+        let lastError = null;
+        
+        while (retries <= maxRetries) {
+          try {
+            const startTime = performance.now();
+            const data = await fetchFn();
+            const endTime = performance.now();
+            
+            console.log(`✅ ${entityName} fetched successfully in ${Math.round(endTime - startTime)}ms`);
+            apiStatus[entityName] = { success: true, error: null, count: data.length };
+            return data;
+          } catch (error) {
+            lastError = error;
+            
+            // Don't retry 404 errors - these mean the endpoint doesn't exist
+            if (error.response?.status === 404) {
+              console.warn(`⚠️ ${entityName} endpoint returned 404 - Not implemented yet`);
+              break;
+            }
+            
+            // Don't retry unauthorized errors
+            if (error.response?.status === 401 || error.response?.status === 403) {
+              console.error(`❌ ${entityName} fetch failed: Authentication error`);
+              break;
+            }
+            
+            retries++;
+            if (retries <= maxRetries) {
+              console.warn(`⚠️ ${entityName} fetch attempt ${retries} failed, retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+          }
         }
-
-        try {
-          teams = await teamService.getAllTeams();
-          setTeams(teams);
-          // Calculate team metrics
-          const teamMetricsData = {
-            totalTeams: teams.length,
-            totalMembers: teams.reduce((acc, team) => acc + (team.members?.length || 0), 0),
-          };
-          setTeamMetrics(teamMetricsData);
-          // Update metrics with team data
-          setMetrics(prev => ({
-            ...prev,
-            totalTeams: teams.length,
-          }));
-        } catch (error) {
-          console.error('Error fetching teams:', error);
-          setTeams([]);
-          setTeamMetrics({
-            totalTeams: 0,
-            totalMembers: 0,
-          });
-          setMetrics(prev => ({
-            ...prev,
-            totalTeams: 0,
-          }));
+        
+        if (lastError) {
+          console.error(`❌ Failed to fetch ${entityName} after ${retries} attempts:`, lastError);
+          apiStatus[entityName] = { success: false, error: lastError, count: 0 };
         }
+        
+        return [];
+      };
 
-        try {
-          sprints = await sprintService.getAllSprints();
-          
-          // Set upcoming sprints with safe date handling
-          const upcomingSprintsData = sprints
-            .filter(s => {
-              if (!s || !s.startDate) return false;
-              const startDate = new Date(s.startDate);
-              return !isNaN(startDate.getTime()) && 
-                     (s.status === 'PLANNED' || s.status === 'IN_PROGRESS');
-            })
-            .sort((a, b) => {
-              const dateA = new Date(a.startDate);
-              const dateB = new Date(b.startDate);
-              return dateA - dateB;
-            })
-            .slice(0, 5)
-            .map(sprint => ({
-              ...sprint,
-              projectName: projects.find(p => p.id === sprint.projectId)?.name || 'Unknown',
-            }));
-          setUpcomingSprints(upcomingSprintsData);
-
-          // Update metrics with sprint data
-          setMetrics(prev => ({
-            ...prev,
-            activeSprints: sprints.filter(s => s.status === 'IN_PROGRESS').length,
-          }));
-
-          // Calculate velocity data with safe date handling
-          const last6Sprints = sprints
-            .filter(s => {
-              if (!s || !s.endDate || s.status !== 'COMPLETED') return false;
-              const endDate = new Date(s.endDate);
-              return !isNaN(endDate.getTime());
-            })
-            .sort((a, b) => {
-              const dateA = new Date(a.endDate);
-              const dateB = new Date(b.endDate);
-              return dateB - dateA;
-            })
-            .slice(0, 6)
-            .reverse();
-
-          setVelocityData({
-            labels: last6Sprints.map(s => s.name || 'Unnamed Sprint'),
-            datasets: [{
-              label: 'Story Points Completed',
-              data: last6Sprints.map(s => s.completedPoints || 0),
-              borderColor: 'rgb(75, 192, 192)',
-              tension: 0.1,
-            }],
-          });
-        } catch (error) {
-          console.error('Error fetching sprints:', error);
-          setUpcomingSprints([]);
-          setMetrics(prev => ({
-            ...prev,
-            activeSprints: 0,
-          }));
-          setVelocityData({
-            labels: [],
-            datasets: [{
-              label: 'Story Points Completed',
-              data: [],
-              borderColor: 'rgb(75, 192, 192)',
-              tension: 0.1,
-            }],
-          });
-        }
-
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        // Reset all states to their default values
-        setProjectMetrics({
-          total: 0,
-          active: 0,
-          completed: 0,
-          onHold: 0,
-        });
-        setTeamMetrics({
-          totalTeams: 0,
-          totalMembers: 0,
-        });
-        setUpcomingSprints([]);
-        setProjectProgress([]);
-        setMetrics({
-          totalProjects: 0,
-          activeProjects: 0,
-          totalTeams: 0,
-          activeSprints: 0,
-        });
-        setRecentProjects([]);
-        setVelocityData({
-          labels: [],
-          datasets: [{
-            label: 'Story Points Completed',
-            data: [],
-            borderColor: 'rgb(75, 192, 192)',
-            tension: 0.1,
-          }],
-        });
-      } finally {
-        setLoading(false);
+      // Fetch core data first - projects and teams
+      console.group('📊 Fetching Core Data');
+      console.time('coreDataFetch');
+      
+      // Projects
+      projects = await fetchWithRetry(
+        () => projectService.getAllProjects(),
+        'projects'
+      );
+      console.log(`📋 Loaded ${projects.length} projects`);
+      
+      // Teams
+      teams = await fetchWithRetry(
+        () => teamService.getAllTeams(),
+        'teams'
+      );
+      console.log(`👥 Loaded ${teams.length} teams`);
+      
+      // Only try to fetch sprints if we have projects
+      if (projects.length > 0) {
+        sprints = await fetchWithRetry(
+          () => sprintService.getAllSprints(),
+          'sprints'
+        );
+        console.log(`🏃‍♂️ Loaded ${sprints.length} sprints`);
+      } else {
+        console.warn('⚠️ Skipping sprint fetch - no projects available');
       }
+      
+      console.timeEnd('coreDataFetch');
+      console.groupEnd(); // Core data fetching
+
+      // Process core data
+      // Calculate project metrics
+      const projectMetricsData = {
+        total: projects.length,
+        active: projects.filter(p => p.status === 'Active').length,
+        completed: projects.filter(p => p.status === 'Completed').length,
+        onHold: projects.filter(p => p.status === 'On Hold').length,
+      };
+      setProjectMetrics(projectMetricsData);
+
+      // Calculate team metrics
+      const teamMetricsData = {
+        totalTeams: teams.length,
+        totalMembers: teams.reduce((total, team) => total + (team.members?.length || 0), 0),
+        activeTeams: teams.filter(t => t.status === 'Active').length,
+      };
+      setTeamMetrics(teamMetricsData);
+
+      // Update metrics with project and team data
+      setMetrics(prev => ({
+        ...prev,
+        totalProjects: projects.length,
+        activeProjects: projectMetricsData.active,
+        totalTeams: teams.length,
+        completedProjects: projectMetricsData.completed,
+      }));
+
+      // Calculate project progress
+      if (projects.length > 0) {
+        const progressData = projects.map(project => ({
+          name: project.name || 'Unnamed Project',
+          completed: project.progress || 0,
+          remaining: 100 - (project.progress || 0),
+        }));
+        setProjectProgress(progressData);
+
+        // Set recent projects with safe date handling
+        const sortedProjects = [...projects]
+          .filter(p => p && p.createdAt) // Only include projects with valid dates
+          .sort((a, b) => {
+            const dateA = new Date(a.createdAt);
+            const dateB = new Date(b.createdAt);
+            return isNaN(dateA.getTime()) || isNaN(dateB.getTime()) ? 0 : dateB - dateA;
+          })
+          .slice(0, 5);
+        setRecentProjects(sortedProjects);
+      }
+
+      // Calculate upcoming sprints
+      if (sprints.length > 0) {
+        const upcomingSprintsData = sprints
+          .filter(sprint => {
+            const startDate = new Date(sprint.startDate);
+            return !isNaN(startDate.getTime()) && startDate >= new Date();
+          })
+          .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+          .slice(0, 5)
+          .map(sprint => ({
+            ...sprint,
+            projectName: projects.find(p => p.id === sprint.projectId)?.name || 'Unknown Project'
+          }));
+        
+        setUpcomingSprints(upcomingSprintsData);
+      }
+
+      // Fetch backlog data - these endpoints might not exist yet
+      console.group('📊 Fetching Backlog Data');
+      console.time('backlogDataFetch');
+      
+      // Stories
+      stories = await fetchWithRetry(
+        () => storyService.getAllStories(),
+        'stories'
+      );
+      console.log(`📃 Loaded ${stories.length} stories`);
+      
+      // Tasks
+      tasks = await fetchWithRetry(
+        () => taskService.getAllTasks(),
+        'tasks'
+      );
+      console.log(`✓ Loaded ${tasks.length} tasks`);
+      
+      // Defects
+      defects = await fetchWithRetry(
+        () => defectService.getAllDefects(),
+        'defects'
+      );
+      console.log(`🐞 Loaded ${defects.length} defects`);
+      
+      console.timeEnd('backlogDataFetch');
+      console.groupEnd(); // Backlog data fetching
+
+      // Calculate backlog metrics if we have any data
+      const backlogMetricsData = {
+        stories: {
+          total: stories.length,
+          byStatus: stories.reduce((acc, story) => {
+            acc[story.status] = (acc[story.status] || 0) + 1;
+            return acc;
+          }, {}),
+          byType: stories.reduce((acc, story) => {
+            acc[story.type] = (acc[story.type] || 0) + 1;
+            return acc;
+          }, {}),
+        },
+        tasks: {
+          total: tasks.length,
+          byStatus: tasks.reduce((acc, task) => {
+            acc[task.status] = (acc[task.status] || 0) + 1;
+            return acc;
+          }, {}),
+          byPriority: tasks.reduce((acc, task) => {
+            acc[task.priority] = (acc[task.priority] || 0) + 1;
+            return acc;
+          }, {}),
+        },
+        defects: {
+          total: defects.length,
+          bySeverity: defects.reduce((acc, defect) => {
+            acc[defect.severity] = (acc[defect.severity] || 0) + 1;
+            return acc;
+          }, {}),
+          byStatus: defects.reduce((acc, defect) => {
+            acc[defect.status] = (acc[defect.status] || 0) + 1;
+            return acc;
+          }, {}),
+        },
+      };
+      setBacklogMetrics(backlogMetricsData);
+
+      // Update overall metrics
+      setMetrics(prev => ({
+        ...prev,
+        totalStories: stories.length,
+        totalTasks: tasks.length,
+        totalDefects: defects.length,
+        activeSprints: sprints.filter(s => s.status === 'ACTIVE').length,
+      }));
+
+      // Print API Status Summary
+      console.group('📊 API Status Summary');
+      Object.entries(apiStatus).forEach(([entityName, status]) => {
+        if (status.success) {
+          console.log(`✅ ${entityName}: ${status.count} items`);
+        } else {
+          console.warn(`❌ ${entityName}: Failed to load`);
+          if (status.error?.response?.status === 404) {
+            console.warn(`   - Reason: API endpoint not implemented (404)`);
+          } else if (status.error) {
+            console.warn(`   - Error: ${status.error.message}`);
+          }
+        }
+      });
+      console.groupEnd(); // API Status Summary
+
+      setLoading(false);
+      console.timeEnd('dashboardDataFetch');
+      console.groupEnd(); // Dashboard Data Fetching
     };
 
-    fetchDashboardData();
+    checkApiHealth();
   }, []);
 
   useEffect(() => {
@@ -578,6 +622,72 @@ const StratflowDashboard = () => {
     }
   };
 
+  // Add a new method to render the API health status dialog
+  const renderApiStatusDialog = () => {
+    return (
+      <Dialog 
+        open={showApiStatus} 
+        onClose={() => setShowApiStatus(false)}
+        maxWidth="md"
+      >
+        <DialogTitle>API Endpoint Status</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="body2">
+              <strong>Note:</strong> CORS restrictions may prevent accurate status checks in development environment.
+              The actual backend features might be available despite showing as "Unknown" here.
+            </Typography>
+          </Box>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Endpoint</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Details</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {Object.entries(apiHealth).map(([endpoint, status]) => (
+                  <TableRow key={endpoint}>
+                    <TableCell>{endpoint}</TableCell>
+                    <TableCell>
+                      {status.available === true ? (
+                        <Chip
+                          label="Available"
+                          color="success"
+                          size="small"
+                        />
+                      ) : status.available === null ? (
+                        <Chip
+                          label="Unknown"
+                          color="warning"
+                          size="small"
+                        />
+                      ) : (
+                        <Chip
+                          label="Not Implemented"
+                          color="error"
+                          size="small"
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {status.available !== true && status.error && status.error.message}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowApiStatus(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
   if (loading) {
     return (
       <Box
@@ -655,6 +765,41 @@ const StratflowDashboard = () => {
             to="/backlog"
           >
             Go to Backlog
+          </Button>
+        </Box>
+
+        {/* Development Notice */}
+        <Box 
+          sx={{ 
+            p: 2, 
+            mb: 3, 
+            bgcolor: 'warning.light', 
+            borderRadius: 1,
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', md: 'center' },
+            border: '1px solid',
+            borderColor: 'warning.main',
+            gap: 2
+          }}
+        >
+          <Box>
+            <Typography variant="body1" color="warning.contrastText" gutterBottom>
+              <strong>Development Alert:</strong> CORS restrictions in GitHub Codespaces may prevent proper
+              API communication. The app will attempt direct requests using multiple methods.
+            </Typography>
+            <Typography variant="body2" color="warning.contrastText">
+              Some errors in the console are expected. To see detailed API endpoint status, use the View API Status button.
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            color="inherit" 
+            size="small"
+            onClick={() => setShowApiStatus(true)}
+          >
+            View API Status
           </Button>
         </Box>
 
@@ -1383,6 +1528,9 @@ const StratflowDashboard = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* API Status Dialog */}
+        {renderApiStatusDialog()}
       </Box>
     </Container>
   );

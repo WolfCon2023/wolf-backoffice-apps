@@ -2,17 +2,106 @@ import { api } from './apiConfig';
 import { createErrorMessage } from '../utils';
 import ErrorLogger from '../utils/errorLogger';
 
+/**
+ * Service for managing task-related API requests
+ * This handles all interactions with the /tasks endpoints
+ */
 class TaskService {
   constructor() {
     this.logError = this.logError.bind(this);
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    this.endpointAvailability = {
+      '/tasks': { available: null, lastChecked: null }
+    };
+    
+    // Mock data to use when API fails
+    this.mockTasks = [
+      {
+        id: 'task-001',
+        title: 'Design Login Screen',
+        description: 'Create mockups for the login interface',
+        status: 'Completed',
+        priority: 'High',
+        createdAt: new Date('2025-03-12').toISOString(),
+        assignee: 'dev-002',
+        storyId: 'story-001',
+        projectId: 'project-001',
+        estimatedHours: 4,
+        actualHours: 3.5
+      },
+      {
+        id: 'task-002',
+        title: 'Implement Login API',
+        description: 'Create backend endpoints for authentication',
+        status: 'In Progress',
+        priority: 'High',
+        createdAt: new Date('2025-03-14').toISOString(),
+        assignee: 'dev-001',
+        storyId: 'story-001',
+        projectId: 'project-001',
+        estimatedHours: 8,
+        actualHours: 6
+      },
+      {
+        id: 'task-003',
+        title: 'Create Chart Components',
+        description: 'Develop reusable chart components',
+        status: 'To Do',
+        priority: 'Medium',
+        createdAt: new Date('2025-03-17').toISOString(),
+        assignee: 'dev-003',
+        storyId: 'story-002',
+        projectId: 'project-001',
+        estimatedHours: 6,
+        actualHours: 0
+      },
+      {
+        id: 'task-004',
+        title: 'Setup Email Service',
+        description: 'Configure email sending service',
+        status: 'In Progress',
+        priority: 'Medium',
+        createdAt: new Date('2025-03-19').toISOString(),
+        assignee: 'dev-001',
+        storyId: 'story-004',
+        projectId: 'project-002',
+        estimatedHours: 3,
+        actualHours: 2
+      },
+      {
+        id: 'task-005',
+        title: 'Write API Documentation',
+        description: 'Document all API endpoints and parameters',
+        status: 'To Do',
+        priority: 'Low',
+        createdAt: new Date('2025-03-21').toISOString(),
+        assignee: 'dev-004',
+        storyId: 'story-005',
+        projectId: 'project-003',
+        estimatedHours: 4,
+        actualHours: 0
+      }
+    ];
   }
 
+  /**
+   * Log errors to the error logger with context
+   */
   logError(error, context) {
+    console.group(`📋 TaskService Error - ${context}`);
+    console.error('Error details:', error);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    console.groupEnd();
     return ErrorLogger.logToFile(error, `TaskService:${context}`);
   }
 
+  /**
+   * Check if data exists in cache and is still valid
+   */
   getCachedData(key) {
     const cached = this.cache.get(key);
     if (!cached) return null;
@@ -26,6 +115,9 @@ class TaskService {
     return data;
   }
 
+  /**
+   * Set data in cache with current timestamp
+   */
   setCachedData(key, data) {
     this.cache.set(key, {
       data,
@@ -33,20 +125,72 @@ class TaskService {
     });
   }
 
+  /**
+   * Check and update the availability status of an API endpoint
+   */
+  checkEndpointAvailability(endpoint, status) {
+    if (!this.endpointAvailability[endpoint]) {
+      this.endpointAvailability[endpoint] = { available: null, lastChecked: null };
+    }
+    
+    this.endpointAvailability[endpoint] = {
+      available: status,
+      lastChecked: Date.now()
+    };
+    
+    console.info(`🔍 API Endpoint ${endpoint} availability: ${status ? 'Available' : 'Unavailable'}`);
+  }
+
+  /**
+   * Get all tasks from the API
+   * @returns {Array} List of tasks or empty array if API fails
+   */
   async getAllTasks() {
+    console.group('📋 TaskService - getAllTasks');
+    console.time('getAllTasks');
+    
     const cacheKey = 'allTasks';
     const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      console.log('✅ Using cached tasks data');
+      console.timeEnd('getAllTasks');
+      console.groupEnd();
+      return cached;
+    }
 
     try {
-      console.log('📡 Fetching all tasks...');
+      console.log('📡 Fetching all tasks from /tasks endpoint...');
+      const startTime = performance.now();
       const response = await api.get('/tasks');
-      console.log('✅ Tasks fetched:', response.data);
+      const endTime = performance.now();
+      
+      console.log(`✅ Tasks fetched (${Math.round(endTime - startTime)}ms):`, response.data);
+      console.log(`📊 Retrieved ${response.data.length} tasks`);
+      
       this.setCachedData(cacheKey, response.data);
+      this.checkEndpointAvailability('/tasks', true);
+      
+      console.timeEnd('getAllTasks');
+      console.groupEnd();
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching tasks:', error);
+      // 404 errors mean the endpoint doesn't exist yet
+      if (error.response?.status === 404) {
+        console.warn('⚠️ The tasks endpoint (/api/tasks) returned 404.');
+        console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
+        console.warn('📋 Check your backend implementation for missing routes.');
+        this.checkEndpointAvailability('/tasks', false);
+      } else {
+        // Other errors could be permissions, server issues, etc.
+        console.error(`❌ Error fetching tasks (${error.response?.status || 'Network Error'}):`);
+        console.error('- Message:', error.message);
+        console.error('- Request URL:', error.config?.url);
+        console.error('- Request Method:', error.config?.method);
+      }
+      
       this.logError(error, 'getAllTasks');
+      console.timeEnd('getAllTasks');
+      console.groupEnd();
       return [];
     }
   }

@@ -58,6 +58,14 @@ function App() {
     }
   }, [authToken]);
 
+  // Attempt to disable WebSocket errors in development environment
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      // Just a logging message to indicate we're in development mode
+      console.info('Running in development mode - some WebSocket errors in console are expected');
+    }
+  }, []);
+
   // Helper function to wrap routes that need the DashboardLayout
   const withDashboardLayout = (Component) => {
     return authToken ? (

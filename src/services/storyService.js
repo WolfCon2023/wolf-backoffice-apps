@@ -2,17 +2,37 @@ import { api } from './apiConfig';
 import { createErrorMessage } from '../utils';
 import ErrorLogger from '../utils/errorLogger';
 
+/**
+ * Service for managing story-related API requests
+ * This handles all interactions with the /stories endpoints
+ */
 class StoryService {
   constructor() {
     this.logError = this.logError.bind(this);
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    this.endpointAvailability = {
+      '/stories': { available: null, lastChecked: null }
+    };
   }
 
+  /**
+   * Log errors to the error logger with context
+   */
   logError(error, context) {
+    console.group(`📋 StoryService Error - ${context}`);
+    console.error('Error details:', error);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    console.groupEnd();
     return ErrorLogger.logToFile(error, `StoryService:${context}`);
   }
 
+  /**
+   * Check if data exists in cache and is still valid
+   */
   getCachedData(key) {
     const cached = this.cache.get(key);
     if (!cached) return null;
@@ -26,6 +46,9 @@ class StoryService {
     return data;
   }
 
+  /**
+   * Set data in cache with current timestamp
+   */
   setCachedData(key, data) {
     this.cache.set(key, {
       data,
@@ -33,20 +56,72 @@ class StoryService {
     });
   }
 
+  /**
+   * Check and update the availability status of an API endpoint
+   */
+  checkEndpointAvailability(endpoint, status) {
+    if (!this.endpointAvailability[endpoint]) {
+      this.endpointAvailability[endpoint] = { available: null, lastChecked: null };
+    }
+    
+    this.endpointAvailability[endpoint] = {
+      available: status,
+      lastChecked: Date.now()
+    };
+    
+    console.info(`🔍 API Endpoint ${endpoint} availability: ${status ? 'Available' : 'Unavailable'}`);
+  }
+
+  /**
+   * Get all stories from the API
+   * @returns {Array} List of stories or empty array if API fails
+   */
   async getAllStories() {
+    console.group('📋 StoryService - getAllStories');
+    console.time('getAllStories');
+    
     const cacheKey = 'allStories';
     const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      console.log('✅ Using cached stories data');
+      console.timeEnd('getAllStories');
+      console.groupEnd();
+      return cached;
+    }
 
     try {
-      console.log('📡 Fetching all stories...');
+      console.log('📡 Fetching all stories from /stories endpoint...');
+      const startTime = performance.now();
       const response = await api.get('/stories');
-      console.log('✅ Stories fetched:', response.data);
+      const endTime = performance.now();
+      
+      console.log(`✅ Stories fetched (${Math.round(endTime - startTime)}ms):`, response.data);
+      console.log(`📊 Retrieved ${response.data.length} stories`);
+      
       this.setCachedData(cacheKey, response.data);
+      this.checkEndpointAvailability('/stories', true);
+      
+      console.timeEnd('getAllStories');
+      console.groupEnd();
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching stories:', error);
+      // 404 errors mean the endpoint doesn't exist yet
+      if (error.response?.status === 404) {
+        console.warn('⚠️ The stories endpoint (/api/stories) returned 404.');
+        console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
+        console.warn('📋 Check your backend implementation for missing routes.');
+        this.checkEndpointAvailability('/stories', false);
+      } else {
+        // Other errors could be permissions, server issues, etc.
+        console.error(`❌ Error fetching stories (${error.response?.status || 'Network Error'}):`);
+        console.error('- Message:', error.message);
+        console.error('- Request URL:', error.config?.url);
+        console.error('- Request Method:', error.config?.method);
+      }
+      
       this.logError(error, 'getAllStories');
+      console.timeEnd('getAllStories');
+      console.groupEnd();
       return [];
     }
   }
@@ -235,4 +310,4 @@ class StoryService {
   }
 }
 
-export default new StoryService(); 
+export default new StoryService();  
