@@ -50,28 +50,31 @@ class UserService {
 
   async createUser(userData) {
     try {
+      // Ensure required fields are present and properly formatted
       const requiredFields = ['username', 'firstName', 'lastName', 'email', 'password'];
       const missingFields = requiredFields.filter(field => !userData[field]);
       if (missingFields.length > 0) {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
+      // Sanitize and validate role
       const validRoles = ['Developer', 'Scrum Master', 'Product Owner', 'Business Analyst', 'QA Tester'];
       const sanitizedRole = userData.role ? userData.role.trim() : 'Developer';
       if (!validRoles.includes(sanitizedRole)) {
         throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
       }
 
+      // Format the request data with all required fields
       const requestData = {
         username: userData.username.trim(),
         firstName: userData.firstName.trim(),
         lastName: userData.lastName.trim(),
         email: userData.email.trim().toLowerCase(),
         password: userData.password || `${userData.firstName.toLowerCase()}${userData.lastName.toLowerCase()}123!`,
+        // Required fields with validated values
         role: sanitizedRole,
         department: (userData.department || 'Information Technology').trim(),
-        title: (userData.title || sanitizedRole).trim(),
-        employeeId: userData.employeeId?.trim() || `EMP-${Math.floor(1000 + Math.random() * 9000)}`
+        title: (userData.title || sanitizedRole).trim()
       };
 
       console.log('📡 Creating new user with data:', {
@@ -79,11 +82,22 @@ class UserService {
         password: '[REDACTED]'
       });
 
+      // Get auth token for admin creation
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+
+      // Create user using the /auth/register endpoint with admin creation header
       const headers = {
         'x-admin-creation': 'true',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // Explicitly add the token
       };
-      console.log('🔑 Request headers:', headers);
+      console.log('🔑 Request headers:', {
+        ...headers,
+        'Authorization': '[REDACTED]'
+      });
 
       const response = await api.post('/auth/register', requestData, { headers });
       console.log('✅ User created:', response.data);
@@ -159,4 +173,4 @@ class UserService {
   }
 }
 
-export const userService = new UserService();
+export const userService = new UserService(); 

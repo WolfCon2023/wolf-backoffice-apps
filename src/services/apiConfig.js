@@ -25,7 +25,13 @@ const api = axios.create({
 api.interceptors.request.use(
   config => {
     const token = localStorage.getItem("token");
-    if (token && !config.url.includes('/auth/register')) {
+    
+    // Add token for all authenticated requests, including admin user creation
+    // Only skip token for public registration (when no x-admin-creation header)
+    const isPublicRegistration = config.url.includes('/auth/register') && 
+                                  (!config.headers || !config.headers['x-admin-creation']);
+    
+    if (token && !isPublicRegistration) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
