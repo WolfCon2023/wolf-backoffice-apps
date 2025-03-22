@@ -76,10 +76,11 @@ const Projects = () => {
   };
 
   const handleCreateProject = async () => {
+    console.log("🔍 Starting handleCreateProject function");
     try {
-      const errors = validateRequired(newProject, ['name']);
-      if (Object.keys(errors).length > 0) {
-        Object.values(errors).forEach(error => toast.error(error));
+      // Basic validation
+      if (!newProject.name) {
+        toast.error('Project name is required');
         return;
       }
 
@@ -88,14 +89,45 @@ const Projects = () => {
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, '')
         .substring(0, 8) + '-' + Math.floor(Math.random() * 1000);
+      
+      // Simple minimal payload
+      const projectData = {
+        name: newProject.name,
+        key: key,
+        description: newProject.description || '',
+        status: 'Active',
+        methodology: newProject.methodology || 'Agile',
+        visibility: 'Team Only',
+        tags: [],
+        
+        // Always include both dates in the right format
+        startDate: new Date().toISOString(),
+        targetEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      };
+      
+      // Override dates if the user provided them
+      if (newProject.startDate) {
+        try {
+          projectData.startDate = new Date(newProject.startDate).toISOString();
+        } catch (e) {
+          console.error('Invalid start date format:', e);
+          // Keep the default
+        }
+      }
+      
+      if (newProject.endDate) {
+        try {
+          projectData.targetEndDate = new Date(newProject.endDate).toISOString();
+        } catch (e) {
+          console.error('Invalid end date format:', e);
+          // Keep the default
+        }
+      }
 
-      const response = await projectService.createProject({
-        ...newProject,
-        key,
-        status: 'ACTIVE',
-        progress: 0,
-        startDate: newProject.startDate || new Date().toISOString().split('T')[0],
-      });
+      console.log('🔍 Creating project with data:', projectData);
+      
+      const response = await projectService.createProject(projectData);
+      console.log('🔍 Project creation response:', response);
 
       setProjects([...projects, response]);
       setOpenNewProject(false);
@@ -109,6 +141,7 @@ const Projects = () => {
       });
       toast.success('Project created successfully!');
     } catch (error) {
+      console.error('🔍 Error in handleCreateProject:', error);
       handleApiError(error, 'createProject');
     }
   };
@@ -142,13 +175,32 @@ const Projects = () => {
       <Box sx={{ py: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
           <Typography variant="h4">Projects</Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenNewProject(true)}
-          >
-            New Project
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={async () => {
+                try {
+                  const response = await projectService.testCreateProject();
+                  console.log('Test project created:', response);
+                  toast.success('Test project created successfully!');
+                  fetchProjects(); // Refresh the list
+                } catch (error) {
+                  console.error('Test project creation failed:', error);
+                  toast.error('Test project creation failed.');
+                }
+              }}
+            >
+              Test Create
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenNewProject(true)}
+            >
+              New Project
+            </Button>
+          </Box>
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -214,11 +266,11 @@ const Projects = () => {
                     <Box sx={{ flexGrow: 1, mr: 1 }}>
                       <LinearProgress
                         variant="determinate"
-                        value={project.progress}
+                        value={project.progress || 0}
                         sx={{ height: 8, borderRadius: 4 }}
                       />
                     </Box>
-                    <Typography variant="body2">{project.progress}%</Typography>
+                    <Typography variant="body2">{project.progress || 0}%</Typography>
                   </Box>
                 </CardContent>
               </Card>
@@ -334,7 +386,7 @@ const Projects = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            setSelectedStatus('ACTIVE');
+            setSelectedStatus('Active');
             setFilterAnchorEl(null);
           }}
         >
@@ -342,7 +394,7 @@ const Projects = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            setSelectedStatus('ON_HOLD');
+            setSelectedStatus('On Hold');
             setFilterAnchorEl(null);
           }}
         >
@@ -350,7 +402,7 @@ const Projects = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            setSelectedStatus('COMPLETED');
+            setSelectedStatus('Completed');
             setFilterAnchorEl(null);
           }}
         >

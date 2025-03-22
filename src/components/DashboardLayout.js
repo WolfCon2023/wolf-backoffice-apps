@@ -87,7 +87,8 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 
 const navigationItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Projects', icon: <AssignmentIcon />, path: '/projects' },
+  { text: 'StratFlow Dashboard', icon: <DashboardIcon />, path: '/projects' },
+  { text: 'Projects', icon: <AssignmentIcon />, path: '/projects/list' },
   { text: 'Teams', icon: <GroupIcon />, path: '/teams' },
   { text: 'Roadmap', icon: <TimelineIcon />, path: '/roadmap' },
   { text: 'Backlog', icon: <BacklogIcon />, path: '/backlog' },

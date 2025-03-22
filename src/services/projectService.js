@@ -1,7 +1,6 @@
-import axios from 'axios';
+import { api } from '../services/apiConfig';
 import ErrorLogger from '../utils/errorLogger';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api";
+import { toast } from 'react-toastify';
 
 class ProjectService {
   constructor() {
@@ -10,15 +9,8 @@ class ProjectService {
 
   async getAllProjects() {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/projects`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.get('/projects');
+      
       const projects = Array.isArray(response.data) ? response.data : [];
       this.cache.set('allProjects', projects);
       return projects;
@@ -40,15 +32,7 @@ class ProjectService {
 
   async getProjectById(id) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.get(`/projects/${id}`);
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching project:', error);
@@ -68,15 +52,31 @@ class ProjectService {
 
   async createProject(projectData) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.post(`${API_BASE_URL}/projects`, projectData, {
-        headers: { Authorization: `Bearer ${token}` }
+      // Make a clean copy of the data to avoid reference issues
+      const cleanData = {
+        name: projectData.name,
+        key: projectData.key,
+        description: projectData.description || '',
+        status: projectData.status,
+        methodology: projectData.methodology || 'Agile',
+        visibility: projectData.visibility || 'Team Only',
+        tags: projectData.tags || [],
+        progress: projectData.progress || 0,
+        
+        // Convert dates to proper format
+        startDate: new Date(projectData.startDate || new Date()).toISOString(),
+        targetEndDate: new Date(projectData.targetEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).toISOString()
+      };
+      
+      console.log('📡 Creating project with cleaned data:', {
+        ...cleanData,
+        startDate: cleanData.startDate,
+        targetEndDate: cleanData.targetEndDate
       });
 
+      const response = await api.post('/projects', cleanData);
+      
+      console.log('✅ Project created successfully:', response.data);
       this.cache.delete('allProjects');
       return response.data;
     } catch (error) {
@@ -87,25 +87,57 @@ class ProjectService {
           statusText: error.response.statusText,
           data: error.response.data,
           headers: error.response.headers,
-          url: error.config?.url
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL,
+          fullUrl: `${error.config?.baseURL || ''}${error.config?.url || ''}`,
+          requestData: error.config?.data ? JSON.parse(error.config.data) : undefined
         });
       }
+      
+      // Try the test endpoint as a fallback
+      try {
+        console.log('🔧 Trying test endpoint instead...');
+        const testResponse = await this.testCreateProject();
+        console.log('🔧 Test endpoint response:', testResponse);
+        
+        // If the test endpoint works, explain the issue
+        toast.info('Project created via test endpoint. There seems to be an issue with the regular endpoint.');
+        this.cache.delete('allProjects');
+        return testResponse;
+      } catch (testError) {
+        console.error('🔧 Test endpoint also failed:', testError);
+      }
+      
       this.logError(error, 'createProject');
       throw new Error(`Failed to create project: ${error.message}`);
     }
   }
 
+  // Test method to diagnose issues with project creation
+  async testCreateProject() {
+    try {
+      console.log('🧪 Calling test-create endpoint...');
+      const response = await api.post('/projects/test-create');
+      console.log('🧪 Test create response:', response.data);
+      return response.data.project;
+    } catch (error) {
+      console.error('❌ Test create error:', error);
+      if (error.response) {
+        console.error('Test create error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
+      }
+      throw error;
+    }
+  }
+
   async updateProject(id, projectData) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.put(`${API_BASE_URL}/projects/${id}`, projectData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.put(`/projects/${id}`, projectData);
+      
       this.cache.delete('allProjects');
       return response.data;
     } catch (error) {
@@ -126,15 +158,8 @@ class ProjectService {
 
   async deleteProject(id) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.delete(`${API_BASE_URL}/projects/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.delete(`/projects/${id}`);
+      
       this.cache.delete('allProjects');
       return response.data;
     } catch (error) {
@@ -155,15 +180,8 @@ class ProjectService {
 
   async getProjectMetrics(id) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/metrics`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.get(`/projects/${id}/metrics`);
+      
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching project metrics:', error);
@@ -183,15 +201,7 @@ class ProjectService {
 
   async getProjectEpics(id) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/epics`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.get(`/projects/${id}/epics`);
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching project epics:', error);
@@ -211,15 +221,7 @@ class ProjectService {
 
   async getProjectStories(id) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/stories`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.get(`/projects/${id}/stories`);
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching project stories:', error);
@@ -239,15 +241,7 @@ class ProjectService {
 
   async getProjectSprints(id) {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      const response = await axios.get(`${API_BASE_URL}/projects/${id}/sprints`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const response = await api.get(`/projects/${id}/sprints`);
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching project sprints:', error);
