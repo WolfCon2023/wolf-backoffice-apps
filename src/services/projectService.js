@@ -52,29 +52,33 @@ class ProjectService {
 
   async createProject(projectData) {
     try {
-      // Make a clean copy of the data to avoid reference issues
-      const cleanData = {
+      // Create a clean payload similar to the userService implementation
+      const payload = {
         name: projectData.name,
         key: projectData.key,
         description: projectData.description || '',
-        status: projectData.status,
+        status: 'Active',
         methodology: projectData.methodology || 'Agile',
-        visibility: projectData.visibility || 'Team Only',
-        tags: projectData.tags || [],
-        progress: projectData.progress || 0,
-        
-        // Convert dates to proper format
-        startDate: new Date(projectData.startDate || new Date()).toISOString(),
-        targetEndDate: new Date(projectData.targetEndDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).toISOString()
+        visibility: 'Team Only',
+        tags: [],
       };
+
+      // Handle dates - convert to ISO string format before sending
+      payload.startDate = projectData.startDate instanceof Date 
+        ? projectData.startDate.toISOString() 
+        : new Date().toISOString();
       
-      console.log('📡 Creating project with cleaned data:', {
-        ...cleanData,
-        startDate: cleanData.startDate,
-        targetEndDate: cleanData.targetEndDate
+      payload.targetEndDate = projectData.targetEndDate instanceof Date
+        ? projectData.targetEndDate.toISOString()
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      console.log('📡 Creating project with data:', {
+        ...payload,
+        startDate: payload.startDate,
+        targetEndDate: payload.targetEndDate
       });
 
-      const response = await api.post('/projects', cleanData);
+      const response = await api.post('/projects', payload);
       
       console.log('✅ Project created successfully:', response.data);
       this.cache.delete('allProjects');
@@ -90,47 +94,12 @@ class ProjectService {
           url: error.config?.url,
           method: error.config?.method,
           baseURL: error.config?.baseURL,
-          fullUrl: `${error.config?.baseURL || ''}${error.config?.url || ''}`,
-          requestData: error.config?.data ? JSON.parse(error.config.data) : undefined
+          fullUrl: `${error.config?.baseURL || ''}${error.config?.url || ''}`
         });
-      }
-      
-      // Try the test endpoint as a fallback
-      try {
-        console.log('🔧 Trying test endpoint instead...');
-        const testResponse = await this.testCreateProject();
-        console.log('🔧 Test endpoint response:', testResponse);
-        
-        // If the test endpoint works, explain the issue
-        toast.info('Project created via test endpoint. There seems to be an issue with the regular endpoint.');
-        this.cache.delete('allProjects');
-        return testResponse;
-      } catch (testError) {
-        console.error('🔧 Test endpoint also failed:', testError);
       }
       
       this.logError(error, 'createProject');
       throw new Error(`Failed to create project: ${error.message}`);
-    }
-  }
-
-  // Test method to diagnose issues with project creation
-  async testCreateProject() {
-    try {
-      console.log('🧪 Calling test-create endpoint...');
-      const response = await api.post('/projects/test-create');
-      console.log('🧪 Test create response:', response.data);
-      return response.data.project;
-    } catch (error) {
-      console.error('❌ Test create error:', error);
-      if (error.response) {
-        console.error('Test create error details:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data
-        });
-      }
-      throw error;
     }
   }
 
