@@ -17,6 +17,17 @@ import {
   Paper,
   CircularProgress,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import {
   BarChart,
@@ -37,6 +48,10 @@ import {
   TrendingUp,
   BugReport,
   Task,
+  PersonAdd,
+  Edit,
+  Delete,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -46,18 +61,19 @@ import {
   LineElement,
   Title,
   Legend,
-  Tooltip,
+  Tooltip as ChartTooltip,
   ArcElement,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import projectService from '../services/projectService';
+import { projectService } from '../services/projectService';
 import teamService from '../services/teamService';
 import sprintService from '../services/sprintService';
 import storyService from '../services/storyService';
 import taskService from '../services/taskService';
 import defectService from '../services/defectService';
+import { userService } from '../services/userService';
 import { Link as RouterLink } from 'react-router-dom';
 
 ChartJS.register(
@@ -67,12 +83,13 @@ ChartJS.register(
   LineElement,
   Title,
   Legend,
-  Tooltip,
+  ChartTooltip,
   ArcElement
 );
 
 const StratflowDashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [teams, setTeams] = useState([]);
   const [projectMetrics, setProjectMetrics] = useState({
     total: 0,
     active: 0,
@@ -115,6 +132,25 @@ const StratflowDashboard = () => {
       bySeverity: {},
       byStatus: {},
     },
+  });
+  const [users, setUsers] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
+  const [openUserManagementDialog, setOpenUserManagementDialog] = useState(false);
+  const [newUser, setNewUser] = useState({
+    username: '',
+    email: '',
+    role: 'USER',
+    title: '',
+    department: '',
+  });
+  const [editingUser, setEditingUser] = useState(null);
+  const [openNewTeamDialog, setOpenNewTeamDialog] = useState(false);
+  const [newTeam, setNewTeam] = useState({
+    name: '',
+    description: '',
+    capacity: 5,
+    status: 'ACTIVE',
   });
 
   const formatDate = (dateString) => {
@@ -255,6 +291,7 @@ const StratflowDashboard = () => {
 
         try {
           teams = await teamService.getAllTeams();
+          setTeams(teams);
           // Calculate team metrics
           const teamMetricsData = {
             totalTeams: teams.length,
@@ -268,6 +305,7 @@ const StratflowDashboard = () => {
           }));
         } catch (error) {
           console.error('Error fetching teams:', error);
+          setTeams([]);
           setTeamMetrics({
             totalTeams: 0,
             totalMembers: 0,
@@ -388,6 +426,19 @@ const StratflowDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await userService.getAllUsers();
+        setUsers(response);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast.error('Failed to fetch users');
+      }
+    };
+    fetchUsers();
+  }, []);
+
   const getStatusColor = (status) => {
     const statusColors = {
       ACTIVE: 'success',
@@ -419,6 +470,112 @@ const StratflowDashboard = () => {
       'Low': 'info',
     };
     return colors[severity] || 'default';
+  };
+
+  const handleAddTeamMember = async (teamId, userId) => {
+    try {
+      await teamService.addTeamMember(teamId, {
+        userId,
+        role: 'TEAM_MEMBER',
+        joinedAt: new Date().toISOString(),
+      });
+      toast.success('Team member added successfully');
+      setOpenAddMemberDialog(false);
+      // Refresh team data
+      const updatedTeam = await teamService.getTeam(teamId);
+      setSelectedTeam(updatedTeam);
+    } catch (error) {
+      console.error('Error adding team member:', error);
+      toast.error('Failed to add team member');
+    }
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      await userService.createUser(newUser);
+      toast.success('User created successfully');
+      setOpenUserManagementDialog(false);
+      setNewUser({
+        username: '',
+        email: '',
+        role: 'USER',
+        title: '',
+        department: '',
+      });
+      // Refresh users list
+      const updatedUsers = await userService.getAllUsers();
+      setUsers(updatedUsers);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error('Failed to create user');
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    try {
+      await userService.updateUser(editingUser._id, editingUser);
+      toast.success('User updated successfully');
+      setOpenUserManagementDialog(false);
+      setEditingUser(null);
+      // Refresh users list
+      const updatedUsers = await userService.getAllUsers();
+      setUsers(updatedUsers);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Failed to update user');
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      try {
+        await userService.deleteUser(userId);
+        toast.success('User deleted successfully');
+        // Refresh users list
+        const updatedUsers = await userService.getAllUsers();
+        setUsers(updatedUsers);
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        toast.error('Failed to delete user');
+      }
+    }
+  };
+
+  const handleCreateTeam = async () => {
+    try {
+      if (!newTeam.name) {
+        toast.error('Team name is required');
+        return;
+      }
+
+      const response = await teamService.createTeam(newTeam);
+      setTeams([...teams, response]);
+      setOpenNewTeamDialog(false);
+      setNewTeam({
+        name: '',
+        description: '',
+        capacity: 5,
+        status: 'ACTIVE',
+      });
+      toast.success('Team created successfully!');
+    } catch (error) {
+      console.error('Error creating team:', error);
+      toast.error('Failed to create team');
+    }
+  };
+
+  const handleEditTeam = async (team) => {
+    try {
+      const updatedTeam = await teamService.updateTeam(team.id, {
+        ...team,
+        updatedAt: new Date().toISOString(),
+      });
+      setTeams(teams.map(t => t.id === team.id ? updatedTeam : t));
+      toast.success('Team updated successfully!');
+    } catch (error) {
+      console.error('Error updating team:', error);
+      toast.error('Failed to update team');
+    }
   };
 
   if (loading) {
@@ -883,6 +1040,349 @@ const StratflowDashboard = () => {
             </Card>
           </Grid>
         </Grid>
+
+        {/* Team Management Section */}
+        <Grid container spacing={3} sx={{ mt: 2 }}>
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">Team Management</Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<PersonAdd />}
+                    onClick={() => setOpenNewTeamDialog(true)}
+                  >
+                    Create New Team
+                  </Button>
+                </Box>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Team Name</TableCell>
+                        <TableCell>Members</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {teams.map((team) => (
+                        <TableRow key={team.id}>
+                          <TableCell>{team.name}</TableCell>
+                          <TableCell>
+                            {team.members?.map((member) => (
+                              <Chip
+                                key={member.id}
+                                label={member.name}
+                                size="small"
+                                sx={{ mr: 1, mb: 1 }}
+                              />
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={team.status}
+                              color={team.status === 'ACTIVE' ? 'success' : 'default'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title="Edit Team">
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setSelectedTeam(team);
+                                  setOpenNewTeamDialog(true);
+                                }}
+                              >
+                                <Edit />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Add Member">
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setSelectedTeam(team);
+                                  setOpenAddMemberDialog(true);
+                                }}
+                              >
+                                <PersonAdd />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* User Management Section */}
+        <Grid container spacing={3} sx={{ mt: 2 }}>
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="h6">User Management</Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AdminPanelSettings />}
+                    onClick={() => setOpenUserManagementDialog(true)}
+                  >
+                    Manage Users
+                  </Button>
+                </Box>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Username</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Role</TableCell>
+                        <TableCell>Title</TableCell>
+                        <TableCell>Department</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user._id}>
+                          <TableCell>{user.username}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.role}</TableCell>
+                          <TableCell>{user.title}</TableCell>
+                          <TableCell>{user.department}</TableCell>
+                          <TableCell>
+                            <Tooltip title="Edit">
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setEditingUser(user);
+                                  setOpenUserManagementDialog(true);
+                                }}
+                              >
+                                <Edit />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteUser(user._id)}
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Add Team Member Dialog */}
+        <Dialog open={openAddMemberDialog} onClose={() => setOpenAddMemberDialog(false)}>
+          <DialogTitle>Add Team Member</DialogTitle>
+          <DialogContent>
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Select User</InputLabel>
+              <Select
+                value={selectedTeam?.selectedUserId || ''}
+                onChange={(e) => setSelectedTeam({ ...selectedTeam, selectedUserId: e.target.value })}
+              >
+                {users.map((user) => (
+                  <MenuItem key={user._id} value={user._id}>
+                    {user.username} - {user.email}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenAddMemberDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => handleAddTeamMember(selectedTeam.id, selectedTeam.selectedUserId)}
+              variant="contained"
+              color="primary"
+            >
+              Add Member
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* User Management Dialog */}
+        <Dialog open={openUserManagementDialog} onClose={() => setOpenUserManagementDialog(false)}>
+          <DialogTitle>
+            {editingUser ? 'Edit User' : 'Create New User'}
+          </DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Username"
+              value={editingUser ? editingUser.username : newUser.username}
+              onChange={(e) => {
+                if (editingUser) {
+                  setEditingUser({ ...editingUser, username: e.target.value });
+                } else {
+                  setNewUser({ ...newUser, username: e.target.value });
+                }
+              }}
+              sx={{ mt: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={editingUser ? editingUser.email : newUser.email}
+              onChange={(e) => {
+                if (editingUser) {
+                  setEditingUser({ ...editingUser, email: e.target.value });
+                } else {
+                  setNewUser({ ...newUser, email: e.target.value });
+                }
+              }}
+              sx={{ mt: 2 }}
+            />
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Role</InputLabel>
+              <Select
+                value={editingUser ? editingUser.role : newUser.role}
+                onChange={(e) => {
+                  if (editingUser) {
+                    setEditingUser({ ...editingUser, role: e.target.value });
+                  } else {
+                    setNewUser({ ...newUser, role: e.target.value });
+                  }
+                }}
+              >
+                <MenuItem value="ADMIN">Admin</MenuItem>
+                <MenuItem value="MANAGER">Manager</MenuItem>
+                <MenuItem value="USER">User</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="Title"
+              value={editingUser ? editingUser.title : newUser.title}
+              onChange={(e) => {
+                if (editingUser) {
+                  setEditingUser({ ...editingUser, title: e.target.value });
+                } else {
+                  setNewUser({ ...newUser, title: e.target.value });
+                }
+              }}
+              sx={{ mt: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Department"
+              value={editingUser ? editingUser.department : newUser.department}
+              onChange={(e) => {
+                if (editingUser) {
+                  setEditingUser({ ...editingUser, department: e.target.value });
+                } else {
+                  setNewUser({ ...newUser, department: e.target.value });
+                }
+              }}
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenUserManagementDialog(false)}>Cancel</Button>
+            <Button
+              onClick={editingUser ? handleUpdateUser : handleCreateUser}
+              variant="contained"
+              color="primary"
+            >
+              {editingUser ? 'Update' : 'Create'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* New Team Dialog */}
+        <Dialog open={openNewTeamDialog} onClose={() => setOpenNewTeamDialog(false)}>
+          <DialogTitle>
+            {selectedTeam ? 'Edit Team' : 'Create New Team'}
+          </DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Team Name"
+              value={selectedTeam ? selectedTeam.name : newTeam.name}
+              onChange={(e) => {
+                if (selectedTeam) {
+                  setSelectedTeam({ ...selectedTeam, name: e.target.value });
+                } else {
+                  setNewTeam({ ...newTeam, name: e.target.value });
+                }
+              }}
+              sx={{ mt: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              multiline
+              rows={3}
+              value={selectedTeam ? selectedTeam.description : newTeam.description}
+              onChange={(e) => {
+                if (selectedTeam) {
+                  setSelectedTeam({ ...selectedTeam, description: e.target.value });
+                } else {
+                  setNewTeam({ ...newTeam, description: e.target.value });
+                }
+              }}
+              sx={{ mt: 2 }}
+            />
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={selectedTeam ? selectedTeam.status : newTeam.status}
+                onChange={(e) => {
+                  if (selectedTeam) {
+                    setSelectedTeam({ ...selectedTeam, status: e.target.value });
+                  } else {
+                    setNewTeam({ ...newTeam, status: e.target.value });
+                  }
+                }}
+              >
+                <MenuItem value="ACTIVE">Active</MenuItem>
+                <MenuItem value="INACTIVE">Inactive</MenuItem>
+                <MenuItem value="ON_HOLD">On Hold</MenuItem>
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => {
+              setOpenNewTeamDialog(false);
+              setSelectedTeam(null);
+              setNewTeam({
+                name: '',
+                description: '',
+                capacity: 5,
+                status: 'ACTIVE',
+              });
+            }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={selectedTeam ? () => handleEditTeam(selectedTeam) : handleCreateTeam}
+              variant="contained"
+              color="primary"
+            >
+              {selectedTeam ? 'Update' : 'Create'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );

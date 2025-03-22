@@ -1,5 +1,5 @@
 import { api, handleHttpError, createErrorMessage } from '../utils';
-import { ErrorLogger } from './ErrorLogger';
+import ErrorLogger from '../utils/errorLogger';
 
 const mockAppointmentTrends = [
   { date: '2024-02-01', count: 5 },

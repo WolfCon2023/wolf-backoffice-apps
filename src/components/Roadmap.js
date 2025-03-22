@@ -25,7 +25,7 @@ import {
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 import sprintService from '../services/sprintService';
-import projectService from '../services/projectService';
+import { projectService } from '../services/projectService';
 
 const Roadmap = () => {
   const [sprints, setSprints] = useState([]);

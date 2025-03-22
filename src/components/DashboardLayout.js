@@ -34,8 +34,10 @@ import {
   CalendarToday as CalendarIcon,
   Assessment as AssessmentIcon,
   TrendingUp as QuickMetricsIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  ViewList as BacklogIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 const drawerWidth = 280;
 
@@ -84,12 +86,13 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 }));
 
 const navigationItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/projects' },
-  { text: 'Projects', icon: <AssignmentIcon />, path: '/projects/list' },
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+  { text: 'Projects', icon: <AssignmentIcon />, path: '/projects' },
   { text: 'Teams', icon: <GroupIcon />, path: '/teams' },
   { text: 'Roadmap', icon: <TimelineIcon />, path: '/roadmap' },
-  { text: 'Backlog', icon: <AssignmentIcon />, path: '/backlog' },
+  { text: 'Backlog', icon: <BacklogIcon />, path: '/backlog' },
   { text: 'Metrics', icon: <AssessmentIcon />, path: '/metrics' },
+  { text: 'User Management', icon: <AdminPanelSettingsIcon />, path: '/users' },
   { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar' },
   { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },

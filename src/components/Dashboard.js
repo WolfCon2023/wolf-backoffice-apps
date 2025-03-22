@@ -10,6 +10,7 @@ import {
   FaQuestionCircle,
   FaEnvelope,
   FaTasks,
+  FaUserShield,
 } from "react-icons/fa";
 import './Dashboard.css';
 
@@ -103,6 +104,25 @@ const Dashboard = () => {
                   <div className="card-content">
                     <h3>StratFlow</h3>
                     <p>Project and team management</p>
+                  </div>
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        </section>
+
+        <section className="admin-apps">
+          <h2>System Administration Tools</h2>
+          <nav className="dashboard-menu" aria-label="Administration Navigation">
+            <ul>
+              <li>
+                <Link to="/admin/users" className="app-card admin">
+                  <div className="card-icon">
+                    <FaUserShield className="icon" />
+                  </div>
+                  <div className="card-content">
+                    <h3>User Administration</h3>
+                    <p>Manage users and permissions</p>
                   </div>
                 </Link>
               </li>

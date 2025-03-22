@@ -16,14 +16,16 @@ const api = axios.create({
   timeout: 30000, // 30 seconds
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: false // Explicitly disable sending credentials
 });
 
 // Add request interceptor
 api.interceptors.request.use(
   config => {
     const token = localStorage.getItem("token");
-    if (token) {
+    if (token && !config.url.includes('/auth/register')) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -31,9 +33,16 @@ api.interceptors.request.use(
     console.log('🔍 Request:', {
       method: config.method,
       fullUrl: `${config.baseURL}${config.url}`,
-      headers: config.headers,
-      data: config.data
+      headers: {
+        ...config.headers,
+        Authorization: config.headers.Authorization ? '[REDACTED]' : undefined
+      },
+      data: config.data ? {
+        ...config.data,
+        password: config.data.password ? '[REDACTED]' : undefined
+      } : undefined
     });
+
     return config;
   },
   error => {
@@ -61,17 +70,36 @@ api.interceptors.response.use(
       url: error.config?.url,
       fullUrl: `${error.config?.baseURL}${error.config?.url}`,
       method: error.config?.method,
+      message: error.response?.data?.message || error.response?.data?.error || error.message,
+      requestData: error.config?.data ? {
+        ...error.config.data,
+        password: '[REDACTED]'
+      } : undefined
     };
     
     console.error('❌ Response Error:', errorResponse);
 
     // Handle specific error cases
-    if (error.response?.status === 404) {
+    if (error.response?.status === 500) {
+      console.error('Server Error Details:', {
+        message: error.response?.data?.message,
+        error: error.response?.data?.error,
+        stack: error.response?.data?.stack,
+        requestData: error.config?.data ? {
+          ...error.config.data,
+          password: '[REDACTED]'
+        } : undefined
+      });
+      error.message = error.response?.data?.message || error.response?.data?.error || 'Internal server error. Please try again later.';
+    } else if (error.response?.status === 404) {
       console.error(`API route not found: ${errorResponse.fullUrl}`);
       error.message = 'API route not found';
     } else if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+      if (!error.config?.url.includes('/auth/')) {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
+      error.message = error.response?.data?.message || 'Authentication failed';
     } else if (error.response?.status === 403) {
       error.message = 'Access forbidden. Please check your permissions.';
     } else if (!error.response) {

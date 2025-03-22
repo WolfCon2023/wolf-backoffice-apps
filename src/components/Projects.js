@@ -28,7 +28,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import projectService from '../services/projectService';
+import { projectService } from '../services/projectService';
 import LoadingSpinner from './shared/LoadingSpinner';
 import StatusChip from './shared/StatusChip';
 import { handleApiError, validateRequired } from '../utils/errorHandler';

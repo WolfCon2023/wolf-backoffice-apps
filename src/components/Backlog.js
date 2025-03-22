@@ -42,7 +42,7 @@ import { format } from 'date-fns';
 import storyService from '../services/storyService';
 import taskService from '../services/taskService';
 import defectService from '../services/defectService';
-import projectService from '../services/projectService';
+import { projectService } from '../services/projectService';
 import sprintService from '../services/sprintService';
 
 const Backlog = () => {

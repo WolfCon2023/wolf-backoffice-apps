@@ -1,5 +1,5 @@
 import { api, handleHttpError, createErrorMessage } from '../utils';
-import { ErrorLogger } from './ErrorLogger';
+import ErrorLogger from '../utils/errorLogger';
 
 class NotificationServiceClass {
   constructor() {

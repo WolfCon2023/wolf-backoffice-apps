@@ -1,6 +1,6 @@
 import { toast } from 'react-toastify';
 import { AUTH_CONFIG } from './config';
-import { ErrorLogger } from '../services/ErrorLogger';
+import ErrorLogger from '../utils/errorLogger';
 
 export const createErrorMessage = (error) => {
   if (error.response?.data?.message) {

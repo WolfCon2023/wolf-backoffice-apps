@@ -1,6 +1,6 @@
 import { api } from './apiConfig';
 import { createErrorMessage } from '../utils';
-import { ErrorLogger } from './ErrorLogger';
+import ErrorLogger from '../utils/errorLogger';
 
 class DefectService {
   constructor() {

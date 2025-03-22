@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@mui/material';
 import { ErrorOutline as ErrorIcon } from '@mui/icons-material';
-import ErrorLogger from '../services/ErrorLogger';
+import ErrorLogger from '../utils/errorLogger';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {

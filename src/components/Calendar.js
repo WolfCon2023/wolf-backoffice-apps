@@ -30,7 +30,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { api } from '../utils';
-import { ErrorLogger } from '../services';
+import ErrorLogger from '../utils/errorLogger';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './Calendar.css';
 import { ResponsiveContainer, LineChart, XAxis, YAxis, Line, Tooltip as RechartsTooltip } from 'recharts';

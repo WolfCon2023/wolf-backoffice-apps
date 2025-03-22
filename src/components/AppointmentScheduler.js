@@ -39,7 +39,8 @@ import Select from "react-select";
 import MiniCalendar from "react-calendar";
 import { toast, ToastContainer } from "react-toastify";
 import { api, handleHttpError } from '../utils';
-import { NotificationService, AnalyticsService, ErrorLogger } from '../services';
+import { NotificationService, AnalyticsService } from '../services';
+import ErrorLogger from '../utils/errorLogger';
 import "react-calendar/dist/Calendar.css";
 import "react-toastify/dist/ReactToastify.css";
 import "react-datepicker/dist/react-datepicker.css";
@@ -119,30 +120,42 @@ const AppointmentScheduler = () => {
       }
       try {
         const response = await api.get('/users');
+        console.log('Full API Response:', response);
         
-        // If response is already an array, use it directly
-        if (Array.isArray(response)) {
-          return response.map(user => ({
-            value: user._id?.toString().replace(/"/g, ''),
+        // Get the users data - could be in response.data or response directly
+        const users = Array.isArray(response) ? response : response.data;
+        console.log('Users data before mapping:', users);
+
+        // Ensure we have an array of users
+        if (!Array.isArray(users)) {
+          console.error('Users data is not an array:', users);
+          throw new Error('Invalid users data format');
+        }
+
+        // Map the users data to the required format
+        const mappedData = users.map(user => {
+          if (!user || typeof user !== 'object') {
+            console.error('Invalid user object:', user);
+            return null;
+          }
+          return {
+            value: user._id || '',
             label: user.firstName && user.lastName 
               ? `${user.firstName} ${user.lastName}`
               : user.email || 'Unknown User'
-          }));
-        }
+          };
+        }).filter(Boolean); // Remove any null entries
 
-        // Handle response.data
-        let usersData = response?.data;
-        if (!Array.isArray(usersData)) {
-          usersData = usersData?.users || usersData?.data || [];
-        }
-
-        return usersData.map(user => ({
-          value: user._id?.toString().replace(/"/g, ''),
-          label: user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}`
-            : user.email || 'Unknown User'
-        }));
+        console.log('Mapped users data:', mappedData);
+        return mappedData;
       } catch (error) {
+        console.error('Error fetching users:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response,
+          status: error.response?.status,
+          data: error.response?.data
+        });
         ErrorLogger.logToFile(error, 'AppointmentScheduler:fetchUsers');
         return [];
       }

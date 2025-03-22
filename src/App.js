@@ -27,6 +27,8 @@ import StratflowDashboard from './components/StratflowDashboard';
 import DashboardLayout from './components/DashboardLayout';
 import Backlog from './components/Backlog';
 import Metrics from './components/Metrics';
+import UserManagement from './components/UserManagement';
+import UserAdmin from './components/admin/UserAdmin';
 
 // Create a QueryClient instance with configuration
 const queryClient = new QueryClient({
@@ -107,6 +109,10 @@ function App() {
               <Route path="/roadmap" element={withDashboardLayout(Roadmap)} />
               <Route path="/backlog" element={withDashboardLayout(Backlog)} />
               <Route path="/metrics" element={withDashboardLayout(Metrics)} />
+              <Route path="/users" element={withDashboardLayout(UserManagement)} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/users" element={authToken ? <UserAdmin /> : <Navigate to="/login" />} />
               
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
