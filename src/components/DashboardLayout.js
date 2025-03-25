@@ -90,6 +90,7 @@ const navigationItems = [
   { text: 'StratFlow Dashboard', icon: <DashboardIcon />, path: '/projects' },
   { text: 'Projects', icon: <AssignmentIcon />, path: '/projects/list' },
   { text: 'Teams', icon: <GroupIcon />, path: '/teams' },
+  { text: 'Sprints', icon: <TimelineIcon />, path: '/sprints' },
   { text: 'Roadmap', icon: <TimelineIcon />, path: '/roadmap' },
   { text: 'Backlog', icon: <BacklogIcon />, path: '/backlog' },
   { text: 'Metrics', icon: <AssessmentIcon />, path: '/metrics' },
@@ -97,6 +98,12 @@ const navigationItems = [
   { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar' },
   { text: 'Analytics', icon: <AssessmentIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+];
+
+// Add admin items
+const adminItems = [
+  { text: 'StratFlow Admin', icon: <AdminPanelSettingsIcon />, path: '/admin/stratflow' },
+  { text: 'User Admin', icon: <AdminPanelSettingsIcon />, path: '/admin/users' },
 ];
 
 const DashboardLayout = ({ children }) => {
@@ -217,6 +224,25 @@ const DashboardLayout = ({ children }) => {
         <Divider />
         <List>
           {navigationItems.map((item) => (
+            <ListItem key={item.text} disablePadding>
+              <ListItemButton
+                selected={location.pathname === item.path}
+                onClick={() => navigate(item.path)}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+        <Divider />
+        <List>
+          <ListItem>
+            <Typography variant="subtitle2" color="text.secondary">
+              Admin
+            </Typography>
+          </ListItem>
+          {adminItems.map((item) => (
             <ListItem key={item.text} disablePadding>
               <ListItemButton
                 selected={location.pathname === item.path}

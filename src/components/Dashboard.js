@@ -11,6 +11,7 @@ import {
   FaEnvelope,
   FaTasks,
   FaUserShield,
+  FaTools,
 } from "react-icons/fa";
 import './Dashboard.css';
 
@@ -112,7 +113,7 @@ const Dashboard = () => {
         </section>
 
         <section className="admin-apps">
-          <h2>System Administration Tools</h2>
+          <h2>Systems Administration Tools</h2>
           <nav className="dashboard-menu" aria-label="Administration Navigation">
             <ul>
               <li>
@@ -123,6 +124,17 @@ const Dashboard = () => {
                   <div className="card-content">
                     <h3>User Administration</h3>
                     <p>Manage users and permissions</p>
+                  </div>
+                </Link>
+              </li>
+              <li>
+                <Link to="/admin/stratflow" className="app-card admin">
+                  <div className="card-icon">
+                    <FaTools className="icon" />
+                  </div>
+                  <div className="card-content">
+                    <h3>StratFlow Admin</h3>
+                    <p>Manage statuses and resources</p>
                   </div>
                 </Link>
               </li>

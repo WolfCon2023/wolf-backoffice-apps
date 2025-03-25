@@ -63,11 +63,14 @@
 }
 
 .admin-apps .dashboard-menu ul {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
 .admin-apps .dashboard-menu li {
   max-width: 300px;
+  flex: 0 0 auto;
 }
 
 /* 🎯 Navigation Menu */

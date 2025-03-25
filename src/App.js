@@ -29,6 +29,13 @@ import Backlog from './components/Backlog';
 import Metrics from './components/Metrics';
 import UserManagement from './components/UserManagement';
 import UserAdmin from './components/admin/UserAdmin';
+import SprintsPage from './pages/SprintsPage';
+// Import ProjectDetails component
+import ProjectDetails from './pages/ProjectDetails';
+// Import TeamDetails component
+import TeamDetails from './pages/TeamDetails';
+// Import StratFlowAdmin component
+import StratFlowAdmin from './components/StratFlowAdmin';
 
 // Create a QueryClient instance with configuration
 const queryClient = new QueryClient({
@@ -121,7 +128,17 @@ function App() {
               
               {/* Admin Routes */}
               <Route path="/admin/users" element={authToken ? <UserAdmin /> : <Navigate to="/login" />} />
+              <Route path="/admin/stratflow" element={withDashboardLayout(StratFlowAdmin)} />
               
+              <Route path="/sprints" element={withDashboardLayout(SprintsPage)} />
+
+              <Route path="/projects/:id" element={withDashboardLayout(ProjectDetails)} />
+              <Route path="/projects/:id/edit" element={withDashboardLayout(ProjectDetails)} />
+              
+              {/* Team Details Routes */}
+              <Route path="/teams/:id" element={withDashboardLayout(TeamDetails)} />
+              <Route path="/teams/:id/edit" element={withDashboardLayout(TeamDetails)} />
+
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

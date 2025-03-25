@@ -181,16 +181,16 @@ class StoryService {
 
   async deleteStory(id) {
     try {
-      console.log(`📡 Deleting story ${id}`);
+      console.log(`📡 Marking story ${id} for deletion`);
       const response = await api.delete(`/stories/${id}`);
-      console.log('✅ Story deleted:', response.data);
+      console.log('✅ Story marked for deletion:', response.data);
       this.cache.delete('allStories');
       this.cache.delete(`story:${id}`);
       return response.data;
     } catch (error) {
-      console.error(`❌ Error deleting story ${id}:`, error);
+      console.error(`❌ Error marking story ${id} for deletion:`, error);
       this.logError(error, 'deleteStory');
-      throw new Error(`Failed to delete story: ${createErrorMessage(error)}`);
+      throw new Error(`Failed to mark story for deletion: ${createErrorMessage(error)}`);
     }
   }
 
@@ -308,6 +308,48 @@ class StoryService {
       throw new Error(`Failed to add attachment: ${createErrorMessage(error)}`);
     }
   }
+
+  async restoreStory(id) {
+    try {
+      console.log(`📡 Restoring story ${id} from deletion`);
+      const response = await api.put(`/stories/${id}/restore`);
+      console.log('✅ Story restored:', response.data);
+      this.cache.delete('allStories');
+      this.cache.delete(`story:${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Error restoring story ${id}:`, error);
+      this.logError(error, 'restoreStory');
+      throw new Error(`Failed to restore story: ${createErrorMessage(error)}`);
+    }
+  }
+
+  async getDeletedStories() {
+    try {
+      console.log('📡 Fetching deleted stories');
+      
+      // Check cache
+      if (this.cache.has('deletedStories')) {
+        const cachedData = this.cache.get('deletedStories');
+        console.log('✅ Using cached deleted stories');
+        return cachedData;
+      }
+      
+      const response = await api.get('/stories/deleted');
+      console.log('✅ Deleted stories fetched successfully:', response.data.length);
+      
+      // Cache the data
+      this.cache.set('deletedStories', response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching deleted stories:', error);
+      this.logError(error, 'getDeletedStories');
+      throw new Error(`Failed to fetch deleted stories: ${createErrorMessage(error)}`);
+    }
+  }
 }
 
-export default new StoryService();  
+const storyService = new StoryService();
+export { storyService };
+export default storyService; 

@@ -1,17 +1,25 @@
-import { api } from '../services/apiConfig';
+import { api } from './apiConfig';
 import ErrorLogger from '../utils/errorLogger';
-import { toast } from 'react-toastify';
 
 class ProjectService {
   constructor() {
     this.cache = new Map();
   }
 
+  logError(error, context) {
+    console.error(`❌ ProjectService Error (${context}):`, error);
+    return ErrorLogger.logToFile ? 
+      ErrorLogger.logToFile(error, `ProjectService:${context}`) : 
+      console.error('ErrorLogger not available');
+  }
+
   async getAllProjects() {
     try {
+      console.log('📡 Fetching all projects...');
       const response = await api.get('/projects');
       
       const projects = Array.isArray(response.data) ? response.data : [];
+      console.log(`✅ Found ${projects.length} projects`);
       this.cache.set('allProjects', projects);
       return projects;
     } catch (error) {
@@ -20,9 +28,7 @@ class ProjectService {
         console.error('Response error details:', {
           status: error.response.status,
           statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
+          data: error.response.data
         });
       }
       this.logError(error, 'getAllProjects');
@@ -32,7 +38,9 @@ class ProjectService {
 
   async getProjectById(id) {
     try {
+      console.log(`📡 Fetching project ${id}...`);
       const response = await api.get(`/projects/${id}`);
+      console.log('✅ Project fetched successfully');
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching project:', error);
@@ -40,9 +48,7 @@ class ProjectService {
         console.error('Response error details:', {
           status: error.response.status,
           statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
+          data: error.response.data
         });
       }
       this.logError(error, 'getProjectById');
@@ -52,35 +58,10 @@ class ProjectService {
 
   async createProject(projectData) {
     try {
-      // Create a clean payload similar to the userService implementation
-      const payload = {
-        name: projectData.name,
-        key: projectData.key,
-        description: projectData.description || '',
-        status: 'Active',
-        methodology: projectData.methodology || 'Agile',
-        visibility: 'Team Only',
-        tags: [],
-      };
-
-      // Handle dates - convert to ISO string format before sending
-      payload.startDate = projectData.startDate instanceof Date 
-        ? projectData.startDate.toISOString() 
-        : new Date().toISOString();
+      console.log('📡 Creating project with data:', projectData);
+      const response = await api.post('/projects', projectData);
       
-      payload.targetEndDate = projectData.targetEndDate instanceof Date
-        ? projectData.targetEndDate.toISOString()
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-      console.log('📡 Creating project with data:', {
-        ...payload,
-        startDate: payload.startDate,
-        targetEndDate: payload.targetEndDate
-      });
-
-      const response = await api.post('/projects', payload);
-      
-      console.log('✅ Project created successfully:', response.data);
+      console.log('✅ Project created successfully:', response.data.name);
       this.cache.delete('allProjects');
       return response.data;
     } catch (error) {
@@ -89,15 +70,9 @@ class ProjectService {
         console.error('Response error details:', {
           status: error.response.status,
           statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url,
-          method: error.config?.method,
-          baseURL: error.config?.baseURL,
-          fullUrl: `${error.config?.baseURL || ''}${error.config?.url || ''}`
+          data: error.response.data
         });
       }
-      
       this.logError(error, 'createProject');
       throw new Error(`Failed to create project: ${error.message}`);
     }
@@ -105,8 +80,10 @@ class ProjectService {
 
   async updateProject(id, projectData) {
     try {
+      console.log(`📡 Updating project ${id} with data:`, projectData);
       const response = await api.put(`/projects/${id}`, projectData);
       
+      console.log('✅ Project updated successfully:', response.data.name);
       this.cache.delete('allProjects');
       return response.data;
     } catch (error) {
@@ -115,9 +92,7 @@ class ProjectService {
         console.error('Response error details:', {
           status: error.response.status,
           statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
+          data: error.response.data
         });
       }
       this.logError(error, 'updateProject');
@@ -127,8 +102,10 @@ class ProjectService {
 
   async deleteProject(id) {
     try {
+      console.log(`📡 Deleting project ${id}...`);
       const response = await api.delete(`/projects/${id}`);
       
+      console.log('✅ Project deleted successfully');
       this.cache.delete('allProjects');
       return response.data;
     } catch (error) {
@@ -137,9 +114,7 @@ class ProjectService {
         console.error('Response error details:', {
           status: error.response.status,
           statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
+          data: error.response.data
         });
       }
       this.logError(error, 'deleteProject');
@@ -147,101 +122,38 @@ class ProjectService {
     }
   }
 
-  async getProjectMetrics(id) {
+  async updateProjectStatus(id, status) {
     try {
-      const response = await api.get(`/projects/${id}/metrics`);
+      // Validate status
+      if (!['ACTIVE', 'INACTIVE', 'ON_HOLD', 'COMPLETED'].includes(status.toUpperCase())) {
+        throw new Error(`Invalid status value: ${status}. Must be one of: ACTIVE, INACTIVE, ON_HOLD, COMPLETED`);
+      }
+
+      console.log(`📡 Updating project ${id} status to ${status}`);
+      
+      // First get the project to ensure we have the name (required by the API)
+      const project = await this.getProjectById(id);
+      
+      // Use the update project endpoint
+      const response = await api.put(`/projects/${id}`, { 
+        name: project.name,
+        status: status.toUpperCase()
+      });
+      
+      console.log(`✅ Status successfully updated to ${status}`);
+      
+      // Update cache
+      this.cache.delete('allProjects');
       
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching project metrics:', error);
-      if (error.response) {
-        console.error('Response error details:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
-        });
-      }
-      this.logError(error, 'getProjectMetrics');
-      throw new Error(`Failed to fetch project metrics: ${error.message}`);
+      console.error('❌ Error updating project status:', error);
+      this.logError(error, 'updateProjectStatus');
+      throw new Error(`Failed to update project status: ${error.message}`);
     }
-  }
-
-  async getProjectEpics(id) {
-    try {
-      const response = await api.get(`/projects/${id}/epics`);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error fetching project epics:', error);
-      if (error.response) {
-        console.error('Response error details:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
-        });
-      }
-      this.logError(error, 'getProjectEpics');
-      throw new Error(`Failed to fetch project epics: ${error.message}`);
-    }
-  }
-
-  async getProjectStories(id) {
-    try {
-      const response = await api.get(`/projects/${id}/stories`);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error fetching project stories:', error);
-      if (error.response) {
-        console.error('Response error details:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
-        });
-      }
-      this.logError(error, 'getProjectStories');
-      throw new Error(`Failed to fetch project stories: ${error.message}`);
-    }
-  }
-
-  async getProjectSprints(id) {
-    try {
-      const response = await api.get(`/projects/${id}/sprints`);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error fetching project sprints:', error);
-      if (error.response) {
-        console.error('Response error details:', {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data,
-          headers: error.response.headers,
-          url: error.config?.url
-        });
-      }
-      this.logError(error, 'getProjectSprints');
-      throw new Error(`Failed to fetch project sprints: ${error.message}`);
-    }
-  }
-
-  async refreshProjectCache(id) {
-    try {
-      this.cache.delete('allProjects');
-      await this.getProjectById(id);
-      return true;
-    } catch (error) {
-      this.logError(error, 'refreshProjectCache');
-      throw new Error(`Failed to refresh project cache: ${error.message}`);
-    }
-  }
-
-  logError(error, method) {
-    ErrorLogger.logToFile(error, `ProjectService:${method}`);
   }
 }
 
-export const projectService = new ProjectService(); 
+const projectService = new ProjectService();
+export { projectService };
+export default projectService; 

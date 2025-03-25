@@ -1,3 +1,4 @@
+import axios from "axios";
 import { api } from './apiConfig';
 import { createErrorMessage } from "../utils";
 import ErrorLogger from '../utils/errorLogger';
@@ -9,8 +10,18 @@ class SprintService {
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
   }
 
-  logError(error, context) {
-    return ErrorLogger.logToFile(error, `SprintService:${context}`);
+  logError(error, method) {
+    console.error(`Error in SprintService.${method}:`, error);
+    if (error.response) {
+      console.error('Response error details:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: error.config?.headers
+      });
+    }
   }
 
   getCachedData(key) {
@@ -29,120 +40,93 @@ class SprintService {
   }
 
   async getAllSprints() {
-    const cacheKey = "allSprints";
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
     try {
-      console.log("📡 Fetching all sprints from projects...");
-      // Get all projects
-      const projectsResponse = await api.get('/projects');
-      const projects = projectsResponse.data;
-      
-      console.log('📊 Project data structure:', JSON.stringify(projects, null, 2));
-      
-      // Create synthetic sprints for projects
-      const allSprints = projects.map(project => {
-        console.log(`Processing project ${project.id}:`, project);
-        
-        // Calculate sprint dates based on project dates
-        const startDate = new Date(project.startDate);
-        const endDate = new Date(project.targetEndDate);
-        const sprintDuration = 14 * 24 * 60 * 60 * 1000; // 2 weeks in milliseconds
-        const totalDuration = endDate.getTime() - startDate.getTime();
-        const numberOfSprints = Math.max(1, Math.ceil(totalDuration / sprintDuration));
-        
-        // Create sprints to cover the project duration
-        return Array.from({ length: numberOfSprints }, (_, index) => {
-          const sprintStartDate = new Date(startDate.getTime() + (index * sprintDuration));
-          const sprintEndDate = new Date(Math.min(
-            sprintStartDate.getTime() + sprintDuration,
-            endDate.getTime()
-          ));
-          
-          const sprint = {
-            id: `sprint-${project._id}-${index + 1}`,
-            name: `${project.name} Sprint ${index + 1}`,
-            projectId: project._id,
-            projectName: project.name,
-            startDate: sprintStartDate.toISOString(),
-            endDate: sprintEndDate.toISOString(),
-            status: 'PLANNED',
-            metrics: {
-              totalStoryPoints: Math.round(project.metrics?.totalStoryPoints / numberOfSprints) || 0,
-              completedStoryPoints: 0,
-              velocity: project.metrics?.velocity || 0
-            }
-          };
-          
-          console.log(`✅ Created synthetic sprint for project ${project._id}:`, sprint);
-          return sprint;
-        });
-      }).flat();
-      
-      console.log('✅ Sprints processed:', allSprints);
-      this.setCachedData(cacheKey, allSprints);
-      return allSprints;
+      console.log('📡 Fetching all sprints...');
+      const response = await api.get('/sprints');
+      const sprints = Array.isArray(response.data) ? response.data : [];
+      console.log(`✅ Found ${sprints.length} sprints`);
+      this.cache.set('allSprints', sprints);
+      return sprints;
     } catch (error) {
-      this.logError(error, "getAllSprints");
-      return [];
+      this.logError(error, 'getAllSprints');
+      throw new Error(`Failed to fetch sprints: ${error.message}`);
     }
   }
 
-  async getSprint(id) {
-    const cacheKey = `sprint:${id}`;
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
+  async getSprintById(id) {
     try {
       console.log(`📡 Fetching sprint ${id}...`);
       const response = await api.get(`/sprints/${id}`);
-      this.setCachedData(cacheKey, response.data);
+      console.log('✅ Sprint fetched successfully');
       return response.data;
     } catch (error) {
-      this.logError(error, "getSprint");
-      throw new Error(`Failed to fetch sprint: ${createErrorMessage(error)}`);
+      this.logError(error, 'getSprintById');
+      throw new Error(`Failed to fetch sprint: ${error.message}`);
     }
   }
 
   async createSprint(sprintData) {
     try {
-      console.log('📡 Creating new sprint:', sprintData);
+      console.log("📡 Creating new sprint:", sprintData);
+      console.log("🔍 Project ID:", sprintData.project);
+      
       const response = await api.post('/sprints', sprintData);
-      console.log('✅ Sprint created:', response.data);
+      console.log('✅ Sprint created successfully:', response.data.name);
       this.cache.delete('allSprints');
       return response.data;
     } catch (error) {
+      console.error('❌ Error creating sprint:', error);
+      if (error.response) {
+        console.error('Response error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        });
+      }
       this.logError(error, 'createSprint');
-      throw new Error(`Failed to create sprint: ${createErrorMessage(error)}`);
+      throw new Error(`Failed to create sprint: ${error.message}`);
     }
   }
 
   async updateSprint(id, sprintData) {
     try {
-      console.log(`📡 Updating sprint ${id}:`, sprintData);
+      console.log(`📡 Updating sprint ${id} with data:`, sprintData);
       const response = await api.put(`/sprints/${id}`, sprintData);
-      console.log('✅ Sprint updated:', response.data);
+      console.log('✅ Sprint updated successfully:', response.data.name);
       this.cache.delete('allSprints');
-      this.cache.delete(`sprint:${id}`);
       return response.data;
     } catch (error) {
       this.logError(error, 'updateSprint');
-      throw new Error(`Failed to update sprint: ${createErrorMessage(error)}`);
+      throw new Error(`Failed to update sprint: ${error.message}`);
     }
   }
 
   async deleteSprint(id) {
     try {
-      console.log(`📡 Deleting sprint ${id}`);
+      console.log(`📡 Deleting sprint ${id}...`);
       const response = await api.delete(`/sprints/${id}`);
-      console.log('✅ Sprint deleted:', response.data);
+      console.log('✅ Sprint deleted successfully');
       this.cache.delete('allSprints');
-      this.cache.delete(`sprint:${id}`);
       return response.data;
     } catch (error) {
       this.logError(error, 'deleteSprint');
-      throw new Error(`Failed to delete sprint: ${createErrorMessage(error)}`);
+      throw new Error(`Failed to delete sprint: ${error.message}`);
+    }
+  }
+
+  async updateSprintStatus(id, status) {
+    try {
+      console.log(`📡 Updating sprint ${id} status to ${status}`);
+      const response = await api.patch(`/sprints/${id}/status`, { status });
+      console.log(`✅ Status successfully updated to ${status}`);
+      this.cache.delete('allSprints');
+      return response.data;
+    } catch (error) {
+      this.logError(error, 'updateSprintStatus');
+      throw new Error(`Failed to update sprint status: ${error.message}`);
     }
   }
 
@@ -314,7 +298,7 @@ class SprintService {
       this.cache.delete(`sprintBurndown:${id}`);
       
       // Refetch sprint data
-      await this.getSprint(id);
+      await this.getSprintById(id);
       return true;
     } catch (error) {
       const errorMessage = createErrorMessage(error);
@@ -322,6 +306,15 @@ class SprintService {
       throw new Error(`Failed to refresh sprint cache: ${errorMessage}`);
     }
   }
+
+  getErrorMessage(error) {
+    return error.response?.data?.message || 
+           error.response?.data?.error || 
+           error.message || 
+           'An unknown error occurred';
+  }
 }
 
-export default new SprintService(); 
+const sprintService = new SprintService();
+export { sprintService };
+export default sprintService; 

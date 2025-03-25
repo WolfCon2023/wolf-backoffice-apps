@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -19,16 +20,26 @@ import {
   CircularProgress,
   Menu,
   MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
+  Tooltip,
+  ListItemIcon,
 } from '@mui/material';
 import {
   Add as AddIcon,
   MoreVert as MoreVertIcon,
   Person as PersonIcon,
+  Edit as EditIcon,
+  ToggleOff as ToggleOffIcon,
+  ToggleOn as ToggleOnIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
+import { Link } from 'react-router-dom';
 import teamService from '../services/teamService';
 
 const Teams = () => {
+  const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openNewTeam, setOpenNewTeam] = useState(false);
@@ -38,6 +49,7 @@ const Teams = () => {
   const [newTeam, setNewTeam] = useState({
     name: '',
     description: '',
+    status: 'ACTIVE'
   });
 
   useEffect(() => {
@@ -45,12 +57,16 @@ const Teams = () => {
   }, []);
 
   const fetchTeams = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await teamService.getAllTeams();
-      setTeams(data);
+      console.log('📊 Fetching teams list...');
+      const fetchedTeams = await teamService.getAllTeams();
+      
+      console.log(`✅ Fetched ${fetchedTeams.length} teams`);
+      setTeams(fetchedTeams);
     } catch (error) {
-      toast.error('Failed to fetch teams');
+      console.error('❌ Error fetching teams:', error);
+      toast.error('Failed to load teams');
     } finally {
       setLoading(false);
     }
@@ -63,34 +79,51 @@ const Teams = () => {
         return;
       }
 
-      const response = await teamService.createTeam({
-        ...newTeam,
-        members: [],
+      const teamData = {
+        name: newTeam.name.trim(),
+        description: newTeam.description?.trim() || '',
         status: 'ACTIVE',
-      });
+        members: []
+      };
 
+      console.log('📝 Creating team with data:', teamData);
+      
+      const response = await teamService.createTeam(teamData);
+      
       setTeams([...teams, response]);
       setOpenNewTeam(false);
       setNewTeam({
         name: '',
         description: '',
+        status: 'ACTIVE'
       });
       toast.success('Team created successfully!');
     } catch (error) {
-      toast.error('Failed to create team');
+      console.error('❌ Error creating team:', error);
+      toast.error(`Failed to create team: ${error.message}`);
     }
   };
 
-  const handleDeleteTeam = async (id) => {
-    try {
-      await teamService.deleteTeam(id);
-      setTeams(teams.filter(team => team.id !== id));
-      setAnchorEl(null);
-      setSelectedTeam(null);
-      toast.success('Team deleted successfully!');
-    } catch (error) {
-      toast.error('Failed to delete team');
-    }
+  const handleViewTeam = (team) => {
+    navigate(`/teams/${team._id}`);
+    setAnchorEl(null);
+  };
+
+  const handleOpenEditTeam = (team) => {
+    navigate(`/teams/${team._id}/edit`);
+    setAnchorEl(null);
+  };
+
+  const formatStatus = (status) => {
+    if (!status) return 'Unknown';
+    
+    const formattedStatus = {
+      'ACTIVE': 'Active',
+      'INACTIVE': 'Inactive',
+      'ON_HOLD': 'On Hold'
+    }[status] || status;
+    
+    return formattedStatus;
   };
 
   if (loading) {
@@ -106,68 +139,60 @@ const Teams = () => {
       <Box sx={{ py: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
           <Typography variant="h4">Teams</Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenNewTeam(true)}
-          >
-            New Team
-          </Button>
+          <Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenNewTeam(true)}
+            >
+              New Team
+            </Button>
+          </Box>
         </Box>
 
         <Grid container spacing={3}>
           {teams.map((team) => (
-            <Grid item xs={12} md={4} key={team.id}>
-              <Card>
+            <Grid item xs={12} sm={6} md={4} key={team._id}>
+              <Card 
+                sx={{ 
+                  cursor: 'pointer',
+                  '&:hover': { boxShadow: 6 }
+                }}
+                onClick={() => navigate(`/teams/${team._id}`)}
+              >
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6" noWrap>
+                    <Typography variant="h6" component="div" noWrap>
                       {team.name}
                     </Typography>
-                    <IconButton 
-                      size="small"
-                      onClick={(e) => {
-                        setAnchorEl(e.currentTarget);
-                        setSelectedTeam(team);
-                      }}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
-                  </Box>
-
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      mb: 2,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {team.description}
-                  </Typography>
-
-                  <Box sx={{ mb: 2 }}>
-                    <AvatarGroup max={4}>
-                      {team.members?.map((member) => (
-                        <Avatar key={member.id}>
-                          {member.name.charAt(0)}
-                        </Avatar>
-                      ))}
-                    </AvatarGroup>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Chip 
+                        label={formatStatus(team.status)} 
+                        color={
+                          team.status === 'ACTIVE' ? 'success' : 
+                          team.status === 'INACTIVE' ? 'default' :
+                          team.status === 'ON_HOLD' ? 'warning' : 'default'
+                        }
+                        size="small"
+                      />
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAnchorEl(e.currentTarget);
+                          setSelectedTeam(team);
+                        }}
+                        sx={{ ml: 1 }}
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </Box>
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
                       {team.members?.length || 0} Members
                     </Typography>
-                    <Chip
-                      label={team.status}
-                      size="small"
-                      color={team.status === 'ACTIVE' ? 'success' : 'default'}
-                    />
                   </Box>
                 </CardContent>
               </Card>
@@ -176,37 +201,43 @@ const Teams = () => {
         </Grid>
       </Box>
 
-      {/* New Team Dialog */}
-      <Dialog open={openNewTeam} onClose={() => setOpenNewTeam(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={openNewTeam} 
+        onClose={() => setOpenNewTeam(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Create New Team</DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="Team Name"
-              fullWidth
-              required
-              value={newTeam.name}
-              onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-            />
-            <TextField
-              label="Description"
-              fullWidth
-              multiline
-              rows={3}
-              value={newTeam.description}
-              onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
-            />
-          </Box>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Team Name"
+            value={newTeam.name}
+            onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Description"
+            multiline
+            rows={4}
+            value={newTeam.description}
+            onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenNewTeam(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreateTeam}>
-            Create Team
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={handleCreateTeam}
+          >
+            Create
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Team Actions Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -214,27 +245,22 @@ const Teams = () => {
           setAnchorEl(null);
           setSelectedTeam(null);
         }}
+        MenuListProps={{
+          'aria-labelledby': 'team-actions-button',
+        }}
       >
-        <MenuItem onClick={() => {
-          // TODO: Implement view team details
-          setAnchorEl(null);
-          setSelectedTeam(null);
-        }}>
-          View Details
-        </MenuItem>
-        <MenuItem onClick={() => {
-          // TODO: Implement edit team
-          setAnchorEl(null);
-          setSelectedTeam(null);
-        }}>
-          Edit
-        </MenuItem>
-        <MenuItem 
-          onClick={() => handleDeleteTeam(selectedTeam?.id)}
-          sx={{ color: 'error.main' }}
-        >
-          Delete
-        </MenuItem>
+        {selectedTeam && (
+          <>
+            <MenuItem
+              onClick={() => handleViewTeam(selectedTeam)}
+            >
+              <ListItemIcon>
+                <EditIcon fontSize="small" />
+              </ListItemIcon>
+              View/Edit
+            </MenuItem>
+          </>
+        )}
       </Menu>
     </Container>
   );

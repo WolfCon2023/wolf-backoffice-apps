@@ -29,7 +29,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { api } from '../utils';
+import { api } from '../services/apiConfig';
 import ErrorLogger from '../utils/errorLogger';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './Calendar.css';

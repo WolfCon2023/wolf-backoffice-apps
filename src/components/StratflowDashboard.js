@@ -52,6 +52,8 @@ import {
   Edit,
   Delete,
   AdminPanelSettings,
+  PlayArrow,
+  CheckCircle,
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -91,6 +93,7 @@ ChartJS.register(
 const StratflowDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState([]);
+  const [sprints, setSprints] = useState([]);
   const mountedRef = useRef(false);
   const [projectMetrics, setProjectMetrics] = useState({
     total: 0,
@@ -154,6 +157,22 @@ const StratflowDashboard = () => {
     capacity: 5,
     status: 'ACTIVE',
   });
+  
+  // Sprint Management state
+  const [openSprintManagementDialog, setOpenSprintManagementDialog] = useState(false);
+  const [openNewSprintDialog, setOpenNewSprintDialog] = useState(false);
+  const [editingSprint, setEditingSprint] = useState(null);
+  const [newSprint, setNewSprint] = useState({
+    name: '',
+    project: '',
+    goal: '',
+    status: 'PLANNING',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    capacity: 10
+  });
+  const [projects, setProjects] = useState([]);
+  
   const [apiHealth, setApiHealth] = useState({});
   const [showApiStatus, setShowApiStatus] = useState(false);
 
@@ -285,6 +304,9 @@ const StratflowDashboard = () => {
       );
       console.log(`📋 Loaded ${projects.length} projects`);
       
+      // Store projects in state for sprint management
+      setProjects(projects);
+      
       // Teams
       teams = await fetchWithRetry(
         () => teamService.getAllTeams(),
@@ -299,6 +321,9 @@ const StratflowDashboard = () => {
           'sprints'
         );
         console.log(`🏃‍♂️ Loaded ${sprints.length} sprints`);
+        
+        // Store sprints in state for management
+        setSprints(sprints);
       } else {
         console.warn('⚠️ Skipping sprint fetch - no projects available');
       }
@@ -443,7 +468,12 @@ const StratflowDashboard = () => {
         totalStories: stories.length,
         totalTasks: tasks.length,
         totalDefects: defects.length,
-        activeSprints: sprints.filter(s => s.status === 'ACTIVE').length,
+        activeSprints: sprints.filter(s => 
+          s.status === 'ACTIVE' || 
+          s.status === 'Active' || 
+          s.status === 'IN_PROGRESS' || 
+          s.status === 'In Progress'
+        ).length,
       }));
 
       // Print API Status Summary
@@ -484,6 +514,9 @@ const StratflowDashboard = () => {
   }, []);
 
   const getStatusColor = (status) => {
+    // Normalize status to uppercase for consistent matching
+    const normalizedStatus = status?.toUpperCase();
+    
     const statusColors = {
       ACTIVE: 'success',
       COMPLETED: 'default',
@@ -492,7 +525,8 @@ const StratflowDashboard = () => {
       PLANNED: 'info',
       IN_PROGRESS: 'primary',
     };
-    return statusColors[status] || 'default';
+    
+    return statusColors[normalizedStatus] || 'default';
   };
 
   const getPriorityColor = (priority) => {
@@ -688,6 +722,210 @@ const StratflowDashboard = () => {
     );
   };
 
+  const handleOpenSprintManagement = () => {
+    setOpenSprintManagementDialog(true);
+  };
+
+  const handleCloseSprintManagement = () => {
+    setOpenSprintManagementDialog(false);
+  };
+
+  const handleOpenNewSprint = () => {
+    setNewSprint({
+      name: '',
+      project: projects.length > 0 ? projects[0]._id : '',
+      goal: '',
+      status: 'PLANNING',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      capacity: 10
+    });
+    setOpenNewSprintDialog(true);
+  };
+
+  const handleCloseNewSprint = () => {
+    setOpenNewSprintDialog(false);
+  };
+
+  const handleSprintChange = (e) => {
+    const { name, value } = e.target;
+    setNewSprint(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleCreateSprint = async () => {
+    try {
+      // Validate required fields
+      if (!newSprint.name || !newSprint.project || !newSprint.startDate || !newSprint.endDate) {
+        toast.error('Missing required fields');
+        return;
+      }
+
+      const response = await sprintService.createSprint(newSprint);
+      
+      setSprints(prev => [...prev, response]);
+      toast.success('Sprint created successfully');
+      handleCloseNewSprint();
+      
+      // Refresh the data
+      const updatedSprints = await sprintService.getAllSprints();
+      setSprints(updatedSprints);
+      
+      // Update metrics for active sprints
+      setMetrics(prev => ({
+        ...prev,
+        activeSprints: updatedSprints.filter(s => 
+          s.status === 'ACTIVE' || 
+          s.status === 'Active' || 
+          s.status === 'IN_PROGRESS' || 
+          s.status === 'In Progress'
+        ).length,
+      }));
+    } catch (error) {
+      console.error('Failed to create sprint:', error);
+      toast.error(`Failed to create sprint: ${error.message}`);
+    }
+  };
+
+  const handleEditSprint = (sprint) => {
+    setEditingSprint(sprint);
+    setNewSprint({
+      name: sprint.name,
+      project: sprint.project,
+      goal: sprint.goal || '',
+      status: sprint.status,
+      startDate: new Date(sprint.startDate).toISOString().split('T')[0],
+      endDate: new Date(sprint.endDate).toISOString().split('T')[0],
+      capacity: sprint.capacity || 10
+    });
+    setOpenNewSprintDialog(true);
+  };
+
+  const handleUpdateSprint = async () => {
+    try {
+      // Validate required fields
+      if (!newSprint.name || !newSprint.project || !newSprint.startDate || !newSprint.endDate) {
+        toast.error('Missing required fields');
+        return;
+      }
+
+      const response = await sprintService.updateSprint(editingSprint.id, newSprint);
+      
+      setSprints(prev => prev.map(s => s.id === editingSprint.id ? response : s));
+      toast.success('Sprint updated successfully');
+      setEditingSprint(null);
+      handleCloseNewSprint();
+      
+      // Refresh the data
+      const updatedSprints = await sprintService.getAllSprints();
+      setSprints(updatedSprints);
+      
+      // Update metrics for active sprints
+      setMetrics(prev => ({
+        ...prev,
+        activeSprints: updatedSprints.filter(s => 
+          s.status === 'ACTIVE' || 
+          s.status === 'Active' || 
+          s.status === 'IN_PROGRESS' || 
+          s.status === 'In Progress'
+        ).length,
+      }));
+    } catch (error) {
+      console.error('Failed to update sprint:', error);
+      toast.error(`Failed to update sprint: ${error.message}`);
+    }
+  };
+
+  const handleDeleteSprint = async (sprintId) => {
+    try {
+      await sprintService.deleteSprint(sprintId);
+      
+      setSprints(prev => prev.filter(s => s.id !== sprintId));
+      toast.success('Sprint deleted successfully');
+      
+      // Update metrics for active sprints
+      setMetrics(prev => ({
+        ...prev,
+        activeSprints: sprints.filter(s => 
+          (s.id !== sprintId) && (
+            s.status === 'ACTIVE' || 
+            s.status === 'Active' || 
+            s.status === 'IN_PROGRESS' || 
+            s.status === 'In Progress'
+          )
+        ).length,
+      }));
+    } catch (error) {
+      console.error('Failed to delete sprint:', error);
+      toast.error(`Failed to delete sprint: ${error.message}`);
+    }
+  };
+
+  const handleStartSprint = async (sprintId) => {
+    try {
+      const sprint = sprints.find(s => s.id === sprintId);
+      const updatedSprint = {
+        ...sprint,
+        status: 'ACTIVE'
+      };
+      
+      const response = await sprintService.updateSprint(sprintId, updatedSprint);
+      
+      setSprints(prev => prev.map(s => s.id === sprintId ? response : s));
+      toast.success('Sprint started successfully');
+      
+      // Update metrics for active sprints
+      setMetrics(prev => ({
+        ...prev,
+        activeSprints: sprints.filter(s => 
+          (s.id === sprintId) || (
+            s.status === 'ACTIVE' || 
+            s.status === 'Active' || 
+            s.status === 'IN_PROGRESS' || 
+            s.status === 'In Progress'
+          )
+        ).length,
+      }));
+    } catch (error) {
+      console.error('Failed to start sprint:', error);
+      toast.error(`Failed to start sprint: ${error.message}`);
+    }
+  };
+
+  const handleCompleteSprint = async (sprintId) => {
+    try {
+      const sprint = sprints.find(s => s.id === sprintId);
+      const updatedSprint = {
+        ...sprint,
+        status: 'COMPLETED',
+        completedDate: new Date().toISOString()
+      };
+      
+      const response = await sprintService.updateSprint(sprintId, updatedSprint);
+      
+      setSprints(prev => prev.map(s => s.id === sprintId ? response : s));
+      toast.success('Sprint completed successfully');
+      
+      // Update metrics for active sprints
+      setMetrics(prev => ({
+        ...prev,
+        activeSprints: sprints.filter(s => 
+          (s.id !== sprintId) && (
+            s.status === 'ACTIVE' || 
+            s.status === 'Active' || 
+            s.status === 'IN_PROGRESS' || 
+            s.status === 'In Progress'
+          )
+        ).length,
+      }));
+    } catch (error) {
+      console.error('Failed to complete sprint:', error);
+      toast.error(`Failed to complete sprint: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -755,52 +993,48 @@ const StratflowDashboard = () => {
         </Grid>
 
         {/* Quick Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5">Quick Actions</Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<Assignment />}
-            component={RouterLink}
-            to="/backlog"
-          >
-            Go to Backlog
-          </Button>
-        </Box>
-
-        {/* Development Notice */}
-        <Box 
-          sx={{ 
-            p: 2, 
-            mb: 3, 
-            bgcolor: 'warning.light', 
-            borderRadius: 1,
-            display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            justifyContent: 'space-between',
-            alignItems: { xs: 'flex-start', md: 'center' },
-            border: '1px solid',
-            borderColor: 'warning.main',
-            gap: 2
-          }}
-        >
-          <Box>
-            <Typography variant="body1" color="warning.contrastText" gutterBottom>
-              <strong>Development Alert:</strong> CORS restrictions in GitHub Codespaces may prevent proper
-              API communication. The app will attempt direct requests using multiple methods.
-            </Typography>
-            <Typography variant="body2" color="warning.contrastText">
-              Some errors in the console are expected. To see detailed API endpoint status, use the View API Status button.
-            </Typography>
-          </Box>
-          <Button
-            variant="outlined"
-            color="inherit" 
-            size="small"
-            onClick={() => setShowApiStatus(true)}
-          >
-            View API Status
-          </Button>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Quick Actions
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item>
+              <Button
+                variant="outlined"
+                startIcon={<Group />}
+                onClick={() => setOpenUserManagementDialog(true)}
+              >
+                User Management
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="outlined"
+                startIcon={<Group />}
+                onClick={() => setOpenNewTeamDialog(true)}
+              >
+                Team Management
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="outlined"
+                startIcon={<Timeline />}
+                onClick={handleOpenSprintManagement}
+              >
+                Sprint Management
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="outlined"
+                startIcon={<AdminPanelSettings />}
+                onClick={() => setShowApiStatus(true)}
+              >
+                API Status
+              </Button>
+            </Grid>
+          </Grid>
         </Box>
 
         {/* Backlog Overview */}
@@ -1531,6 +1765,228 @@ const StratflowDashboard = () => {
 
         {/* API Status Dialog */}
         {renderApiStatusDialog()}
+
+        {/* Sprint Management Dialog */}
+        <Dialog
+          open={openSprintManagementDialog}
+          onClose={handleCloseSprintManagement}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            Sprint Management
+            <Box sx={{ float: 'right' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<PersonAdd />}
+                onClick={handleOpenNewSprint}
+              >
+                New Sprint
+              </Button>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <TableContainer component={Paper} variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Project</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Start Date</TableCell>
+                    <TableCell>End Date</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {sprints.length > 0 ? (
+                    sprints.map((sprint) => (
+                      <TableRow key={sprint.id}>
+                        <TableCell>{sprint.name}</TableCell>
+                        <TableCell>
+                          {projects.find(p => p._id === sprint.project)?.name || 'Unknown Project'}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={sprint.status}
+                            color={getStatusColor(sprint.status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{formatDate(sprint.startDate)}</TableCell>
+                        <TableCell>{formatDate(sprint.endDate)}</TableCell>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditSprint(sprint)}
+                            color="primary"
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteSprint(sprint.id)}
+                            color="error"
+                          >
+                            <Delete />
+                          </IconButton>
+                          {(sprint.status === 'PLANNING' || sprint.status === 'Planning') && (
+                            <Tooltip title="Start Sprint">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleStartSprint(sprint.id)}
+                                color="success"
+                              >
+                                <PlayArrow />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {(sprint.status === 'ACTIVE' || sprint.status === 'Active' || 
+                            sprint.status === 'IN_PROGRESS' || sprint.status === 'In Progress') && (
+                            <Tooltip title="Complete Sprint">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleCompleteSprint(sprint.id)}
+                                color="info"
+                              >
+                                <CheckCircle />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        No sprints found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseSprintManagement}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* New Sprint Dialog */}
+        <Dialog
+          open={openNewSprintDialog}
+          onClose={handleCloseNewSprint}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            {editingSprint ? 'Edit Sprint' : 'Create New Sprint'}
+          </DialogTitle>
+          <DialogContent>
+            <Box component="form" sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Sprint Name"
+                name="name"
+                value={newSprint.name}
+                onChange={handleSprintChange}
+                margin="normal"
+                required
+              />
+              
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel>Project</InputLabel>
+                <Select
+                  name="project"
+                  value={newSprint.project}
+                  onChange={handleSprintChange}
+                >
+                  {projects.map((project) => (
+                    <MenuItem key={project._id} value={project._id}>
+                      {project.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <TextField
+                fullWidth
+                label="Goal"
+                name="goal"
+                value={newSprint.goal}
+                onChange={handleSprintChange}
+                margin="normal"
+                multiline
+                rows={2}
+              />
+              
+              <FormControl fullWidth margin="normal" required>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  name="status"
+                  value={newSprint.status}
+                  onChange={handleSprintChange}
+                >
+                  <MenuItem value="PLANNING">Planning</MenuItem>
+                  <MenuItem value="ACTIVE">Active</MenuItem>
+                  <MenuItem value="COMPLETED">Completed</MenuItem>
+                  <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Start Date"
+                    name="startDate"
+                    type="date"
+                    value={newSprint.startDate}
+                    onChange={handleSprintChange}
+                    margin="normal"
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="End Date"
+                    name="endDate"
+                    type="date"
+                    value={newSprint.endDate}
+                    onChange={handleSprintChange}
+                    margin="normal"
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+              </Grid>
+              
+              <TextField
+                fullWidth
+                label="Capacity (Story Points)"
+                name="capacity"
+                type="number"
+                value={newSprint.capacity}
+                onChange={handleSprintChange}
+                margin="normal"
+                InputProps={{ inputProps: { min: 0 } }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseNewSprint}>Cancel</Button>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={editingSprint ? handleUpdateSprint : handleCreateSprint}
+            >
+              {editingSprint ? 'Update' : 'Create'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );
