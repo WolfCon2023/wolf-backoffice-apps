@@ -28,7 +28,11 @@ import {
   FormGroup,
   FormControlLabel,
   Checkbox,
-  Switch
+  Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -42,6 +46,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import teamService from '../services/teamService';
+import { api } from '../services/apiConfig';
 
 // Simple, clean TeamDetails component using teamService
 const TeamDetails = () => {
@@ -58,6 +63,9 @@ const TeamDetails = () => {
     status: 'ACTIVE'
   });
   const [saving, setSaving] = useState(false);
+  const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const fetchTeam = async () => {
@@ -87,6 +95,19 @@ const TeamDetails = () => {
 
     fetchTeam();
   }, [id, navigate]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await api.get('/users');
+        setUsers(response.data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast.error('Failed to load users');
+      }
+    };
+    fetchUsers();
+  }, []);
 
   // Handle basic form field changes
   const handleChange = (e) => {
@@ -154,6 +175,34 @@ const TeamDetails = () => {
     }
   };
 
+  const handleAddTeamMember = async () => {
+    try {
+      if (!selectedUserId) {
+        toast.error('Please select a user');
+        return;
+      }
+      console.log('Adding team member:', { teamId: id, userId: selectedUserId });
+      const response = await teamService.addTeamMember(id, selectedUserId);
+      console.log('Team member added successfully:', response);
+      toast.success('Team member added successfully');
+      setOpenAddMemberDialog(false);
+      setSelectedUserId('');
+      // Refresh team data
+      const updatedTeam = await teamService.getTeamById(id);
+      console.log('Updated team data:', updatedTeam);
+      setTeam(updatedTeam);
+    } catch (error) {
+      console.error('Error adding team member:', error);
+      if (error.response) {
+        console.error('Error response:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+      }
+      toast.error(error.response?.data?.message || 'Failed to add team member');
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Not set';
     try {
@@ -162,6 +211,33 @@ const TeamDetails = () => {
       return 'Invalid date';
     }
   };
+
+  const renderAddMemberDialog = () => (
+    <Dialog open={openAddMemberDialog} onClose={() => setOpenAddMemberDialog(false)}>
+      <DialogTitle>Add Team Member</DialogTitle>
+      <DialogContent>
+        <FormControl fullWidth sx={{ mt: 2 }}>
+          <InputLabel>Select User</InputLabel>
+          <Select
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+          >
+            {users.map((user) => (
+              <MenuItem key={user._id} value={user._id}>
+                {`${user.firstName} ${user.lastName}`} - {user.email}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setOpenAddMemberDialog(false)}>Cancel</Button>
+        <Button onClick={handleAddTeamMember} variant="contained" color="primary">
+          Add Member
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 
   if (loading) {
     return (
@@ -335,10 +411,12 @@ const TeamDetails = () => {
                     <Typography variant="h6">
                       Team Members ({team.members?.length || 0})
                     </Typography>
-                    <Button 
+                    <Button
                       startIcon={<PersonAddIcon />}
+                      onClick={() => setOpenAddMemberDialog(true)}
                       variant="outlined"
-                      size="small"
+                      color="primary"
+                      sx={{ mb: 2 }}
                     >
                       Add Member
                     </Button>
@@ -456,6 +534,7 @@ const TeamDetails = () => {
           </Grid>
         )}
       </Box>
+      {renderAddMemberDialog()}
     </Container>
   );
 };

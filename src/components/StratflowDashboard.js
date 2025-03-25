@@ -552,16 +552,21 @@ const StratflowDashboard = () => {
 
   const handleAddTeamMember = async (teamId, userId) => {
     try {
-      await teamService.addTeamMember(teamId, {
-        userId,
-        role: 'TEAM_MEMBER',
-        joinedAt: new Date().toISOString(),
-      });
+      console.log('Adding team member:', { teamId, userId });
+      if (!teamId || !userId) {
+        console.error('Missing required parameters:', { teamId, userId });
+        toast.error('Missing required parameters');
+        return;
+      }
+      await teamService.addTeamMember(teamId, userId);
       toast.success('Team member added successfully');
       setOpenAddMemberDialog(false);
       // Refresh team data
-      const updatedTeam = await teamService.getTeam(teamId);
+      const updatedTeam = await teamService.getTeamById(teamId);
       setSelectedTeam(updatedTeam);
+      // Refresh teams list
+      const updatedTeams = await teamService.getAllTeams();
+      setTeams(updatedTeams);
     } catch (error) {
       console.error('Error adding team member:', error);
       toast.error('Failed to add team member');
@@ -1483,7 +1488,10 @@ const StratflowDashboard = () => {
                               <IconButton
                                 size="small"
                                 onClick={() => {
-                                  setSelectedTeam(team);
+                                  setSelectedTeam({
+                                    ...team,
+                                    selectedUserId: ''
+                                  });
                                   setOpenAddMemberDialog(true);
                                 }}
                               >
