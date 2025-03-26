@@ -65,6 +65,7 @@ const TeamDetails = () => {
   const [saving, setSaving] = useState(false);
   const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedRole, setSelectedRole] = useState('TEAM_MEMBER');
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
@@ -181,12 +182,13 @@ const TeamDetails = () => {
         toast.error('Please select a user');
         return;
       }
-      console.log('Adding team member:', { teamId: id, userId: selectedUserId });
-      const response = await teamService.addTeamMember(id, selectedUserId);
+      console.log('Adding team member:', { teamId: id, userId: selectedUserId, role: selectedRole });
+      const response = await teamService.addTeamMember(id, selectedUserId, selectedRole);
       console.log('Team member added successfully:', response);
       toast.success('Team member added successfully');
       setOpenAddMemberDialog(false);
       setSelectedUserId('');
+      setSelectedRole('TEAM_MEMBER'); // Reset role selection
       // Refresh team data
       const updatedTeam = await teamService.getTeamById(id);
       console.log('Updated team data:', updatedTeam);
@@ -198,8 +200,10 @@ const TeamDetails = () => {
           status: error.response.status,
           data: error.response.data
         });
+        toast.error(error.response.data.message || 'Failed to add team member');
+      } else {
+        toast.error('Failed to add team member');
       }
-      toast.error(error.response?.data?.message || 'Failed to add team member');
     }
   };
 
@@ -227,6 +231,21 @@ const TeamDetails = () => {
                 {`${user.firstName} ${user.lastName}`} - {user.email}
               </MenuItem>
             ))}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth sx={{ mt: 2 }}>
+          <InputLabel>Role</InputLabel>
+          <Select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            label="Role"
+          >
+            <MenuItem value="TEAM_MEMBER">Team Member</MenuItem>
+            <MenuItem value="TEAM_LEAD">Team Lead</MenuItem>
+            <MenuItem value="DEVELOPER">Developer</MenuItem>
+            <MenuItem value="DESIGNER">Designer</MenuItem>
+            <MenuItem value="QA">QA</MenuItem>
+            <MenuItem value="PRODUCT_OWNER">Product Owner</MenuItem>
           </Select>
         </FormControl>
       </DialogContent>
