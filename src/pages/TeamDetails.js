@@ -65,7 +65,7 @@ const TeamDetails = () => {
   const [saving, setSaving] = useState(false);
   const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedRole, setSelectedRole] = useState('TEAM_MEMBER');
+  const [selectedRole, setSelectedRole] = useState('Team Member');
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
@@ -188,7 +188,7 @@ const TeamDetails = () => {
       toast.success('Team member added successfully');
       setOpenAddMemberDialog(false);
       setSelectedUserId('');
-      setSelectedRole('TEAM_MEMBER'); // Reset role selection
+      setSelectedRole('Team Member'); // Reset role selection
       // Refresh team data
       const updatedTeam = await teamService.getTeamById(id);
       console.log('Updated team data:', updatedTeam);
@@ -240,12 +240,12 @@ const TeamDetails = () => {
             onChange={(e) => setSelectedRole(e.target.value)}
             label="Role"
           >
-            <MenuItem value="TEAM_MEMBER">Team Member</MenuItem>
-            <MenuItem value="TEAM_LEAD">Team Lead</MenuItem>
-            <MenuItem value="DEVELOPER">Developer</MenuItem>
-            <MenuItem value="DESIGNER">Designer</MenuItem>
-            <MenuItem value="QA">QA</MenuItem>
-            <MenuItem value="PRODUCT_OWNER">Product Owner</MenuItem>
+            <MenuItem value="Team Member">Team Member</MenuItem>
+            <MenuItem value="Scrum Master">Scrum Master</MenuItem>
+            <MenuItem value="Developer">Developer</MenuItem>
+            <MenuItem value="Business Analyst">Business Analyst</MenuItem>
+            <MenuItem value="QA Tester">QA Tester</MenuItem>
+            <MenuItem value="Product Owner">Product Owner</MenuItem>
           </Select>
         </FormControl>
       </DialogContent>

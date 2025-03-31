@@ -1,4 +1,5 @@
 import { api } from './apiConfig';
+import { createErrorMessage } from '../utils';
 import ErrorLogger from '../utils/errorLogger';
 
 class TeamService {
@@ -251,7 +252,7 @@ class TeamService {
   async updateTeamMemberRole(teamId, userId, role) {
     try {
       console.log(`📡 Updating role for member ${userId} in team ${teamId} to: ${role}`);
-      const validRoles = ['TEAM_LEAD', 'DEVELOPER', 'DESIGNER', 'QA', 'PRODUCT_OWNER'];
+      const validRoles = ['Team Member', 'Scrum Master', 'Developer', 'Business Analyst', 'QA Tester', 'Product Owner'];
       if (!validRoles.includes(role)) {
         throw new Error(`Role must be one of: ${validRoles.join(', ')}`);
       }
