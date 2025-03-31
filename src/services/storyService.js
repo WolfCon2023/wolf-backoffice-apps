@@ -232,12 +232,26 @@ class StoryService {
 
   async updateStoryStatus(id, status) {
     try {
-      console.log(`📡 Updating story ${id} status to: ${status}`);
-      return this.updateStory(id, { status });
+      // Validate status
+      if (!['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ON_HOLD'].includes(status.toUpperCase())) {
+        throw new Error(`Invalid status value: ${status}. Must be one of: PLANNING, IN_PROGRESS, COMPLETED, CANCELLED, ON_HOLD`);
+      }
+
+      console.log(`📡 Updating story ${id} status to ${status}`);
+      
+      // Use the dedicated status update endpoint
+      const response = await api.put(`/stories/${id}/status`, { 
+        status: status.toUpperCase()
+      });
+      
+      console.log(`✅ Status successfully updated to ${status}`);
+      this.cache.delete('allStories');
+      
+      return response.data;
     } catch (error) {
-      console.error(`❌ Error updating story status:`, error);
+      console.error('❌ Error updating story status:', error);
       this.logError(error, 'updateStoryStatus');
-      throw error;
+      throw new Error(`Failed to update story status: ${error.message}`);
     }
   }
 

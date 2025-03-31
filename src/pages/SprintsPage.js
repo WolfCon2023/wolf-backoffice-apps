@@ -25,7 +25,8 @@ import {
   MenuItem,
   Grid,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  Menu
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -52,6 +53,8 @@ const SprintsPage = () => {
     endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     capacity: 10
   });
+  const [statusAnchorEl, setStatusAnchorEl] = useState(null);
+  const [selectedSprintId, setSelectedSprintId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -244,6 +247,31 @@ const SprintsPage = () => {
     }
   };
 
+  // Add status menu handler
+  const handleStatusClick = (event, sprintId) => {
+    setStatusAnchorEl(event.currentTarget);
+    setSelectedSprintId(sprintId);
+  };
+
+  const handleStatusClose = () => {
+    setStatusAnchorEl(null);
+    setSelectedSprintId(null);
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    try {
+      await sprintService.updateSprintStatus(selectedSprintId, newStatus);
+      // Refresh sprints after status update
+      const updatedSprints = await sprintService.getAllSprints();
+      setSprints(updatedSprints);
+      toast.success('Sprint status updated successfully');
+    } catch (error) {
+      console.error('Failed to update sprint status:', error);
+      toast.error('Failed to update sprint status');
+    }
+    handleStatusClose();
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
@@ -295,7 +323,8 @@ const SprintsPage = () => {
                           <Chip
                             label={sprint.status}
                             color={getStatusColor(sprint.status)}
-                            size="small"
+                            onClick={(e) => handleStatusClick(e, sprintId)}
+                            style={{ cursor: 'pointer' }}
                           />
                         </TableCell>
                         <TableCell>{formatDate(sprint.startDate)}</TableCell>
@@ -331,6 +360,19 @@ const SprintsPage = () => {
           </TableContainer>
         </CardContent>
       </Card>
+
+      {/* Status Update Menu */}
+      <Menu
+        anchorEl={statusAnchorEl}
+        open={Boolean(statusAnchorEl)}
+        onClose={handleStatusClose}
+      >
+        <MenuItem onClick={() => handleStatusChange('PLANNING')}>Planning</MenuItem>
+        <MenuItem onClick={() => handleStatusChange('ACTIVE')}>Active</MenuItem>
+        <MenuItem onClick={() => handleStatusChange('COMPLETED')}>Completed</MenuItem>
+        <MenuItem onClick={() => handleStatusChange('ON_HOLD')}>On Hold</MenuItem>
+        <MenuItem onClick={() => handleStatusChange('CANCELLED')}>Cancelled</MenuItem>
+      </Menu>
 
       {/* New/Edit Sprint Dialog */}
       <Dialog

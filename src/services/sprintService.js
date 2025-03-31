@@ -119,12 +119,24 @@ class SprintService {
 
   async updateSprintStatus(id, status) {
     try {
+      // Validate status
+      if (!['PLANNING', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'ON_HOLD'].includes(status.toUpperCase())) {
+        throw new Error(`Invalid status value: ${status}. Must be one of: PLANNING, ACTIVE, COMPLETED, CANCELLED, ON_HOLD`);
+      }
+
       console.log(`📡 Updating sprint ${id} status to ${status}`);
-      const response = await api.patch(`/sprints/${id}/status`, { status });
+      
+      // Use the dedicated status update endpoint
+      const response = await api.put(`/sprints/${id}/status`, { 
+        status: status.toUpperCase()
+      });
+      
       console.log(`✅ Status successfully updated to ${status}`);
       this.cache.delete('allSprints');
+      
       return response.data;
     } catch (error) {
+      console.error('❌ Error updating sprint status:', error);
       this.logError(error, 'updateSprintStatus');
       throw new Error(`Failed to update sprint status: ${error.message}`);
     }

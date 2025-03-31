@@ -42,7 +42,7 @@ import { useNavigate } from 'react-router-dom';
 
 // Import services
 import teamService from '../services/teamService';
-import projectService from '../services/projectService';
+import { projectService } from '../services/projectService';
 import sprintService from '../services/sprintService';
 import storyService from '../services/storyService';
 
@@ -140,10 +140,9 @@ const StratFlowAdmin = () => {
     
     const formattedStatus = {
       'ACTIVE': 'Active',
-      'INACTIVE': 'Inactive',
       'ON_HOLD': 'On Hold',
       'COMPLETED': 'Completed',
-      'DELETED': 'Deleted'
+      'CANCELLED': 'Cancelled'
     }[status] || status;
     
     return formattedStatus;
@@ -152,10 +151,9 @@ const StratFlowAdmin = () => {
   const getStatusColor = (status) => {
     return {
       'ACTIVE': 'success',
-      'INACTIVE': 'default',
       'ON_HOLD': 'warning',
       'COMPLETED': 'info',
-      'DELETED': 'error'
+      'CANCELLED': 'error'
     }[status] || 'default';
   };
 
@@ -573,9 +571,9 @@ const StratFlowAdmin = () => {
               label="Status"
             >
               <MenuItem value="ACTIVE">Active</MenuItem>
-              <MenuItem value="INACTIVE">Inactive</MenuItem>
               <MenuItem value="ON_HOLD">On Hold</MenuItem>
               <MenuItem value="COMPLETED">Completed</MenuItem>
+              <MenuItem value="CANCELLED">Cancelled</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>
