@@ -444,20 +444,19 @@ const TeamDetails = () => {
                   {team.members && team.members.length > 0 ? (
                     <List>
                       {team.members.map((member) => (
-                        <React.Fragment key={member.id || member.user?._id}>
+                        <React.Fragment key={member._id}>
                           <ListItem alignItems="flex-start">
                             <ListItemAvatar>
-                              <Avatar>{member.name ? member.name.charAt(0) : member.user?.name?.charAt(0) || 'U'}</Avatar>
+                              <Avatar>{member.userId?.firstName ? member.userId.firstName.charAt(0) : 'U'}</Avatar>
                             </ListItemAvatar>
                             <ListItemText
-                              primary={member.name || member.user?.name || 'Unknown User'}
+                              primary={`${member.userId?.firstName} ${member.userId?.lastName}`}
                               secondary={
                                 <React.Fragment>
                                   <Typography component="span" variant="body2" color="text.primary">
-                                    {member.role || 'Team Member'}
+                                    {member.role}
                                   </Typography>
-                                  {member.email && ` — ${member.email}`}
-                                  {member.user?.email && ` — ${member.user.email}`}
+                                  {member.userId?.email && ` — ${member.userId.email}`}
                                 </React.Fragment>
                               }
                             />

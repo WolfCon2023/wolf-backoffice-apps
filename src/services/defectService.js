@@ -186,7 +186,7 @@ class DefectService {
     } catch (error) {
       // 404 errors mean the endpoint doesn't exist yet
       if (error.response?.status === 404) {
-        console.warn('⚠️ The defects endpoint (/api/defects) returned 404.');
+        console.warn('⚠️ The defects endpoint (/defects) returned 404.');
         console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
         console.warn('📋 Check your backend implementation for missing routes.');
         this.checkEndpointAvailability('/defects', false);
@@ -211,7 +211,7 @@ class DefectService {
     if (cached) return cached;
 
     try {
-      console.log(`📡 Fetching defect ${id}...`);
+      console.log(`📡 Fetching defect ${id}`);
       const response = await api.get(`/defects/${id}`);
       console.log('✅ Defect fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
@@ -225,7 +225,7 @@ class DefectService {
 
   async createDefect(defectData) {
     try {
-      console.log('📡 Creating new defect:', defectData);
+      console.log('📡 Creating new defect');
       const response = await api.post('/defects', {
         ...defectData,
         dateReported: new Date().toISOString()
@@ -242,7 +242,7 @@ class DefectService {
 
   async updateDefect(id, defectData) {
     try {
-      console.log(`📡 Updating defect ${id}:`, defectData);
+      console.log(`📡 Updating defect ${id}`);
       const response = await api.put(`/defects/${id}`, {
         ...defectData,
         updatedAt: new Date().toISOString()
@@ -279,8 +279,8 @@ class DefectService {
     if (cached) return cached;
 
     try {
-      console.log(`📡 Fetching defects for project ${projectId}...`);
-      const response = await api.get(`/projects/${projectId}/defects`);
+      console.log(`📡 Fetching defects for project ${projectId}`);
+      const response = await api.get(`/defects/project/${projectId}`);
       console.log('✅ Project defects fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
@@ -297,8 +297,8 @@ class DefectService {
     if (cached) return cached;
 
     try {
-      console.log(`📡 Fetching defects for sprint ${sprintId}...`);
-      const response = await api.get(`/sprints/${sprintId}/defects`);
+      console.log(`📡 Fetching defects for sprint ${sprintId}`);
+      const response = await api.get(`/defects/sprint/${sprintId}`);
       console.log('✅ Sprint defects fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;

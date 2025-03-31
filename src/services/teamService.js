@@ -304,7 +304,7 @@ class TeamService {
     }
   }
 
-  async addTeamMember(teamId, userId, role = 'TEAM_MEMBER') {
+  async addTeamMember(teamId, userId, role = 'Team Member') {
     try {
       console.log(`📡 Adding user ${userId} to team ${teamId} with role ${role}`);
       const response = await api.post(`/teams/${teamId}/members`, { 

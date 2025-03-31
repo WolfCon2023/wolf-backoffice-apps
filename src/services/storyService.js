@@ -107,7 +107,7 @@ class StoryService {
     } catch (error) {
       // 404 errors mean the endpoint doesn't exist yet
       if (error.response?.status === 404) {
-        console.warn('⚠️ The stories endpoint (/api/stories) returned 404.');
+        console.warn('⚠️ The stories endpoint (/stories) returned 404.');
         console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
         console.warn('📋 Check your backend implementation for missing routes.');
         this.checkEndpointAvailability('/stories', false);
@@ -132,7 +132,7 @@ class StoryService {
     if (cached) return cached;
 
     try {
-      console.log(`📡 Fetching story ${id}...`);
+      console.log(`📡 Fetching story ${id}`);
       const response = await api.get(`/stories/${id}`);
       console.log('✅ Story fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
@@ -146,7 +146,7 @@ class StoryService {
 
   async createStory(storyData) {
     try {
-      console.log('📡 Creating new story:', storyData);
+      console.log('📡 Creating new story');
       const response = await api.post('/stories', {
         ...storyData,
         createdAt: new Date().toISOString()
@@ -163,7 +163,7 @@ class StoryService {
 
   async updateStory(id, storyData) {
     try {
-      console.log(`📡 Updating story ${id}:`, storyData);
+      console.log(`📡 Updating story ${id}`);
       const response = await api.put(`/stories/${id}`, {
         ...storyData,
         updatedAt: new Date().toISOString()
@@ -181,7 +181,7 @@ class StoryService {
 
   async deleteStory(id) {
     try {
-      console.log(`📡 Marking story ${id} for deletion`);
+      console.log(`📡 Deleting story ${id}`);
       const response = await api.delete(`/stories/${id}`);
       console.log('✅ Story marked for deletion:', response.data);
       this.cache.delete('allStories');
@@ -200,8 +200,8 @@ class StoryService {
     if (cached) return cached;
 
     try {
-      console.log(`📡 Fetching stories for project ${projectId}...`);
-      const response = await api.get(`/projects/${projectId}/stories`);
+      console.log(`📡 Fetching stories for project ${projectId}`);
+      const response = await api.get(`/stories/project/${projectId}`);
       console.log('✅ Project stories fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
@@ -311,7 +311,7 @@ class StoryService {
 
   async restoreStory(id) {
     try {
-      console.log(`📡 Restoring story ${id} from deletion`);
+      console.log(`📡 Restoring story ${id}`);
       const response = await api.put(`/stories/${id}/restore`);
       console.log('✅ Story restored:', response.data);
       this.cache.delete('allStories');

@@ -176,7 +176,7 @@ class TaskService {
     } catch (error) {
       // 404 errors mean the endpoint doesn't exist yet
       if (error.response?.status === 404) {
-        console.warn('⚠️ The tasks endpoint (/api/tasks) returned 404.');
+        console.warn('⚠️ The tasks endpoint (/tasks) returned 404.');
         console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
         console.warn('📋 Check your backend implementation for missing routes.');
         this.checkEndpointAvailability('/tasks', false);
@@ -288,7 +288,7 @@ class TaskService {
 
     try {
       console.log(`📡 Fetching tasks for sprint ${sprintId}...`);
-      const response = await api.get(`/sprints/${sprintId}/tasks`);
+      const response = await api.get(`/tasks/sprint/${sprintId}`);
       console.log('✅ Sprint tasks fetched:', response.data);
       this.setCachedData(cacheKey, response.data);
       return response.data;
