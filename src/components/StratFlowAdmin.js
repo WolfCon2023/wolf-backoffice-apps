@@ -181,11 +181,15 @@ const StratFlowAdmin = () => {
 
   // Open status change dialog
   const openStatusDialog = (item, type) => {
+    console.log('Opening status dialog:', { item, type });
+    const currentStatus = item.status?.toUpperCase() || '';
+    console.log('Current status:', currentStatus);
+    
     setStatusDialog({
       open: true,
       item,
       type,
-      newStatus: item.status
+      newStatus: currentStatus
     });
   };
 
@@ -589,7 +593,13 @@ const StratFlowAdmin = () => {
             <InputLabel>Status</InputLabel>
             <Select
               value={statusDialog.newStatus || ''}
-              onChange={(e) => setStatusDialog({ ...statusDialog, newStatus: e.target.value })}
+              onChange={(e) => {
+                console.log('Selected status:', e.target.value);
+                setStatusDialog(prev => ({
+                  ...prev,
+                  newStatus: e.target.value
+                }));
+              }}
               label="Status"
             >
               {statusDialog.type === 'sprint' ? (
@@ -618,7 +628,7 @@ const StratFlowAdmin = () => {
             variant="contained" 
             color="primary" 
             onClick={handleStatusUpdate}
-            disabled={loading}
+            disabled={loading || !statusDialog.newStatus}
           >
             {loading ? <CircularProgress size={24} /> : 'Update Status'}
           </Button>
