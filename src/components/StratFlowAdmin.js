@@ -83,7 +83,10 @@ const StratFlowAdmin = () => {
     type: '',
     newStatus: ''
   });
-  
+
+  // State for tracking the selected status separately
+  const [selectedStatus, setSelectedStatus] = useState('');
+
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     item: null,
@@ -95,6 +98,12 @@ const StratFlowAdmin = () => {
     // Fetch data based on current tab
     fetchData();
   }, [currentTab, refreshTrigger]);
+
+  useEffect(() => {
+    if (statusDialog.item) {
+      setSelectedStatus(statusDialog.item.status || '');
+    }
+  }, [statusDialog.item]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -185,15 +194,34 @@ const StratFlowAdmin = () => {
 
   // Open status change dialog
   const openStatusDialog = (item, type) => {
-    console.log('Opening status dialog:', { item, type });
-    console.log('Item status:', item.status);
+    console.log('Opening status dialog with item:', item);
+    console.log('Dialog type:', type);
+    console.log('Current item status:', item.status);
     
+    const initialStatus = item.status || '';
+    console.log('Setting initial status:', initialStatus);
+    
+    setSelectedStatus(initialStatus);
     setStatusDialog({
       open: true,
       item,
       type,
-      newStatus: item.status || ''
+      newStatus: initialStatus
     });
+  };
+
+  // Handle status change
+  const handleStatusChange = (event) => {
+    const value = event.target.value;
+    console.log('Status select onChange triggered');
+    console.log('Previous status:', selectedStatus);
+    console.log('New selected status:', value);
+    
+    setSelectedStatus(value);
+    setStatusDialog(prev => ({
+      ...prev,
+      newStatus: value
+    }));
   };
 
   // Open delete confirmation dialog
@@ -208,8 +236,8 @@ const StratFlowAdmin = () => {
 
   // Update status
   const handleStatusUpdate = async () => {
-    const { item, type, newStatus } = statusDialog;
-    if (!newStatus) {
+    const { item, type } = statusDialog;
+    if (!selectedStatus) {
       toast.error('Please select a status');
       return;
     }
@@ -221,23 +249,24 @@ const StratFlowAdmin = () => {
       
       switch (type) {
         case 'team':
-          result = await teamService.updateTeamStatus(item._id, newStatus);
+          result = await teamService.updateTeamStatus(item._id, selectedStatus);
           break;
         case 'project':
-          result = await projectService.updateProjectStatus(item._id, newStatus);
+          result = await projectService.updateProjectStatus(item._id, selectedStatus);
           break;
         case 'sprint':
-          result = await sprintService.updateSprintStatus(item._id, newStatus);
+          result = await sprintService.updateSprintStatus(item._id, selectedStatus);
           break;
         case 'story':
-          result = await storyService.updateStoryStatus(item._id, newStatus);
+          result = await storyService.updateStoryStatus(item._id, selectedStatus);
           break;
         default:
           throw new Error('Unknown item type');
       }
       
-      toast.success(`Status updated to ${formatStatus(newStatus, type)}`);
+      toast.success(`Status updated to ${formatStatus(selectedStatus, type)}`);
       setStatusDialog({ open: false, item: null, type: '', newStatus: '' });
+      setSelectedStatus('');
       refreshData();
     } catch (error) {
       console.error('Error updating status:', error);
@@ -593,7 +622,10 @@ const StratFlowAdmin = () => {
       {/* Status Change Dialog */}
       <Dialog 
         open={statusDialog.open} 
-        onClose={() => setStatusDialog({ open: false, item: null, type: '', newStatus: '' })}
+        onClose={() => {
+          setStatusDialog({ open: false, item: null, type: '', newStatus: '' });
+          setSelectedStatus('');
+        }}
       >
         <DialogTitle>Change Status</DialogTitle>
         <DialogContent>
@@ -603,44 +635,62 @@ const StratFlowAdmin = () => {
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
             <Select
-              value={statusDialog.newStatus}
-              onChange={(e) => {
-                const value = e.target.value;
-                console.log('Selected status:', value);
-                setStatusDialog(prev => ({
-                  ...prev,
-                  newStatus: value
-                }));
-              }}
+              defaultValue=""
+              value={selectedStatus}
+              onChange={handleStatusChange}
               label="Status"
+              MenuProps={{
+                PaperProps: {
+                  style: {
+                    maxHeight: 300
+                  }
+                }
+              }}
             >
+              <MenuItem value="">
+                <em>Select a status</em>
+              </MenuItem>
               {statusDialog.type === 'sprint' ? (
-                <>
-                  <MenuItem value="PLANNING">Planning</MenuItem>
-                  <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
-                  <MenuItem value="COMPLETED">Completed</MenuItem>
-                  <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                </>
+                [
+                  { value: "PLANNING", label: "Planning" },
+                  { value: "IN_PROGRESS", label: "In Progress" },
+                  { value: "COMPLETED", label: "Completed" },
+                  { value: "CANCELLED", label: "Cancelled" }
+                ].map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))
               ) : (
-                <>
-                  <MenuItem value="ACTIVE">Active</MenuItem>
-                  <MenuItem value="ON_HOLD">On Hold</MenuItem>
-                  <MenuItem value="COMPLETED">Completed</MenuItem>
-                  <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                </>
+                [
+                  { value: "ACTIVE", label: "Active" },
+                  { value: "ON_HOLD", label: "On Hold" },
+                  { value: "COMPLETED", label: "Completed" },
+                  { value: "CANCELLED", label: "Cancelled" }
+                ].map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))
               )}
             </Select>
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDialog({ open: false, item: null, type: '', newStatus: '' })}>
+          <Button onClick={() => {
+            setStatusDialog({ open: false, item: null, type: '', newStatus: '' });
+            setSelectedStatus('');
+          }}>
             Cancel
           </Button>
           <Button 
             variant="contained" 
             color="primary" 
-            onClick={handleStatusUpdate}
-            disabled={loading || !statusDialog.newStatus}
+            onClick={() => {
+              handleStatusUpdate();
+              setSelectedStatus('');
+            }}
+            disabled={loading || !selectedStatus}
           >
             {loading ? <CircularProgress size={24} /> : 'Update Status'}
           </Button>
