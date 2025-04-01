@@ -135,8 +135,19 @@ const StratFlowAdmin = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const formatStatus = (status) => {
+  const formatStatus = (status, type = '') => {
     if (!status) return 'Unknown';
+    
+    if (type === 'sprint') {
+      const formattedStatus = {
+        'PLANNING': 'Planning',
+        'IN_PROGRESS': 'In Progress',
+        'COMPLETED': 'Completed',
+        'CANCELLED': 'Cancelled'
+      }[status] || status;
+      
+      return formattedStatus;
+    }
     
     const formattedStatus = {
       'ACTIVE': 'Active',
@@ -148,13 +159,24 @@ const StratFlowAdmin = () => {
     return formattedStatus;
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status, type = '') => {
+    const normalizedStatus = status?.toUpperCase();
+    
+    if (type === 'sprint') {
+      return {
+        'PLANNING': 'info',
+        'IN_PROGRESS': 'success',
+        'COMPLETED': 'default',
+        'CANCELLED': 'error'
+      }[normalizedStatus] || 'default';
+    }
+    
     return {
       'ACTIVE': 'success',
       'ON_HOLD': 'warning',
       'COMPLETED': 'info',
       'CANCELLED': 'error'
-    }[status] || 'default';
+    }[normalizedStatus] || 'default';
   };
 
   // Open status change dialog
@@ -445,8 +467,8 @@ const StratFlowAdmin = () => {
                           <TableCell>{sprint.project?.name || 'N/A'}</TableCell>
                           <TableCell>
                             <Chip 
-                              label={formatStatus(sprint.status)} 
-                              color={getStatusColor(sprint.status)}
+                              label={formatStatus(sprint.status, 'sprint')} 
+                              color={getStatusColor(sprint.status, 'sprint')}
                               size="small"
                             />
                           </TableCell>
@@ -570,10 +592,21 @@ const StratFlowAdmin = () => {
               onChange={(e) => setStatusDialog({ ...statusDialog, newStatus: e.target.value })}
               label="Status"
             >
-              <MenuItem value="ACTIVE">Active</MenuItem>
-              <MenuItem value="ON_HOLD">On Hold</MenuItem>
-              <MenuItem value="COMPLETED">Completed</MenuItem>
-              <MenuItem value="CANCELLED">Cancelled</MenuItem>
+              {statusDialog.type === 'sprint' ? (
+                <>
+                  <MenuItem value="PLANNING">Planning</MenuItem>
+                  <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
+                  <MenuItem value="COMPLETED">Completed</MenuItem>
+                  <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                </>
+              ) : (
+                <>
+                  <MenuItem value="ACTIVE">Active</MenuItem>
+                  <MenuItem value="ON_HOLD">On Hold</MenuItem>
+                  <MenuItem value="COMPLETED">Completed</MenuItem>
+                  <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                </>
+              )}
             </Select>
           </FormControl>
         </DialogContent>
