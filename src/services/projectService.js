@@ -15,11 +15,25 @@ class ProjectService {
 
   async getAllProjects() {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       console.log('📡 Fetching all projects...');
-      const response = await api.get('/projects');
+      const response = await api.get('/projects', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
+      if (!response.data) {
+        console.warn('No data received from projects API');
+        return [];
+      }
+
       const projects = Array.isArray(response.data) ? response.data : [];
-      console.log(`✅ Found ${projects.length} projects`);
+      console.log(`✅ Found ${projects.length} projects:`, projects);
       this.cache.set('allProjects', projects);
       return projects;
     } catch (error) {
@@ -34,6 +48,13 @@ class ProjectService {
         });
       }
       this.logError(error, 'getAllProjects');
+      
+      // Check for specific error types
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        throw new Error('Session expired. Please log in again.');
+      }
+      
       throw new Error(`Failed to fetch projects: ${error.message}`);
     }
   }
@@ -284,5 +305,7 @@ class ProjectService {
   }
 }
 
+// Create and export a singleton instance
 const projectService = new ProjectService();
-export { projectService }; 
+export { projectService };
+export default projectService; 

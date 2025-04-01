@@ -77,69 +77,52 @@ class StoryService {
    * @returns {Array} List of stories or empty array if API fails
    */
   async getAllStories() {
-    console.group('📋 StoryService - getAllStories');
-    console.time('getAllStories');
-    
-    const cacheKey = 'allStories';
-    const cached = this.getCachedData(cacheKey);
-    if (cached) {
-      console.log('✅ Using cached stories data');
-      console.timeEnd('getAllStories');
-      console.groupEnd();
-      return cached;
-    }
-
     try {
-      console.log('📡 Fetching all stories from /stories endpoint...');
-      const startTime = performance.now();
-      const response = await api.get('/stories');
-      const endTime = performance.now();
+      console.log('📡 Fetching all stories');
       
-      console.log(`✅ Stories fetched (${Math.round(endTime - startTime)}ms):`, response.data);
-      console.log(`📊 Retrieved ${response.data.length} stories`);
-      
-      this.setCachedData(cacheKey, response.data);
-      this.checkEndpointAvailability('/stories', true);
-      
-      console.timeEnd('getAllStories');
-      console.groupEnd();
-      return response.data;
-    } catch (error) {
-      // 404 errors mean the endpoint doesn't exist yet
-      if (error.response?.status === 404) {
-        console.warn('⚠️ The stories endpoint (/stories) returned 404.');
-        console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
-        console.warn('📋 Check your backend implementation for missing routes.');
-        this.checkEndpointAvailability('/stories', false);
-      } else {
-        // Other errors could be permissions, server issues, etc.
-        console.error(`❌ Error fetching stories (${error.response?.status || 'Network Error'}):`);
-        console.error('- Message:', error.message);
-        console.error('- Request URL:', error.config?.url);
-        console.error('- Request Method:', error.config?.method);
+      // Check cache
+      if (this.cache.has('allStories')) {
+        const cachedData = this.cache.get('allStories');
+        console.log('✅ Using cached stories');
+        return cachedData;
       }
       
+      const response = await api.get('/stories');
+      console.log('✅ Stories fetched successfully:', response.data.length);
+      
+      // Cache the data
+      this.cache.set('allStories', response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching stories:', error);
       this.logError(error, 'getAllStories');
-      console.timeEnd('getAllStories');
-      console.groupEnd();
-      return [];
+      throw new Error(`Failed to fetch stories: ${createErrorMessage(error)}`);
     }
   }
 
-  async getStory(id) {
-    const cacheKey = `story:${id}`;
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
+  async getStoryById(id) {
     try {
       console.log(`📡 Fetching story ${id}`);
+      
+      // Check cache
+      const cacheKey = `story:${id}`;
+      if (this.cache.has(cacheKey)) {
+        const cachedData = this.cache.get(cacheKey);
+        console.log('✅ Using cached story');
+        return cachedData;
+      }
+      
       const response = await api.get(`/stories/${id}`);
       console.log('✅ Story fetched:', response.data);
-      this.setCachedData(cacheKey, response.data);
+      
+      // Cache the data
+      this.cache.set(cacheKey, response.data);
+      
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching story ${id}:`, error);
-      this.logError(error, 'getStory');
+      this.logError(error, 'getStoryById');
       throw new Error(`Failed to fetch story: ${createErrorMessage(error)}`);
     }
   }
@@ -147,30 +130,57 @@ class StoryService {
   async createStory(storyData) {
     try {
       console.log('📡 Creating new story');
-      const response = await api.post('/stories', {
-        ...storyData,
-        createdAt: new Date().toISOString()
-      });
+      console.log('Story data:', storyData);
+      
+      if (!storyData.reporter) {
+        throw new Error('Reporter ID is required');
+      }
+
+      // Ensure all required fields are present and properly formatted
+      const payload = {
+        key: storyData.key,
+        title: storyData.title,
+        description: storyData.description || '',
+        priority: storyData.priority || 'Medium',
+        type: storyData.type || 'Story',
+        status: storyData.status || 'PLANNING',
+        storyPoints: storyData.storyPoints ? parseInt(storyData.storyPoints) : 0,
+        estimatedHours: storyData.estimatedHours ? parseFloat(storyData.estimatedHours) : 0,
+        assignee: storyData.assignee || null,
+        reporter: storyData.reporter, // MongoDB ObjectId
+        project: storyData.project,
+        sprint: storyData.sprint || null,
+        feature: storyData.feature || null
+      };
+
+      // Log the reporter ID specifically
+      console.log('Reporter ID being sent:', payload.reporter);
+      console.log('Full payload:', payload);
+      
+      const response = await api.post('/stories', payload);
       console.log('✅ Story created:', response.data);
+      
+      // Clear the cache
       this.cache.delete('allStories');
+      
       return response.data;
     } catch (error) {
       console.error('❌ Error creating story:', error);
       this.logError(error, 'createStory');
-      throw new Error(`Failed to create story: ${createErrorMessage(error)}`);
+      throw error;
     }
   }
 
   async updateStory(id, storyData) {
     try {
       console.log(`📡 Updating story ${id}`);
-      const response = await api.put(`/stories/${id}`, {
-        ...storyData,
-        updatedAt: new Date().toISOString()
-      });
+      const response = await api.put(`/stories/${id}`, storyData);
       console.log('✅ Story updated:', response.data);
+      
+      // Clear the cache
       this.cache.delete('allStories');
       this.cache.delete(`story:${id}`);
+      
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating story ${id}:`, error);
@@ -183,14 +193,17 @@ class StoryService {
     try {
       console.log(`📡 Deleting story ${id}`);
       const response = await api.delete(`/stories/${id}`);
-      console.log('✅ Story marked for deletion:', response.data);
+      console.log('✅ Story deleted');
+      
+      // Clear the cache
       this.cache.delete('allStories');
       this.cache.delete(`story:${id}`);
+      
       return response.data;
     } catch (error) {
-      console.error(`❌ Error marking story ${id} for deletion:`, error);
+      console.error(`❌ Error deleting story ${id}:`, error);
       this.logError(error, 'deleteStory');
-      throw new Error(`Failed to mark story for deletion: ${createErrorMessage(error)}`);
+      throw new Error(`Failed to delete story: ${createErrorMessage(error)}`);
     }
   }
 
@@ -262,108 +275,50 @@ class StoryService {
     } catch (error) {
       console.error(`❌ Error updating story priority:`, error);
       this.logError(error, 'updateStoryPriority');
-      throw error;
+      throw new Error(`Failed to update story priority: ${createErrorMessage(error)}`);
+    }
+  }
+
+  async updateStoryAssignee(id, assigneeId) {
+    try {
+      console.log(`📡 Updating story ${id} assignee to: ${assigneeId}`);
+      return this.updateStory(id, { assignee: assigneeId });
+    } catch (error) {
+      console.error(`❌ Error updating story assignee:`, error);
+      this.logError(error, 'updateStoryAssignee');
+      throw new Error(`Failed to update story assignee: ${createErrorMessage(error)}`);
     }
   }
 
   async updateStoryPoints(id, points) {
     try {
       console.log(`📡 Updating story ${id} points to: ${points}`);
-      return this.updateStory(id, { storyPoints: points });
+      return this.updateStory(id, { storyPoints: parseInt(points) });
     } catch (error) {
       console.error(`❌ Error updating story points:`, error);
       this.logError(error, 'updateStoryPoints');
-      throw error;
+      throw new Error(`Failed to update story points: ${createErrorMessage(error)}`);
     }
   }
 
-  async assignStory(id, assigneeId) {
+  async moveStoryToSprint(id, sprintId) {
     try {
-      console.log(`📡 Assigning story ${id} to user ${assigneeId}`);
-      return this.updateStory(id, { assignee: assigneeId });
+      console.log(`📡 Moving story ${id} to sprint: ${sprintId}`);
+      return this.updateStory(id, { sprintId });
     } catch (error) {
-      console.error(`❌ Error assigning story:`, error);
-      this.logError(error, 'assignStory');
-      throw error;
+      console.error(`❌ Error moving story to sprint:`, error);
+      this.logError(error, 'moveStoryToSprint');
+      throw new Error(`Failed to move story to sprint: ${createErrorMessage(error)}`);
     }
   }
 
-  async addComment(storyId, comment) {
-    try {
-      console.log(`📡 Adding comment to story ${storyId}`);
-      const response = await api.post(`/stories/${storyId}/comments`, comment);
-      console.log('✅ Comment added:', response.data);
-      this.cache.delete(`story:${storyId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`❌ Error adding comment:`, error);
-      this.logError(error, 'addComment');
-      throw new Error(`Failed to add comment: ${createErrorMessage(error)}`);
-    }
-  }
-
-  async addAttachment(storyId, attachment) {
-    try {
-      console.log(`📡 Adding attachment to story ${storyId}`);
-      const formData = new FormData();
-      formData.append('file', attachment);
-      
-      const response = await api.post(`/stories/${storyId}/attachments`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      console.log('✅ Attachment added:', response.data);
-      this.cache.delete(`story:${storyId}`);
-      return response.data;
-    } catch (error) {
-      console.error(`❌ Error adding attachment:`, error);
-      this.logError(error, 'addAttachment');
-      throw new Error(`Failed to add attachment: ${createErrorMessage(error)}`);
-    }
-  }
-
-  async restoreStory(id) {
-    try {
-      console.log(`📡 Restoring story ${id}`);
-      const response = await api.put(`/stories/${id}/restore`);
-      console.log('✅ Story restored:', response.data);
-      this.cache.delete('allStories');
-      this.cache.delete(`story:${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`❌ Error restoring story ${id}:`, error);
-      this.logError(error, 'restoreStory');
-      throw new Error(`Failed to restore story: ${createErrorMessage(error)}`);
-    }
-  }
-
-  async getDeletedStories() {
-    try {
-      console.log('📡 Fetching deleted stories');
-      
-      // Check cache
-      if (this.cache.has('deletedStories')) {
-        const cachedData = this.cache.get('deletedStories');
-        console.log('✅ Using cached deleted stories');
-        return cachedData;
-      }
-      
-      const response = await api.get('/stories/deleted');
-      console.log('✅ Deleted stories fetched successfully:', response.data.length);
-      
-      // Cache the data
-      this.cache.set('deletedStories', response.data);
-      
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error fetching deleted stories:', error);
-      this.logError(error, 'getDeletedStories');
-      throw new Error(`Failed to fetch deleted stories: ${createErrorMessage(error)}`);
-    }
+  clearCache() {
+    console.log('🧹 Clearing story service cache');
+    this.cache.clear();
   }
 }
 
+// Create and export a singleton instance
 const storyService = new StoryService();
 export { storyService };
-export default storyService; 
+export default storyService;
