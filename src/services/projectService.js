@@ -257,17 +257,22 @@ class ProjectService {
   async updateProjectStatus(id, status) {
     try {
       // Validate status
-      if (!['ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'].includes(status.toUpperCase())) {
-        throw new Error(`Invalid status value: ${status}. Must be one of: ACTIVE, ON_HOLD, COMPLETED, CANCELLED`);
+      const validStatuses = ['Active', 'On Hold', 'Completed', 'Cancelled'];
+      const formattedStatus = status.split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+      if (!validStatuses.includes(formattedStatus)) {
+        throw new Error(`Invalid status value: ${status}. Must be one of: ${validStatuses.join(', ')}`);
       }
 
-      console.log(`📡 Updating project ${id} status to ${status}`);
+      console.log(`📡 Updating project ${id} status to ${formattedStatus}`);
       
       const response = await api.put(`/projects/${id}/status`, { 
-        status: status.toUpperCase()
+        status: formattedStatus
       });
       
-      console.log(`✅ Status successfully updated to ${status}`);
+      console.log(`✅ Status successfully updated to ${formattedStatus}`);
       this.cache.delete('allProjects');
       
       return response.data;
