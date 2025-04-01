@@ -99,13 +99,7 @@ class DefectService {
    * Log errors to the error logger with context
    */
   logError(error, context) {
-    console.group(`📋 DefectService Error - ${context}`);
-    console.error('Error details:', error);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
-    console.groupEnd();
+    console.error(`❌ Error in DefectService - ${context}:`, error);
     return ErrorLogger.logToFile(error, `DefectService:${context}`);
   }
 
@@ -156,69 +150,27 @@ class DefectService {
    * @returns {Array} List of defects or empty array if API fails
    */
   async getAllDefects() {
-    console.group('📋 DefectService - getAllDefects');
-    console.time('getAllDefects');
-    
-    const cacheKey = 'allDefects';
-    const cached = this.getCachedData(cacheKey);
-    if (cached) {
-      console.log('✅ Using cached defects data');
-      console.timeEnd('getAllDefects');
-      console.groupEnd();
-      return cached;
-    }
-
     try {
-      console.log('📡 Fetching all defects from /defects endpoint...');
-      const startTime = performance.now();
+      console.log('📡 Fetching all defects');
       const response = await api.get('/defects');
-      const endTime = performance.now();
-      
-      console.log(`✅ Defects fetched (${Math.round(endTime - startTime)}ms):`, response.data);
-      console.log(`📊 Retrieved ${response.data.length} defects`);
-      
-      this.setCachedData(cacheKey, response.data);
-      this.checkEndpointAvailability('/defects', true);
-      
-      console.timeEnd('getAllDefects');
-      console.groupEnd();
+      console.log('✅ Defects fetched successfully:', response.data);
       return response.data;
     } catch (error) {
-      // 404 errors mean the endpoint doesn't exist yet
-      if (error.response?.status === 404) {
-        console.warn('⚠️ The defects endpoint (/defects) returned 404.');
-        console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
-        console.warn('📋 Check your backend implementation for missing routes.');
-        this.checkEndpointAvailability('/defects', false);
-      } else {
-        // Other errors could be permissions, server issues, etc.
-        console.error(`❌ Error fetching defects (${error.response?.status || 'Network Error'}):`);
-        console.error('- Message:', error.message);
-        console.error('- Request URL:', error.config?.url);
-        console.error('- Request Method:', error.config?.method);
-      }
-      
+      console.error('❌ Error fetching defects:', error);
       this.logError(error, 'getAllDefects');
-      console.timeEnd('getAllDefects');
-      console.groupEnd();
-      return [];
+      throw new Error(`Failed to fetch defects: ${createErrorMessage(error)}`);
     }
   }
 
-  async getDefect(id) {
-    const cacheKey = `defect:${id}`;
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
+  async getDefectById(id) {
     try {
       console.log(`📡 Fetching defect ${id}`);
       const response = await api.get(`/defects/${id}`);
       console.log('✅ Defect fetched:', response.data);
-      this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching defect ${id}:`, error);
-      this.logError(error, 'getDefect');
+      this.logError(error, 'getDefectById');
       throw new Error(`Failed to fetch defect: ${createErrorMessage(error)}`);
     }
   }
@@ -226,30 +178,32 @@ class DefectService {
   async createDefect(defectData) {
     try {
       console.log('📡 Creating new defect');
-      const response = await api.post('/defects', {
-        ...defectData,
-        dateReported: new Date().toISOString()
-      });
+      const payload = {
+        title: defectData.title,
+        description: defectData.description,
+        severity: defectData.severity || 'Medium',
+        status: defectData.status || 'New',
+        projectId: defectData.projectId,
+        reportedBy: defectData.reportedBy,
+        dateReported: new Date()
+      };
+
+      console.log('Creating defect with payload:', payload);
+      const response = await api.post('/defects', payload);
       console.log('✅ Defect created:', response.data);
-      this.cache.delete('allDefects');
       return response.data;
     } catch (error) {
       console.error('❌ Error creating defect:', error);
       this.logError(error, 'createDefect');
-      throw new Error(`Failed to create defect: ${createErrorMessage(error)}`);
+      throw error;
     }
   }
 
   async updateDefect(id, defectData) {
     try {
       console.log(`📡 Updating defect ${id}`);
-      const response = await api.put(`/defects/${id}`, {
-        ...defectData,
-        updatedAt: new Date().toISOString()
-      });
+      const response = await api.put(`/defects/${id}`, defectData);
       console.log('✅ Defect updated:', response.data);
-      this.cache.delete('allDefects');
-      this.cache.delete(`defect:${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating defect ${id}:`, error);
@@ -262,9 +216,7 @@ class DefectService {
     try {
       console.log(`📡 Deleting defect ${id}`);
       const response = await api.delete(`/defects/${id}`);
-      console.log('✅ Defect deleted:', response.data);
-      this.cache.delete('allDefects');
-      this.cache.delete(`defect:${id}`);
+      console.log('✅ Defect deleted');
       return response.data;
     } catch (error) {
       console.error(`❌ Error deleting defect ${id}:`, error);
@@ -400,4 +352,5 @@ class DefectService {
   }
 }
 
-export default new DefectService(); 
+const defectService = new DefectService();
+export default defectService; 

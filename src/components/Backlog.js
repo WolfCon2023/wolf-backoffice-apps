@@ -48,6 +48,7 @@ import defectService from '../services/defectService';
 import featureService from '../services/featureService';
 import { projectService } from '../services/projectService';
 import sprintService from '../services/sprintService';
+import incrementService from '../services/incrementService';
 
 const Backlog = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -63,18 +64,16 @@ const Backlog = () => {
   const [dialogType, setDialogType] = useState('increment');
   const [selectedItem, setSelectedItem] = useState(null);
   const [lastUsedNumber, setLastUsedNumber] = useState(0);
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    priority: '',
-    status: '',
-    projectId: '',
-    sprintId: '',
-    assignee: '',
-    type: '',
-    effortPoints: '',
-    featureId: '',
+    project: '',
+    sprint: '',
+    effortPoints: 0,
+    priority: 'Medium',
+    status: 'PLANNING'
   });
 
   useEffect(() => {
@@ -117,6 +116,14 @@ const Backlog = () => {
           }
 
           try {
+            const featuresData = await featureService.getAllFeatures();
+            setFeatures(featuresData || []);
+          } catch (error) {
+            console.error('Error fetching features:', error);
+            setFeatures([]);
+          }
+
+          try {
             const storiesData = await storyService.getAllStories();
             setStories(storiesData || []);
           } catch (error) {
@@ -138,15 +145,6 @@ const Backlog = () => {
           } catch (error) {
             console.error('Error fetching defects:', error);
             setDefects([]);
-          }
-
-          try {
-            const featuresData = await featureService.getAllFeatures();
-            setFeatures(featuresData || []);
-          } catch (error) {
-            console.error('Error fetching features:', error);
-            setFeatures([]);
-            // Don't show error toast for features since the endpoint doesn't exist yet
           }
         }
       } catch (error) {
@@ -176,18 +174,7 @@ const Backlog = () => {
     if (item) {
       setFormData(item);
     } else {
-      setFormData({
-        title: '',
-        description: '',
-        priority: '',
-        status: '',
-        projectId: '',
-        sprintId: '',
-        assignee: '',
-        type: '',
-        effortPoints: '',
-        featureId: '',
-      });
+      resetForm();
     }
     setOpenDialog(true);
   };
@@ -195,6 +182,19 @@ const Backlog = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedItem(null);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      project: '',
+      sprint: '',
+      effortPoints: 0,
+      priority: 'Medium',
+      status: 'PLANNING'
+    });
+    setError('');
   };
 
   const handleInputChange = (event) => {
@@ -212,102 +212,53 @@ const Backlog = () => {
     return `BOAZ-${nextNumber}`;
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    
+  const handleSubmit = async () => {
     try {
-      const currentUser = getCurrentUser();
-      console.log('Current user from token:', currentUser); // Debug log
-      
-      if (!currentUser || !currentUser.id) {
-        console.error('No valid user ID found in token');
-        toast.error('User authentication required');
+      if (!currentUser?.id) {
+        console.error('No user ID found');
+        setError('User ID not found. Please log in again.');
         return;
       }
 
-      const reporterId = currentUser.id;
-      console.log('Using reporter ID:', reporterId); // Debug log
-      
+      console.log('Current user:', currentUser);
+      console.log('Reporter ID:', currentUser.id);
+
+      if (!formData.title || !formData.project) {
+        setError('Title and Project are required');
+        return;
+      }
+
+      const baseData = {
+        title: formData.title,
+        description: formData.description,
+        project: formData.project,
+        sprint: formData.sprint || null,
+        reporter: currentUser.id,
+        status: formData.status,
+        priority: formData.priority
+      };
+
       if (dialogType === 'increment') {
-        if (!formData.title || !formData.projectId) {
-          toast.error('Title and Project are required fields');
-          return;
-        }
-
-        const incrementData = {
-          key: getNextKey(),
-          title: formData.title,
-          description: formData.description || '',
-          priority: 'Medium',
-          type: formData.type || 'Story',
-          status: 'PLANNING',
-          effortPoints: parseInt(formData.effortPoints) || 0,
-          storyPoints: 0,
-          assignee: formData.assignee || reporterId,
-          reporter: reporterId,
-          project: formData.projectId,
-          sprint: formData.sprintId || null,
-          feature: formData.featureId || null
-        };
-
-        console.log('Creating increment with data:', incrementData);
-        console.log('Reporter ID being sent:', incrementData.reporter);
-        console.log('Project ID being sent:', incrementData.project);
-
-        const result = await storyService.createStory(incrementData);
-        console.log('Increment created successfully:', result);
-        toast.success('Increment created successfully');
-      } else if (dialogType === 'feature') {
-        const featureData = {
-          name: formData.title,
-          description: formData.description,
-          status: 'PLANNED',
-          priority: formData.priority || 'LOW',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-
-        console.log('Creating feature with data:', featureData);
-        const result = await featureService.createFeature(featureData);
-        console.log('Feature created successfully:', result);
-        toast.success('Feature created successfully');
+        console.log('Creating increment with data:', baseData);
+        await incrementService.createIncrement(baseData);
+        console.log('Increment created successfully');
       } else if (dialogType === 'story') {
-        if (!formData.title || !formData.projectId) {
-          toast.error('Title and Project are required fields');
-          return;
-        }
-
         const storyData = {
-          key: getNextKey(),
-          title: formData.title,
-          description: formData.description || '',
-          priority: 'Medium',
-          type: 'Story',
-          status: 'PLANNING',
-          effortPoints: parseInt(formData.effortPoints) || 0,
-          storyPoints: 0,
-          assignee: formData.assignee || reporterId,
-          reporter: reporterId,
-          project: formData.projectId,
-          sprint: formData.sprintId || null,
-          feature: formData.featureId || null
+          ...baseData,
+          storyPoints: parseInt(formData.effortPoints) || 0
         };
 
         console.log('Creating story with data:', storyData);
-        console.log('Reporter ID being sent:', storyData.reporter);
-        console.log('Project ID being sent:', storyData.project);
-
-        const result = await storyService.createStory(storyData);
-        console.log('Story created successfully:', result);
-        toast.success('Story created successfully');
+        await storyService.createStory(storyData);
+        console.log('Story created successfully');
       }
-      
-      handleCloseDialog();
+
+      setOpenDialog(false);
+      resetForm();
       fetchData();
     } catch (error) {
-      console.error('Error creating item:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create item';
-      toast.error(errorMessage);
+      console.error('Error in handleSubmit:', error);
+      setError(error.message || 'An error occurred while saving');
     }
   };
 
@@ -346,7 +297,7 @@ const Backlog = () => {
     }
   };
 
-  const handleDelete = async (type, id) => {
+  const handleDelete = async (id, type) => {
     try {
       if (type === 'increment') {
         await storyService.deleteStory(id);
@@ -359,61 +310,106 @@ const Backlog = () => {
         setStories(stories.filter(s => s._id !== id));
       } else if (type === 'task') {
         await taskService.deleteTask(id);
-        setTasks(tasks.filter(t => t.id !== id));
+        setTasks(tasks.filter(t => t._id !== id));
       } else if (type === 'defect') {
         await defectService.deleteDefect(id);
-        setDefects(defects.filter(d => d.id !== id));
+        setDefects(defects.filter(d => d._id !== id));
       }
-      toast.success(`${type} deleted successfully!`);
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} deleted successfully`);
     } catch (error) {
+      console.error('Error deleting item:', error);
       toast.error(`Failed to delete ${type}`);
     }
   };
 
   const getStatusColor = (status) => {
-    const statusColors = {
-      'Backlog': 'default',
-      'To Do': 'info',
-      'In Progress': 'primary',
-      'In Review': 'warning',
-      'Done': 'success',
-      'Blocked': 'error',
-    };
-    return statusColors[status] || 'default';
+    switch (status?.toLowerCase()) {
+      case 'new':
+        return 'info';
+      case 'in progress':
+        return 'warning';
+      case 'completed':
+        return 'success';
+      case 'closed':
+        return 'default';
+      default:
+        return 'default';
+    }
   };
 
-  const renderDialogContent = () => {
-    console.log('Current Projects:', projects);
-    console.log('Current Sprints:', sprints);
-    
+  const getSeverityColor = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'critical':
+        return 'error';
+      case 'high':
+        return 'warning';
+      case 'medium':
+        return 'info';
+      case 'low':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  const renderForm = () => {
     return (
-      <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box component="form" noValidate autoComplete="off">
         <TextField
-          label="Title"
-          name="title"
           fullWidth
-          required
-          value={formData.title || ''}
+          margin="normal"
+          name="title"
+          label="Title"
+          value={formData.title}
           onChange={handleInputChange}
-          error={!formData.title && formData.title !== undefined}
-          helperText={!formData.title && formData.title !== undefined ? 'Title is required' : ''}
+          required
         />
         <TextField
-          label="Description"
-          name="description"
           fullWidth
+          margin="normal"
+          name="description"
+          label="Description"
+          value={formData.description}
+          onChange={handleInputChange}
           multiline
           rows={4}
-          value={formData.description || ''}
-          onChange={handleInputChange}
         />
-        <FormControl fullWidth required>
+        <FormControl fullWidth margin="normal" required>
+          <InputLabel>Project</InputLabel>
+          <Select
+            name="project"
+            value={formData.project}
+            onChange={handleInputChange}
+          >
+            <MenuItem value="">Select a project</MenuItem>
+            {projects.map((project) => (
+              <MenuItem key={project._id} value={project._id}>
+                {project.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Sprint</InputLabel>
+          <Select
+            name="sprint"
+            value={formData.sprint}
+            onChange={handleInputChange}
+          >
+            <MenuItem value="">Select a sprint</MenuItem>
+            {sprints.map((sprint) => (
+              <MenuItem key={sprint._id} value={sprint._id}>
+                {sprint.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl fullWidth margin="normal">
           <InputLabel>Priority</InputLabel>
           <Select
             name="priority"
-            value={formData.priority || 'Medium'}
+            value={formData.priority}
             onChange={handleInputChange}
-            label="Priority"
           >
             <MenuItem value="Low">Low</MenuItem>
             <MenuItem value="Medium">Medium</MenuItem>
@@ -421,107 +417,57 @@ const Backlog = () => {
             <MenuItem value="Critical">Critical</MenuItem>
           </Select>
         </FormControl>
-        {dialogType === 'increment' && (
-          <>
-            <FormControl fullWidth required>
-              <InputLabel>Increment Type</InputLabel>
-              <Select
-                name="type"
-                value={formData.type || 'Story'}
-                onChange={handleInputChange}
-                label="Increment Type"
-              >
-                <MenuItem value="Story">Story</MenuItem>
-                <MenuItem value="Task">Task</MenuItem>
-                <MenuItem value="Defect">Defect</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                name="status"
-                value={formData.status || 'PLANNING'}
-                onChange={handleInputChange}
-                label="Status"
-              >
-                <MenuItem value="PLANNING">Planning</MenuItem>
-                <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
-                <MenuItem value="COMPLETED">Completed</MenuItem>
-                <MenuItem value="CANCELLED">Cancelled</MenuItem>
-                <MenuItem value="ON_HOLD">On Hold</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Feature</InputLabel>
-              <Select
-                name="featureId"
-                value={formData.featureId || ''}
-                onChange={handleInputChange}
-                label="Feature"
-              >
-                <MenuItem value="">None</MenuItem>
-                {features.map(feature => (
-                  <MenuItem key={feature._id} value={feature._id}>
-                    {feature.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth required error={!formData.projectId}>
-              <InputLabel>Project</InputLabel>
-              <Select
-                name="projectId"
-                value={formData.projectId || ''}
-                onChange={handleInputChange}
-                label="Project"
-              >
-                <MenuItem value="">Select a project</MenuItem>
-                {projects && projects.length > 0 ? (
-                  projects.map(project => (
-                    <MenuItem key={project._id} value={project._id}>
-                      {project.name}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem disabled>No projects available</MenuItem>
-                )}
-              </Select>
-              {!formData.projectId && (
-                <FormHelperText>Project is required</FormHelperText>
-              )}
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Sprint</InputLabel>
-              <Select
-                name="sprintId"
-                value={formData.sprintId || ''}
-                onChange={handleInputChange}
-                label="Sprint"
-              >
-                <MenuItem value="">None</MenuItem>
-                {sprints && sprints.length > 0 ? (
-                  sprints.map(sprint => (
-                    <MenuItem key={sprint._id} value={sprint._id}>
-                      {sprint.name}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem disabled>No sprints available</MenuItem>
-                )}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Effort Points"
-              name="effortPoints"
-              type="number"
-              fullWidth
-              value={formData.effortPoints || ''}
-              onChange={handleInputChange}
-              inputProps={{ min: 0, step: 1 }}
-            />
-          </>
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Status</InputLabel>
+          <Select
+            name="status"
+            value={formData.status}
+            onChange={handleInputChange}
+          >
+            <MenuItem value="PLANNING">Planning</MenuItem>
+            <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
+            <MenuItem value="COMPLETED">Completed</MenuItem>
+            <MenuItem value="CANCELLED">Cancelled</MenuItem>
+            <MenuItem value="ON_HOLD">On Hold</MenuItem>
+          </Select>
+        </FormControl>
+        {dialogType === 'story' && (
+          <TextField
+            fullWidth
+            margin="normal"
+            name="effortPoints"
+            label="Effort Points"
+            type="number"
+            value={formData.effortPoints}
+            onChange={handleInputChange}
+            InputProps={{ inputProps: { min: 0 } }}
+          />
+        )}
+        {error && (
+          <Typography color="error" sx={{ mt: 2 }}>
+            {error}
+          </Typography>
         )}
       </Box>
+    );
+  };
+
+  const renderDialog = () => {
+    return (
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {dialogType === 'increment' ? 'Create Increment' : 'Create Story'}
+        </DialogTitle>
+        <DialogContent>
+          {renderForm()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained" color="primary">
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
     );
   };
 
@@ -529,53 +475,40 @@ const Backlog = () => {
     let data = [];
     let columns = [];
 
-    if (type === 'increment') {
-      data = increments;
+    if (type === 'defect') {
+      data = defects;
       columns = [
         { id: 'title', label: 'Title' },
+        { id: 'description', label: 'Description' },
         { id: 'status', label: 'Status' },
-        { id: 'priority', label: 'Priority' },
-        { id: 'effortPoints', label: 'Effort Points' },
-        { id: 'actions', label: 'Actions' },
-      ];
-    } else if (type === 'feature') {
-      data = features;
-      columns = [
-        { id: 'name', label: 'Name' },
-        { id: 'status', label: 'Status' },
-        { id: 'priority', label: 'Priority' },
+        { id: 'severity', label: 'Severity' },
+        { id: 'dateReported', label: 'Date Reported' },
         { id: 'actions', label: 'Actions' },
       ];
     } else if (type === 'story') {
       data = stories;
       columns = [
         { id: 'title', label: 'Title' },
+        { id: 'description', label: 'Description' },
         { id: 'status', label: 'Status' },
-        { id: 'priority', label: 'Priority' },
-        { id: 'effortPoints', label: 'Effort Points' },
+        { id: 'severity', label: 'Severity' },
+        { id: 'dateReported', label: 'Date Reported' },
         { id: 'actions', label: 'Actions' },
       ];
     } else if (type === 'task') {
       data = tasks;
       columns = [
         { id: 'title', label: 'Title' },
+        { id: 'description', label: 'Description' },
         { id: 'status', label: 'Status' },
-        { id: 'priority', label: 'Priority' },
-        { id: 'effortPoints', label: 'Effort Points' },
-        { id: 'actions', label: 'Actions' },
-      ];
-    } else if (type === 'defect') {
-      data = defects;
-      columns = [
-        { id: 'title', label: 'Title' },
-        { id: 'status', label: 'Status' },
-        { id: 'priority', label: 'Priority' },
+        { id: 'severity', label: 'Severity' },
+        { id: 'dateReported', label: 'Date Reported' },
         { id: 'actions', label: 'Actions' },
       ];
     }
 
     return (
-      <TableContainer component={Paper} variant="outlined">
+      <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -585,46 +518,44 @@ const Backlog = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.length > 0 ? (
-              data.map((item) => (
-                <TableRow key={item._id || item.id}>
-                  {columns.map((column) => {
-                    if (column.id === 'actions') {
-                      return (
-                        <TableCell key={column.id}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenDialog(type, item)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDelete(type, item._id || item.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      );
-                    }
-                    if (column.id === 'status') {
-                      return (
-                        <TableCell key={column.id}>
-                          <Chip
-                            label={item[column.id]}
-                            size="small"
-                            color={getStatusColor(item[column.id])}
-                          />
-                        </TableCell>
-                      );
-                    }
-                    return (
-                      <TableCell key={column.id}>{item[column.id]}</TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))
-            ) : (
+            {data.map((item) => (
+              <TableRow key={item._id}>
+                <TableCell>{item.title}</TableCell>
+                <TableCell>{item.description}</TableCell>
+                <TableCell>
+                  <Chip 
+                    label={item.status} 
+                    color={getStatusColor(item.status)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={item.severity} 
+                    color={getSeverityColor(item.severity)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  {format(new Date(item.dateReported), 'MMM d, yyyy')}
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpenDialog(type, item)}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDelete(item._id, type)}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+            {data.length === 0 && (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
                   No {type}s found
@@ -655,16 +586,14 @@ const Backlog = () => {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog(
               activeTab === 0 ? 'increment' : 
-              activeTab === 1 ? 'feature' : 
-              activeTab === 2 ? 'story' :
-              activeTab === 3 ? 'task' : 'defect'
+              activeTab === 1 ? 'story' :
+              activeTab === 2 ? 'task' : 'defect'
             )}
           >
             New {
               activeTab === 0 ? 'Increment' : 
-              activeTab === 1 ? 'Feature' : 
-              activeTab === 2 ? 'Story' :
-              activeTab === 3 ? 'Task' : 'Defect'
+              activeTab === 1 ? 'Story' :
+              activeTab === 2 ? 'Task' : 'Defect'
             }
           </Button>
         </Box>
@@ -703,25 +632,7 @@ const Backlog = () => {
         {activeTab === 3 && renderTable('task')}
         {activeTab === 4 && renderTable('defect')}
 
-        <Dialog
-          open={openDialog}
-          onClose={handleCloseDialog}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>
-            {selectedItem ? 'Edit' : 'Create'} {dialogType.charAt(0).toUpperCase() + dialogType.slice(1)}
-          </DialogTitle>
-          <DialogContent>
-            {renderDialogContent()}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleSubmit}>
-              {selectedItem ? 'Update' : 'Create'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+        {renderDialog()}
       </Box>
     </Container>
   );

@@ -46,10 +46,10 @@ class FeatureService {
       console.log('Feature data:', featureData);
       
       const payload = {
-        ...featureData,
+        name: featureData.title, // Map title to name for backend compatibility
+        description: featureData.description,
         status: featureData.status || 'PLANNED',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        priority: featureData.priority || 'MEDIUM'
       };
 
       const response = await api.post('/features', payload);
@@ -66,8 +66,10 @@ class FeatureService {
     try {
       console.log(`📡 Updating feature ${id}`);
       const payload = {
-        ...featureData,
-        updatedAt: new Date()
+        name: featureData.title, // Map title to name for backend compatibility
+        description: featureData.description,
+        status: featureData.status,
+        priority: featureData.priority
       };
       const response = await api.put(`/features/${id}`, payload);
       console.log('✅ Feature updated:', response.data);

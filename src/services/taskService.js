@@ -89,13 +89,7 @@ class TaskService {
    * Log errors to the error logger with context
    */
   logError(error, context) {
-    console.group(`📋 TaskService Error - ${context}`);
-    console.error('Error details:', error);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
-    console.groupEnd();
+    console.error(`❌ Error in TaskService - ${context}:`, error);
     return ErrorLogger.logToFile(error, `TaskService:${context}`);
   }
 
@@ -146,100 +140,60 @@ class TaskService {
    * @returns {Array} List of tasks or empty array if API fails
    */
   async getAllTasks() {
-    console.group('📋 TaskService - getAllTasks');
-    console.time('getAllTasks');
-    
-    const cacheKey = 'allTasks';
-    const cached = this.getCachedData(cacheKey);
-    if (cached) {
-      console.log('✅ Using cached tasks data');
-      console.timeEnd('getAllTasks');
-      console.groupEnd();
-      return cached;
-    }
-
     try {
-      console.log('📡 Fetching all tasks from /tasks endpoint...');
-      const startTime = performance.now();
+      console.log('📡 Fetching all tasks');
       const response = await api.get('/tasks');
-      const endTime = performance.now();
-      
-      console.log(`✅ Tasks fetched (${Math.round(endTime - startTime)}ms):`, response.data);
-      console.log(`📊 Retrieved ${response.data.length} tasks`);
-      
-      this.setCachedData(cacheKey, response.data);
-      this.checkEndpointAvailability('/tasks', true);
-      
-      console.timeEnd('getAllTasks');
-      console.groupEnd();
+      console.log('✅ Tasks fetched successfully:', response.data);
       return response.data;
     } catch (error) {
-      // 404 errors mean the endpoint doesn't exist yet
-      if (error.response?.status === 404) {
-        console.warn('⚠️ The tasks endpoint (/tasks) returned 404.');
-        console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
-        console.warn('📋 Check your backend implementation for missing routes.');
-        this.checkEndpointAvailability('/tasks', false);
-      } else {
-        // Other errors could be permissions, server issues, etc.
-        console.error(`❌ Error fetching tasks (${error.response?.status || 'Network Error'}):`);
-        console.error('- Message:', error.message);
-        console.error('- Request URL:', error.config?.url);
-        console.error('- Request Method:', error.config?.method);
-      }
-      
+      console.error('❌ Error fetching tasks:', error);
       this.logError(error, 'getAllTasks');
-      console.timeEnd('getAllTasks');
-      console.groupEnd();
-      return [];
+      throw new Error(`Failed to fetch tasks: ${createErrorMessage(error)}`);
     }
   }
 
-  async getTask(id) {
-    const cacheKey = `task:${id}`;
-    const cached = this.getCachedData(cacheKey);
-    if (cached) return cached;
-
+  async getTaskById(id) {
     try {
-      console.log(`📡 Fetching task ${id}...`);
+      console.log(`📡 Fetching task ${id}`);
       const response = await api.get(`/tasks/${id}`);
       console.log('✅ Task fetched:', response.data);
-      this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching task ${id}:`, error);
-      this.logError(error, 'getTask');
+      this.logError(error, 'getTaskById');
       throw new Error(`Failed to fetch task: ${createErrorMessage(error)}`);
     }
   }
 
   async createTask(taskData) {
     try {
-      console.log('📡 Creating new task:', taskData);
-      const response = await api.post('/tasks', {
-        ...taskData,
-        createdAt: new Date().toISOString()
-      });
+      console.log('📡 Creating new task');
+      const payload = {
+        title: taskData.title,
+        description: taskData.description,
+        severity: taskData.severity || 'Medium',
+        status: taskData.status || 'New',
+        projectId: taskData.projectId,
+        reportedBy: taskData.reportedBy,
+        dateReported: new Date()
+      };
+
+      console.log('Creating task with payload:', payload);
+      const response = await api.post('/tasks', payload);
       console.log('✅ Task created:', response.data);
-      this.cache.delete('allTasks');
       return response.data;
     } catch (error) {
       console.error('❌ Error creating task:', error);
       this.logError(error, 'createTask');
-      throw new Error(`Failed to create task: ${createErrorMessage(error)}`);
+      throw error;
     }
   }
 
   async updateTask(id, taskData) {
     try {
-      console.log(`📡 Updating task ${id}:`, taskData);
-      const response = await api.put(`/tasks/${id}`, {
-        ...taskData,
-        updatedAt: new Date().toISOString()
-      });
+      console.log(`📡 Updating task ${id}`);
+      const response = await api.put(`/tasks/${id}`, taskData);
       console.log('✅ Task updated:', response.data);
-      this.cache.delete('allTasks');
-      this.cache.delete(`task:${id}`);
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating task ${id}:`, error);
@@ -252,14 +206,25 @@ class TaskService {
     try {
       console.log(`📡 Deleting task ${id}`);
       const response = await api.delete(`/tasks/${id}`);
-      console.log('✅ Task deleted:', response.data);
-      this.cache.delete('allTasks');
-      this.cache.delete(`task:${id}`);
+      console.log('✅ Task deleted');
       return response.data;
     } catch (error) {
       console.error(`❌ Error deleting task ${id}:`, error);
       this.logError(error, 'deleteTask');
       throw new Error(`Failed to delete task: ${createErrorMessage(error)}`);
+    }
+  }
+
+  async getTasksByProject(projectId) {
+    try {
+      console.log(`📡 Fetching tasks for project ${projectId}`);
+      const response = await api.get(`/tasks/project/${projectId}`);
+      console.log('✅ Project tasks fetched:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Error fetching project tasks:`, error);
+      this.logError(error, 'getTasksByProject');
+      return [];
     }
   }
 
@@ -335,7 +300,7 @@ class TaskService {
   async logHours(id, hours) {
     try {
       console.log(`📡 Logging ${hours} hours for task ${id}`);
-      const task = await this.getTask(id);
+      const task = await this.getTaskById(id);
       const loggedHours = (task.loggedHours || 0) + hours;
       return this.updateTask(id, { loggedHours });
     } catch (error) {
@@ -403,4 +368,5 @@ class TaskService {
   }
 }
 
-export default new TaskService(); 
+const taskService = new TaskService();
+export default taskService; 
