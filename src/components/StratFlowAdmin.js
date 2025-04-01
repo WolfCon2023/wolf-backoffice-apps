@@ -138,13 +138,15 @@ const StratFlowAdmin = () => {
   const formatStatus = (status, type = '') => {
     if (!status) return 'Unknown';
     
+    const normalizedStatus = status.toUpperCase();
+    
     if (type === 'sprint') {
       const formattedStatus = {
         'PLANNING': 'Planning',
         'IN_PROGRESS': 'In Progress',
         'COMPLETED': 'Completed',
         'CANCELLED': 'Cancelled'
-      }[status] || status;
+      }[normalizedStatus] || status;
       
       return formattedStatus;
     }
@@ -154,13 +156,15 @@ const StratFlowAdmin = () => {
       'ON_HOLD': 'On Hold',
       'COMPLETED': 'Completed',
       'CANCELLED': 'Cancelled'
-    }[status] || status;
+    }[normalizedStatus] || status;
     
     return formattedStatus;
   };
 
   const getStatusColor = (status, type = '') => {
-    const normalizedStatus = status?.toUpperCase();
+    if (!status) return 'default';
+    
+    const normalizedStatus = status.toUpperCase();
     
     if (type === 'sprint') {
       return {
@@ -182,14 +186,13 @@ const StratFlowAdmin = () => {
   // Open status change dialog
   const openStatusDialog = (item, type) => {
     console.log('Opening status dialog:', { item, type });
-    const currentStatus = item.status?.toUpperCase() || '';
-    console.log('Current status:', currentStatus);
+    console.log('Item status:', item.status);
     
     setStatusDialog({
       open: true,
       item,
       type,
-      newStatus: currentStatus
+      newStatus: item.status || ''
     });
   };
 
@@ -206,6 +209,11 @@ const StratFlowAdmin = () => {
   // Update status
   const handleStatusUpdate = async () => {
     const { item, type, newStatus } = statusDialog;
+    if (!newStatus) {
+      toast.error('Please select a status');
+      return;
+    }
+    
     setLoading(true);
     
     try {
@@ -228,7 +236,7 @@ const StratFlowAdmin = () => {
           throw new Error('Unknown item type');
       }
       
-      toast.success(`Status updated to ${formatStatus(newStatus)}`);
+      toast.success(`Status updated to ${formatStatus(newStatus, type)}`);
       setStatusDialog({ open: false, item: null, type: '', newStatus: '' });
       refreshData();
     } catch (error) {
@@ -583,7 +591,10 @@ const StratFlowAdmin = () => {
       </Box>
       
       {/* Status Change Dialog */}
-      <Dialog open={statusDialog.open} onClose={() => setStatusDialog({ ...statusDialog, open: false })}>
+      <Dialog 
+        open={statusDialog.open} 
+        onClose={() => setStatusDialog({ open: false, item: null, type: '', newStatus: '' })}
+      >
         <DialogTitle>Change Status</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -592,12 +603,13 @@ const StratFlowAdmin = () => {
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>
             <Select
-              value={statusDialog.newStatus || ''}
+              value={statusDialog.newStatus}
               onChange={(e) => {
-                console.log('Selected status:', e.target.value);
+                const value = e.target.value;
+                console.log('Selected status:', value);
                 setStatusDialog(prev => ({
                   ...prev,
-                  newStatus: e.target.value
+                  newStatus: value
                 }));
               }}
               label="Status"
@@ -621,7 +633,7 @@ const StratFlowAdmin = () => {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDialog({ ...statusDialog, open: false })}>
+          <Button onClick={() => setStatusDialog({ open: false, item: null, type: '', newStatus: '' })}>
             Cancel
           </Button>
           <Button 
