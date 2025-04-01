@@ -94,13 +94,10 @@ const SprintsPage = () => {
     const normalizedStatus = status?.toUpperCase();
     
     const statusColors = {
-      ACTIVE: 'success',
-      COMPLETED: 'default',
-      ON_HOLD: 'warning',
-      CANCELLED: 'error',
-      PLANNED: 'info',
       PLANNING: 'info',
-      IN_PROGRESS: 'primary',
+      IN_PROGRESS: 'success',
+      COMPLETED: 'default',
+      CANCELLED: 'error'
     };
     
     return statusColors[normalizedStatus] || 'default';
@@ -368,9 +365,8 @@ const SprintsPage = () => {
         onClose={handleStatusClose}
       >
         <MenuItem onClick={() => handleStatusChange('PLANNING')}>Planning</MenuItem>
-        <MenuItem onClick={() => handleStatusChange('ACTIVE')}>Active</MenuItem>
+        <MenuItem onClick={() => handleStatusChange('IN_PROGRESS')}>In Progress</MenuItem>
         <MenuItem onClick={() => handleStatusChange('COMPLETED')}>Completed</MenuItem>
-        <MenuItem onClick={() => handleStatusChange('ON_HOLD')}>On Hold</MenuItem>
         <MenuItem onClick={() => handleStatusChange('CANCELLED')}>Cancelled</MenuItem>
       </Menu>
 

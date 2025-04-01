@@ -120,8 +120,8 @@ class SprintService {
   async updateSprintStatus(id, status) {
     try {
       // Validate status
-      if (!['PLANNING', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'ON_HOLD'].includes(status.toUpperCase())) {
-        throw new Error(`Invalid status value: ${status}. Must be one of: PLANNING, ACTIVE, COMPLETED, CANCELLED, ON_HOLD`);
+      if (!['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(status.toUpperCase())) {
+        throw new Error(`Invalid status value: ${status}. Must be one of: PLANNING, IN_PROGRESS, COMPLETED, CANCELLED`);
       }
 
       console.log(`📡 Updating sprint ${id} status to ${status}`);
