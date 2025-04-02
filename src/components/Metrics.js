@@ -36,7 +36,7 @@ import {
   Cell,
 } from 'recharts';
 import { format, differenceInDays } from 'date-fns';
-import storyService from '../services/storyService';
+import { storyService } from '../services/storyService';
 import sprintService from '../services/sprintService';
 import teamService from '../services/teamService';
 import defectService from '../services/defectService';

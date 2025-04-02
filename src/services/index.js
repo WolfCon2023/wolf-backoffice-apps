@@ -1,3 +1,3 @@
 // Export services
 export { NotificationService } from './NotificationService';
-export { AnalyticsService } from './AnalyticsService';
+export { analyticsService } from './AnalyticsService';

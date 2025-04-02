@@ -39,7 +39,7 @@ import Select from "react-select";
 import MiniCalendar from "react-calendar";
 import { toast, ToastContainer } from "react-toastify";
 import { api, handleHttpError } from '../utils';
-import { NotificationService, AnalyticsService } from '../services';
+import { NotificationService, analyticsService } from '../services';
 import ErrorLogger from '../utils/errorLogger';
 import "react-calendar/dist/Calendar.css";
 import "react-toastify/dist/ReactToastify.css";
@@ -886,7 +886,7 @@ const AppointmentScheduler = () => {
       setIsExporting(true);
       const now = new Date();
       const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-      await AnalyticsService.exportAnalyticsReport('monthly', {
+      await analyticsService.exportAnalyticsReport('monthly', {
         startDate: monthAgo,
         endDate: new Date()
       });

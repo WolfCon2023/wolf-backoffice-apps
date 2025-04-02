@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { AnalyticsService } from '../services';
+import { analyticsService } from '../services';
 import { toast } from 'react-toastify';
 import './Analytics.css';
 
@@ -30,7 +30,7 @@ const CustomerInsights = () => {
     const fetchInsights = async () => {
       try {
         setLoading(true);
-        const data = await AnalyticsService.getCustomerInsights();
+        const data = await analyticsService.getCustomerInsights();
         setInsights(data);
       } catch (err) {
         toast.error('Failed to load customer insights');

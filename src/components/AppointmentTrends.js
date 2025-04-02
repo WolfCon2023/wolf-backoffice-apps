@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { AnalyticsService } from '../services';
+import { analyticsService } from '../services';
 import { toast } from 'react-toastify';
 import './Analytics.css';
 
@@ -25,7 +25,7 @@ const AppointmentTrends = () => {
     const fetchTrends = async () => {
       try {
         setLoading(true);
-        const data = await AnalyticsService.getAppointmentTrends();
+        const data = await analyticsService.getAppointmentTrends();
         // Format dates for better display
         const formattedData = data.map(item => ({
           ...item,

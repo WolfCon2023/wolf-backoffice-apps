@@ -16,7 +16,7 @@ import {
   LocationOn as LocationIcon,
   Download as DownloadIcon
 } from '@mui/icons-material';
-import { AnalyticsService } from '../services';
+import { analyticsService } from '../services';
 import { toast } from 'react-toastify';
 import './Analytics.css';
 
@@ -34,7 +34,7 @@ const Analytics = () => {
 
     try {
       setExporting(true);
-      await AnalyticsService.exportAnalyticsReport('monthly', { 
+      await analyticsService.exportAnalyticsReport('monthly', { 
         startDate: new Date(startDate),
         endDate: new Date(endDate)
       });

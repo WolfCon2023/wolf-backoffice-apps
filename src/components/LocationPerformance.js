@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { AnalyticsService } from '../services';
+import { analyticsService } from '../services';
 import { toast } from 'react-toastify';
 import './Analytics.css';
 
@@ -25,7 +25,7 @@ const LocationPerformance = () => {
     const fetchPerformance = async () => {
       try {
         setLoading(true);
-        const data = await AnalyticsService.getLocationPerformance();
+        const data = await analyticsService.getLocationPerformance();
         setPerformance(data);
       } catch (err) {
         toast.error('Failed to load location performance data');

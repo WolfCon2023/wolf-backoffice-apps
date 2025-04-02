@@ -14,85 +14,6 @@ class DefectService {
     this.endpointAvailability = {
       '/defects': { available: null, lastChecked: null }
     };
-    
-    // Mock data to use when API fails
-    this.mockDefects = [
-      {
-        id: 'defect-001',
-        title: 'Login Button Not Working on Mobile',
-        description: 'When users tap the login button on mobile devices, nothing happens',
-        status: 'New',
-        severity: 'High',
-        priority: 'High',
-        createdAt: new Date('2025-03-16').toISOString(),
-        reportedBy: 'user-002',
-        assignee: 'dev-001',
-        projectId: 'project-001',
-        storyId: 'story-001',
-        environment: 'Production',
-        stepsToReproduce: ['Open the app on mobile', 'Enter credentials', 'Tap login button']
-      },
-      {
-        id: 'defect-002',
-        title: 'Dashboard Charts Not Loading',
-        description: 'Charts on the dashboard are showing loading spinner indefinitely',
-        status: 'In Progress',
-        severity: 'Medium',
-        priority: 'Medium',
-        createdAt: new Date('2025-03-18').toISOString(),
-        reportedBy: 'user-003',
-        assignee: 'dev-003',
-        projectId: 'project-001',
-        storyId: 'story-002',
-        environment: 'Staging',
-        stepsToReproduce: ['Login', 'Navigate to dashboard', 'Observe charts not loading']
-      },
-      {
-        id: 'defect-003',
-        title: 'Password Reset Email Contains Broken Link',
-        description: 'The link in password reset emails leads to a 404 page',
-        status: 'Fixed',
-        severity: 'High',
-        priority: 'High',
-        createdAt: new Date('2025-03-10').toISOString(),
-        reportedBy: 'user-005',
-        assignee: 'dev-001',
-        projectId: 'project-002',
-        storyId: 'story-004',
-        environment: 'Production',
-        stepsToReproduce: ['Request password reset', 'Open email', 'Click on the reset link']
-      },
-      {
-        id: 'defect-004',
-        title: 'Data Table Pagination Not Working',
-        description: 'Clicking on next page in data tables does not change the displayed data',
-        status: 'New',
-        severity: 'Low',
-        priority: 'Low',
-        createdAt: new Date('2025-03-21').toISOString(),
-        reportedBy: 'user-001',
-        assignee: null,
-        projectId: 'project-002',
-        storyId: null,
-        environment: 'Development',
-        stepsToReproduce: ['Go to any data table with multiple pages', 'Click on the next page button']
-      },
-      {
-        id: 'defect-005',
-        title: 'API Documentation Missing Authentication Details',
-        description: 'The documentation does not include how to authenticate API requests',
-        status: 'New',
-        severity: 'Medium',
-        priority: 'Medium',
-        createdAt: new Date('2025-03-22').toISOString(),
-        reportedBy: 'user-004',
-        assignee: 'dev-004',
-        projectId: 'project-003',
-        storyId: 'story-005',
-        environment: 'Documentation',
-        stepsToReproduce: ['Read the API documentation', 'Look for authentication section']
-      }
-    ];
   }
 
   /**
@@ -151,12 +72,22 @@ class DefectService {
    */
   async getAllDefects() {
     try {
-      console.log('📡 Fetching all defects');
+      console.group('📡 Fetching all defects');
       const response = await api.get('/defects');
-      console.log('✅ Defects fetched successfully:', response.data);
+      console.log('✅ Defects API Response:', {
+        status: response.status,
+        data: response.data,
+        headers: response.headers
+      });
+      console.groupEnd();
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching defects:', error);
+      console.error('❌ Error fetching defects:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: error.config
+      });
       this.logError(error, 'getAllDefects');
       throw new Error(`Failed to fetch defects: ${createErrorMessage(error)}`);
     }

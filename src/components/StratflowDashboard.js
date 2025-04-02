@@ -28,6 +28,7 @@ import {
   InputLabel,
   IconButton,
   Tooltip,
+  useTheme,
 } from '@mui/material';
 import {
   BarChart,
@@ -51,9 +52,10 @@ import {
   PersonAdd,
   Edit,
   Delete,
-  AdminPanelSettings,
   PlayArrow,
   CheckCircle,
+  AddCircleOutline,
+  People,
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -72,7 +74,7 @@ import { toast } from 'react-toastify';
 import { projectService } from '../services/projectService';
 import teamService from '../services/teamService';
 import sprintService from '../services/sprintService';
-import storyService from '../services/storyService';
+import { storyService } from '../services/storyService';
 import taskService from '../services/taskService';
 import defectService from '../services/defectService';
 import { userService } from '../services/userService';
@@ -157,7 +159,7 @@ const StratflowDashboard = () => {
     capacity: 5,
     status: 'ACTIVE',
   });
-  
+ 
   // Sprint Management state
   const [openSprintManagementDialog, setOpenSprintManagementDialog] = useState(false);
   const [openNewSprintDialog, setOpenNewSprintDialog] = useState(false);
@@ -173,9 +175,6 @@ const StratflowDashboard = () => {
   });
   const [projects, setProjects] = useState([]);
   
-  const [apiHealth, setApiHealth] = useState({});
-  const [showApiStatus, setShowApiStatus] = useState(false);
-
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -209,11 +208,75 @@ const StratflowDashboard = () => {
       const healthResults = await apiHealthService.checkMultipleEndpoints(endpoints);
       apiHealthService.logApiHealthSummary(healthResults);
       
-      setApiHealth(healthResults);
-      console.groupEnd();
-      
       // Continue with data fetching
       fetchDashboardData(healthResults);
+    };
+
+    // Create sample data if none exists
+    const createSampleData = async () => {
+      console.group('📝 Creating Sample Data');
+      
+      // Create a sample story if none exist
+      const stories = await storyService.getAllStories();
+      if (stories.length === 0 && projects.length > 0) {
+        try {
+          const sampleStory = {
+            title: 'Sample Story',
+            description: 'This is a sample story to demonstrate functionality',
+            type: 'Feature',
+            status: 'New',
+            projectId: projects[0]._id,
+            reporter: 'system',
+            project: projects[0]._id, // Required field
+            priority: 'Medium',
+            storyPoints: 5
+          };
+          await storyService.createStory(sampleStory);
+          console.log('✅ Created sample story');
+        } catch (error) {
+          console.error('❌ Error creating sample story:', error);
+        }
+      }
+
+      // Create a sample task if none exist
+      const tasks = await taskService.getAllTasks();
+      if (tasks.length === 0 && projects.length > 0) {
+        try {
+          const sampleTask = {
+            title: 'Sample Task',
+            description: 'This is a sample task to demonstrate functionality',
+            status: 'New',
+            projectId: projects[0]._id,
+            reportedBy: 'system',
+            dateReported: new Date().toISOString()
+          };
+          await taskService.createTask(sampleTask);
+          console.log('✅ Created sample task');
+        } catch (error) {
+          console.error('❌ Error creating sample task:', error);
+        }
+      }
+
+      // Create a sample defect if none exist
+      const defects = await defectService.getAllDefects();
+      if (defects.length === 0 && projects.length > 0) {
+        try {
+          const sampleDefect = {
+            title: 'Sample Defect',
+            description: 'This is a sample defect to demonstrate functionality',
+            status: 'New',
+            projectId: projects[0]._id,
+            reportedBy: 'system',
+            dateReported: new Date().toISOString()
+          };
+          await defectService.createDefect(sampleDefect);
+          console.log('✅ Created sample defect');
+        } catch (error) {
+          console.error('❌ Error creating sample defect:', error);
+        }
+      }
+
+      console.groupEnd();
     };
     
     const fetchDashboardData = async (healthStatus) => {
@@ -239,9 +302,13 @@ const StratflowDashboard = () => {
         const endpoint = `/${entityName}`;
         const healthResult = healthStatus[endpoint];
         
+        console.group(`🔄 Fetching ${entityName}`);
+        console.log('Health status:', healthResult);
+        
         // If health check returned definitively unavailable (not just CORS unknown)
         if (healthResult && healthResult.available === false) {
           console.warn(`⚠️ Skipping ${entityName} fetch - endpoint not implemented`);
+          console.groupEnd();
           return [];
         }
         
@@ -260,7 +327,9 @@ const StratflowDashboard = () => {
             const endTime = performance.now();
             
             console.log(`✅ ${entityName} fetched successfully in ${Math.round(endTime - startTime)}ms`);
+            console.log(`📦 ${entityName} data:`, data);
             apiStatus[entityName] = { success: true, error: null, count: data.length };
+            console.groupEnd();
             return data;
           } catch (error) {
             lastError = error;
@@ -290,6 +359,7 @@ const StratflowDashboard = () => {
           apiStatus[entityName] = { success: false, error: lastError, count: 0 };
         }
         
+        console.groupEnd();
         return [];
       };
 
@@ -396,9 +466,22 @@ const StratflowDashboard = () => {
         setUpcomingSprints(upcomingSprintsData);
       }
 
+      // Create sample data after fetching core data
+      if (projects.length > 0) {
+        await createSampleData();
+      }
+
       // Fetch backlog data - these endpoints might not exist yet
       console.group('📊 Fetching Backlog Data');
       console.time('backlogDataFetch');
+      
+      // Check if we have a valid token
+      const token = localStorage.getItem('token');
+      console.log('🔑 Authentication token:', token ? 'Present' : 'Missing');
+      
+      if (!token) {
+        console.warn('⚠️ No authentication token found - API calls may fail');
+      }
       
       // Stories
       stories = await fetchWithRetry(
@@ -425,6 +508,11 @@ const StratflowDashboard = () => {
       console.groupEnd(); // Backlog data fetching
 
       // Calculate backlog metrics if we have any data
+      console.group('📊 Calculating Backlog Metrics');
+      console.log('Stories:', stories);
+      console.log('Tasks:', tasks);
+      console.log('Defects:', defects);
+      
       const backlogMetricsData = {
         stories: {
           total: stories.length,
@@ -460,6 +548,9 @@ const StratflowDashboard = () => {
           }, {}),
         },
       };
+      console.log('Calculated Metrics:', backlogMetricsData);
+      console.groupEnd();
+      
       setBacklogMetrics(backlogMetricsData);
 
       // Update overall metrics
@@ -498,6 +589,19 @@ const StratflowDashboard = () => {
     };
 
     checkApiHealth();
+  }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await userService.getAllUsers();
+        setUsers(response);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast.error('Failed to fetch users');
+      }
+    };
+    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -552,18 +656,25 @@ const StratflowDashboard = () => {
 
   const handleAddTeamMember = async (teamId, userId) => {
     try {
-      console.log('Adding team member:', { teamId, userId });
       if (!teamId || !userId) {
         console.error('Missing required parameters:', { teamId, userId });
         toast.error('Missing required parameters');
         return;
       }
-      await teamService.addTeamMember(teamId, userId);
+
+      await teamService.addTeamMember(teamId, {
+        userId,
+        role: 'TEAM_MEMBER',
+        joinedAt: new Date().toISOString(),
+      });
+      
       toast.success('Team member added successfully');
       setOpenAddMemberDialog(false);
+      
       // Refresh team data
-      const updatedTeam = await teamService.getTeamById(teamId);
-      setSelectedTeam(updatedTeam);
+      const updatedTeamData = await teamService.getTeam(teamId);
+      setSelectedTeam(updatedTeamData);
+      
       // Refresh teams list
       const updatedTeams = await teamService.getAllTeams();
       setTeams(updatedTeams);
@@ -659,72 +770,6 @@ const StratflowDashboard = () => {
       console.error('Error updating team:', error);
       toast.error('Failed to update team');
     }
-  };
-
-  // Add a new method to render the API health status dialog
-  const renderApiStatusDialog = () => {
-    return (
-      <Dialog 
-        open={showApiStatus} 
-        onClose={() => setShowApiStatus(false)}
-        maxWidth="md"
-      >
-        <DialogTitle>API Endpoint Status</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-            <Typography variant="body2">
-              <strong>Note:</strong> CORS restrictions may prevent accurate status checks in development environment.
-              The actual backend features might be available despite showing as "Unknown" here.
-            </Typography>
-          </Box>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Endpoint</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Details</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {Object.entries(apiHealth).map(([endpoint, status]) => (
-                  <TableRow key={endpoint}>
-                    <TableCell>{endpoint}</TableCell>
-                    <TableCell>
-                      {status.available === true ? (
-                        <Chip
-                          label="Available"
-                          color="success"
-                          size="small"
-                        />
-                      ) : status.available === null ? (
-                        <Chip
-                          label="Unknown"
-                          color="warning"
-                          size="small"
-                        />
-                      ) : (
-                        <Chip
-                          label="Not Implemented"
-                          color="error"
-                          size="small"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {status.available !== true && status.error && status.error.message}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowApiStatus(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    );
   };
 
   const handleOpenSprintManagement = () => {
@@ -1006,19 +1051,19 @@ const StratflowDashboard = () => {
             <Grid item>
               <Button
                 variant="outlined"
-                startIcon={<Group />}
-                onClick={() => setOpenUserManagementDialog(true)}
+                startIcon={<AddCircleOutline />}
+                onClick={() => setOpenNewTeamDialog(true)}
               >
-                User Management
+                New Team
               </Button>
             </Grid>
             <Grid item>
               <Button
                 variant="outlined"
-                startIcon={<Group />}
-                onClick={() => setOpenNewTeamDialog(true)}
+                startIcon={<People />}
+                onClick={() => setOpenUserManagementDialog(true)}
               >
-                Team Management
+                Manage Users
               </Button>
             </Grid>
             <Grid item>
@@ -1028,15 +1073,6 @@ const StratflowDashboard = () => {
                 onClick={handleOpenSprintManagement}
               >
                 Sprint Management
-              </Button>
-            </Grid>
-            <Grid item>
-              <Button
-                variant="outlined"
-                startIcon={<AdminPanelSettings />}
-                onClick={() => setShowApiStatus(true)}
-              >
-                API Status
               </Button>
             </Grid>
           </Grid>
@@ -1488,6 +1524,7 @@ const StratflowDashboard = () => {
                               <IconButton
                                 size="small"
                                 onClick={() => {
+                                  setSelectedTeam(team);
                                   setSelectedTeam({
                                     ...team,
                                     selectedUserId: ''
@@ -1519,7 +1556,7 @@ const StratflowDashboard = () => {
                   <Button
                     variant="contained"
                     color="primary"
-                    startIcon={<AdminPanelSettings />}
+                    startIcon={<PersonAdd />}
                     onClick={() => setOpenUserManagementDialog(true)}
                   >
                     Manage Users
@@ -1770,9 +1807,6 @@ const StratflowDashboard = () => {
             </Button>
           </DialogActions>
         </Dialog>
-
-        {/* API Status Dialog */}
-        {renderApiStatusDialog()}
 
         {/* Sprint Management Dialog */}
         <Dialog

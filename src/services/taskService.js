@@ -14,75 +14,6 @@ class TaskService {
     this.endpointAvailability = {
       '/tasks': { available: null, lastChecked: null }
     };
-    
-    // Mock data to use when API fails
-    this.mockTasks = [
-      {
-        id: 'task-001',
-        title: 'Design Login Screen',
-        description: 'Create mockups for the login interface',
-        status: 'Completed',
-        priority: 'High',
-        createdAt: new Date('2025-03-12').toISOString(),
-        assignee: 'dev-002',
-        storyId: 'story-001',
-        projectId: 'project-001',
-        estimatedHours: 4,
-        actualHours: 3.5
-      },
-      {
-        id: 'task-002',
-        title: 'Implement Login API',
-        description: 'Create backend endpoints for authentication',
-        status: 'In Progress',
-        priority: 'High',
-        createdAt: new Date('2025-03-14').toISOString(),
-        assignee: 'dev-001',
-        storyId: 'story-001',
-        projectId: 'project-001',
-        estimatedHours: 8,
-        actualHours: 6
-      },
-      {
-        id: 'task-003',
-        title: 'Create Chart Components',
-        description: 'Develop reusable chart components',
-        status: 'To Do',
-        priority: 'Medium',
-        createdAt: new Date('2025-03-17').toISOString(),
-        assignee: 'dev-003',
-        storyId: 'story-002',
-        projectId: 'project-001',
-        estimatedHours: 6,
-        actualHours: 0
-      },
-      {
-        id: 'task-004',
-        title: 'Setup Email Service',
-        description: 'Configure email sending service',
-        status: 'In Progress',
-        priority: 'Medium',
-        createdAt: new Date('2025-03-19').toISOString(),
-        assignee: 'dev-001',
-        storyId: 'story-004',
-        projectId: 'project-002',
-        estimatedHours: 3,
-        actualHours: 2
-      },
-      {
-        id: 'task-005',
-        title: 'Write API Documentation',
-        description: 'Document all API endpoints and parameters',
-        status: 'To Do',
-        priority: 'Low',
-        createdAt: new Date('2025-03-21').toISOString(),
-        assignee: 'dev-004',
-        storyId: 'story-005',
-        projectId: 'project-003',
-        estimatedHours: 4,
-        actualHours: 0
-      }
-    ];
   }
 
   /**
@@ -141,12 +72,22 @@ class TaskService {
    */
   async getAllTasks() {
     try {
-      console.log('📡 Fetching all tasks');
+      console.group('📡 Fetching all tasks');
       const response = await api.get('/tasks');
-      console.log('✅ Tasks fetched successfully:', response.data);
+      console.log('✅ Tasks API Response:', {
+        status: response.status,
+        data: response.data,
+        headers: response.headers
+      });
+      console.groupEnd();
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching tasks:', error);
+      console.error('❌ Error fetching tasks:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        config: error.config
+      });
       this.logError(error, 'getAllTasks');
       throw new Error(`Failed to fetch tasks: ${createErrorMessage(error)}`);
     }

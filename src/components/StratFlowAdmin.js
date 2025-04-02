@@ -44,7 +44,7 @@ import { useNavigate } from 'react-router-dom';
 import teamService from '../services/teamService';
 import { projectService } from '../services/projectService';
 import sprintService from '../services/sprintService';
-import storyService from '../services/storyService';
+import { storyService } from '../services/storyService';
 
 function TabPanel({ children, value, index, ...other }) {
   return (

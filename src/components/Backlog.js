@@ -83,6 +83,7 @@ const Backlog = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError('');
       
       // First, ensure we have a valid token
       const token = localStorage.getItem('token');
@@ -91,74 +92,113 @@ const Backlog = () => {
         return;
       }
 
-      // Fetch projects and sprints first
-      try {
-        console.log('Fetching projects and sprints...');
-        const projectsData = await projectService.getAllProjects();
-        console.log('Projects fetched:', projectsData);
-        setProjects(projectsData || []);
+      // Helper function for retrying failed requests
+      const fetchWithRetry = async (fetchFn, entityName, maxRetries = 2, retryDelay = 1000) => {
+        let retries = 0;
+        let lastError = null;
 
-        const sprintsData = await sprintService.getAllSprints();
-        console.log('Sprints fetched:', sprintsData);
-        setSprints(sprintsData || []);
-
-        // Only proceed with other data if we have projects
-        if (projectsData && projectsData.length > 0) {
-          console.log('Fetching stories and other data...');
-          
-          // Fetch each type of data separately to handle errors individually
+        while (retries <= maxRetries) {
           try {
-            const incrementsData = await storyService.getAllStories();
-            setIncrements(incrementsData || []);
+            console.log(`📡 Fetching ${entityName}...`);
+            const data = await fetchFn();
+            console.log(`✅ ${entityName} fetched successfully:`, data);
+            return data || [];
           } catch (error) {
-            console.error('Error fetching increments:', error);
-            setIncrements([]);
-          }
-
-          try {
-            const featuresData = await featureService.getAllFeatures();
-            setFeatures(featuresData || []);
-          } catch (error) {
-            console.error('Error fetching features:', error);
-            setFeatures([]);
-          }
-
-          try {
-            const storiesData = await storyService.getAllStories();
-            setStories(storiesData || []);
-          } catch (error) {
-            console.error('Error fetching stories:', error);
-            setStories([]);
-          }
-
-          try {
-            const tasksData = await taskService.getAllTasks();
-            setTasks(tasksData || []);
-          } catch (error) {
-            console.error('Error fetching tasks:', error);
-            setTasks([]);
-          }
-
-          try {
-            const defectsData = await defectService.getAllDefects();
-            setDefects(defectsData || []);
-          } catch (error) {
-            console.error('Error fetching defects:', error);
-            setDefects([]);
+            lastError = error;
+            
+            // Don't retry 404 errors - these mean the endpoint doesn't exist
+            if (error.response?.status === 404) {
+              console.warn(`⚠️ ${entityName} endpoint returned 404 - Not implemented yet`);
+              break;
+            }
+            
+            // Don't retry unauthorized errors
+            if (error.response?.status === 401 || error.response?.status === 403) {
+              console.error(`❌ ${entityName} fetch failed: Authentication error`);
+              break;
+            }
+            
+            retries++;
+            if (retries <= maxRetries) {
+              console.warn(`⚠️ ${entityName} fetch attempt ${retries} failed, retrying in ${retryDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
           }
         }
-      } catch (error) {
-        console.error('Error fetching initial data:', error);
-        const errorMessage = error.response?.data?.message || error.message;
-        toast.error(`Failed to load projects and sprints: ${errorMessage}`);
+
+        if (lastError) {
+          console.error(`❌ Failed to fetch ${entityName} after ${retries} attempts:`, lastError);
+          throw lastError;
+        }
         
-        // Set empty arrays as fallback
-        setProjects([]);
-        setSprints([]);
+        return [];
+      };
+
+      // Fetch core data first - projects and sprints
+      console.group('📊 Fetching Core Data');
+      console.time('coreDataFetch');
+      
+      // Projects
+      const projectsData = await fetchWithRetry(
+        () => projectService.getAllProjects(),
+        'projects'
+      );
+      setProjects(projectsData);
+      
+      // Sprints
+      const sprintsData = await fetchWithRetry(
+        () => sprintService.getAllSprints(),
+        'sprints'
+      );
+      setSprints(sprintsData);
+      
+      console.timeEnd('coreDataFetch');
+      console.groupEnd();
+
+      // Only proceed with other data if we have projects
+      if (projectsData.length > 0) {
+        console.group('📊 Fetching Backlog Data');
+        console.time('backlogDataFetch');
+        
+        // Fetch all backlog items in parallel
+        const [incrementsData, featuresData, storiesData, tasksData, defectsData] = await Promise.allSettled([
+          fetchWithRetry(() => incrementService.getAllIncrements(), 'increments'),
+          fetchWithRetry(() => featureService.getAllFeatures(), 'features'),
+          fetchWithRetry(() => storyService.getAllStories(), 'stories'),
+          fetchWithRetry(() => taskService.getAllTasks(), 'tasks'),
+          fetchWithRetry(() => defectService.getAllDefects(), 'defects')
+        ]);
+
+        // Set state based on the results
+        setIncrements(incrementsData.status === 'fulfilled' ? incrementsData.value : []);
+        setFeatures(featuresData.status === 'fulfilled' ? featuresData.value : []);
+        setStories(storiesData.status === 'fulfilled' ? storiesData.value : []);
+        setTasks(tasksData.status === 'fulfilled' ? tasksData.value : []);
+        setDefects(defectsData.status === 'fulfilled' ? defectsData.value : []);
+
+        // Log results
+        console.group('📊 Backlog Data Results');
+        console.log('Increments:', incrementsData.status === 'fulfilled' ? incrementsData.value.length : 0);
+        console.log('Features:', featuresData.status === 'fulfilled' ? featuresData.value.length : 0);
+        console.log('Stories:', storiesData.status === 'fulfilled' ? storiesData.value.length : 0);
+        console.log('Tasks:', tasksData.status === 'fulfilled' ? tasksData.value.length : 0);
+        console.log('Defects:', defectsData.status === 'fulfilled' ? defectsData.value.length : 0);
+        console.groupEnd();
+
+        console.timeEnd('backlogDataFetch');
+        console.groupEnd();
+      } else {
+        console.warn('⚠️ No projects found, skipping backlog data fetch');
+        setIncrements([]);
+        setFeatures([]);
+        setStories([]);
+        setTasks([]);
+        setDefects([]);
       }
     } catch (error) {
-      console.error('Error in fetchData:', error);
-      toast.error('Failed to fetch backlog data');
+      console.error('❌ Error in fetchData:', error);
+      toast.error('Failed to fetch backlog data. Please try again later.');
+      setError('Failed to fetch data');
     } finally {
       setLoading(false);
     }

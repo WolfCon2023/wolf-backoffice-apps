@@ -181,16 +181,9 @@ class AnalyticsServiceClass {
       this.setCachedData(cacheKey, response);
       return response;
     } catch (error) {
-      // Return mock data on failure
-      const mockData = [
-        { period: 'Jan', amount: 25000 },
-        { period: 'Feb', amount: 28000 },
-        { period: 'Mar', amount: 32000 },
-        { period: 'Apr', amount: 35000 },
-        { period: 'May', amount: 38000 },
-        { period: 'Jun', amount: 42000 }
-      ];
-      return mockData;
+      console.error('❌ Error fetching revenue analytics:', error);
+      this.logError(error, 'getRevenueAnalytics');
+      throw new Error(`Failed to fetch revenue analytics: ${error.message}`);
     }
   }
 
@@ -363,46 +356,6 @@ class AnalyticsServiceClass {
     }
   }
 
-  // Helper method to generate mock appointments for a date range
-  generateMockAppointments(startDate, endDate) {
-    const appointments = [];
-    const locations = ['Downtown', 'Uptown', 'Westside', 'Eastside', 'Suburban'];
-    const currentDate = new Date();
-    
-    // Generate one appointment per day in the date range
-    const daysBetween = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-    
-    for (let i = 0; i < daysBetween; i++) {
-      const appointmentDate = new Date(startDate);
-      appointmentDate.setDate(appointmentDate.getDate() + i);
-      
-      // Generate 2-4 appointments per day
-      const appointmentsPerDay = Math.floor(Math.random() * 3) + 2;
-      
-      for (let j = 0; j < appointmentsPerDay; j++) {
-        const hour = 9 + Math.floor(Math.random() * 8); // Business hours 9 AM - 5 PM
-        const minute = Math.floor(Math.random() * 4) * 15; // 15-minute intervals
-        
-        appointmentDate.setHours(hour, minute, 0, 0);
-        
-        appointments.push({
-          title: `Appointment ${i + 1}-${j + 1}`,
-          date: appointmentDate.toLocaleDateString(),
-          time: appointmentDate.toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit'
-          }),
-          location: locations[Math.floor(Math.random() * locations.length)],
-          status: appointmentDate < currentDate ? 'Completed' : 'Upcoming',
-          contactName: `Client ${i + 1}-${j + 1}`,
-          contactEmail: `client${i + 1}_${j + 1}@example.com`
-        });
-      }
-    }
-    
-    return appointments.sort((a, b) => new Date(a.date) - new Date(b.date));
-  }
-
   async validateAnalyticsData(data) {
     try {
       const response = await api.post('/analytics/validate', data);
@@ -428,4 +381,7 @@ class AnalyticsServiceClass {
   }
 }
 
-export const AnalyticsService = new AnalyticsServiceClass(); 
+// Create and export a singleton instance
+const analyticsService = new AnalyticsServiceClass();
+export { analyticsService };
+export default analyticsService; 

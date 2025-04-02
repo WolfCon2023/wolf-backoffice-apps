@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { AnalyticsService } from '../services';
+import { analyticsService } from '../services';
 import { toast } from 'react-toastify';
 import { Button, Typography } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
@@ -28,7 +28,7 @@ const BusinessMetrics = () => {
     const fetchMetrics = async () => {
       try {
         setLoading(true);
-        const data = await AnalyticsService.getBusinessMetrics();
+        const data = await analyticsService.getBusinessMetrics();
         setMetrics(data);
       } catch (err) {
         setError(err.message);

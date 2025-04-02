@@ -230,4 +230,3 @@ class StoryService {
 
 // Create and export a singleton instance
 export const storyService = new StoryService();
-export default StoryService;
