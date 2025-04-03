@@ -33,25 +33,17 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
-import { storyService } from '../services/storyService';
+import { storyService, StoryStatus } from '../services/storyService';
 import { projectService } from '../services/projectService';
 import featureService from '../services/featureService';
 import taskService from '../services/taskService';
 import defectService from '../services/defectService';
+import { sprintService } from '../services/sprintService';
 
 const StoryType = {
-  STORY: 'Feature',
+  STORY: 'Story',
   TASK: 'Task',
-  BUG: 'Bug',
-  EPIC: 'Epic'
-};
-
-const StoryStatus = {
-  PLANNING: 'Planning',
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
-  ON_HOLD: 'On Hold'
+  DEFECT: 'Bug'
 };
 
 const Priority = {
@@ -66,6 +58,7 @@ const Backlog = () => {
   const [stories, setStories] = useState([]);
   const [features, setFeatures] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [sprints, setSprints] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [error, setError] = useState('');
@@ -74,11 +67,14 @@ const Backlog = () => {
     title: '',
     description: '',
     type: StoryType.STORY,
+    status: StoryStatus.PLANNING,
+    priority: Priority.MEDIUM,
     project: '',
+    sprint: '',
     feature: '',
     effortPoints: 0,
-    priority: Priority.MEDIUM,
-    status: StoryStatus.PLANNING
+    assignee: '',
+    reporter: ''
   });
 
   useEffect(() => {
@@ -91,7 +87,7 @@ const Backlog = () => {
     description: task.taskDescription,
     type: StoryType.TASK,
     project: task.projectId,
-    status: task.status.toUpperCase(),
+    status: task.status.toUpperCase().replace(/\s+/g, '_'),
     priority: task.priority,
     storyPoints: task.progress || 0,
     assignee: task.assignee,
@@ -102,54 +98,54 @@ const Backlog = () => {
     _id: defect._id,
     title: defect.title,
     description: defect.description,
-    type: StoryType.BUG,
+    type: StoryType.DEFECT,
     project: defect.projectId,
-    status: defect.status.toUpperCase(),
+    status: defect.status.toUpperCase().replace(/\s+/g, '_'),
     priority: defect.severity,
     reportedBy: defect.reportedBy,
     dateReported: defect.dateReported
   });
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      console.log('🔄 Fetching all data...');
       
       // Fetch all data in parallel
-      const [projectsData, featuresData, storiesData, tasksData, defectsData] = await Promise.all([
+      const [projectsData, sprintsData, featuresData, storiesData, tasksData, defectsData] = await Promise.all([
         projectService.getAllProjects(),
+        sprintService.getAllSprints(),
         featureService.getAllFeatures(),
         storyService.getAllStories(),
         taskService.getAllTasks(),
         defectService.getAllDefects()
       ]);
 
-      // Map tasks and defects to story format
-      const mappedTasks = tasksData.map(mapTaskToStory);
-      const mappedDefects = defectsData.map(mapDefectToStory);
+      console.log('✅ Data fetched:', {
+        projects: projectsData?.length,
+        sprints: sprintsData?.length,
+        features: featuresData?.length,
+        stories: storiesData?.length,
+        tasks: tasksData?.length,
+        defects: defectsData?.length
+      });
 
-      // Combine all items
+      // Set raw data without normalization
+      setProjects(projectsData || []);
+      setSprints(sprintsData || []);
+      setFeatures(featuresData || []);
+
+      // Combine all items into one list with correct type values
       const allStories = [
-        ...storiesData,
-        ...mappedTasks,
-        ...mappedDefects
+        ...(storiesData || []).map(story => ({ ...story, type: StoryType.STORY })),
+        ...(tasksData || []).map(task => mapTaskToStory(task)),
+        ...(defectsData || []).map(defect => mapDefectToStory(defect))
       ];
 
-      setProjects(projectsData);
-      setFeatures(featuresData);
       setStories(allStories);
-
-      console.log('Fetched data:', {
-        projects: projectsData.length,
-        features: featuresData.length,
-        stories: storiesData.length,
-        tasks: tasksData.length,
-        defects: defectsData.length,
-        total: allStories.length
-      });
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to fetch data. Please try again later.');
-      setError('Failed to fetch data');
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -158,7 +154,21 @@ const Backlog = () => {
   const handleOpenDialog = (item = null) => {
     setSelectedItem(item);
     if (item) {
-      setFormData(item);
+      // Normalize the item data for the form
+      const normalizedStatus = item.status ? item.status.toUpperCase().replace(/\s+/g, '_') : StoryStatus.PLANNING;
+      setFormData({
+        title: item.title || item.taskName || '',
+        description: item.description || item.taskDescription || '',
+        type: item.type || StoryType.STORY,
+        status: normalizedStatus,
+        priority: item.priority || item.severity || Priority.MEDIUM,
+        project: item.project || item.projectId || '',
+        sprint: item.sprint?._id || item.sprintId || '',
+        feature: item.feature?._id || '',
+        effortPoints: item.storyPoints || item.progress || 0,
+        assignee: item.assignee || '',
+        reporter: item.reporter || ''
+      });
     } else {
       resetForm();
     }
@@ -176,20 +186,54 @@ const Backlog = () => {
       title: '',
       description: '',
       type: StoryType.STORY,
+      status: StoryStatus.PLANNING,
+      priority: Priority.MEDIUM,
       project: '',
+      sprint: '',
       feature: '',
       effortPoints: 0,
-      priority: Priority.MEDIUM,
-      status: StoryStatus.PLANNING
+      assignee: '',
+      reporter: ''
     });
     setError('');
   };
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
+    
+    // Special handling for status to ensure correct format
+    if (name === 'status') {
+      // Normalize status by replacing spaces with underscores and converting to uppercase
+      const formattedStatus = value.toUpperCase().replace(/\s+/g, '_');
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedStatus
+      }));
+      return;
+    }
+
+    // For sprint and feature, ensure we store just the ID
+    if (name === 'sprint' || name === 'feature') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value || '' // Store empty string if value is null/undefined
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleProjectChange = async (event) => {
+    const projectId = event.target.value;
+    setFormData(prev => ({
+      ...prev,
+      project: projectId,
+      sprint: '',  // Reset sprint when project changes
+      feature: ''  // Reset feature when project changes
     }));
   };
 
@@ -200,15 +244,30 @@ const Backlog = () => {
         return;
       }
 
+      // Get the current user ID from localStorage
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        setError('User ID is required');
+        return;
+      }
+
       const storyData = {
-        ...formData,
-        storyPoints: parseInt(formData.effortPoints) || 0
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        status: formData.status,
+        priority: formData.priority,
+        project: typeof formData.project === 'object' ? formData.project._id : formData.project,
+        sprint: formData.sprint ? (typeof formData.sprint === 'object' ? formData.sprint._id : formData.sprint) : null,
+        feature: formData.feature ? (typeof formData.feature === 'object' ? formData.feature._id : formData.feature) : null,
+        storyPoints: parseInt(formData.effortPoints) || 0,
+        reporter: userId
       };
 
-      console.log('Creating story with data:', storyData);
+      console.log('Creating/Updating with data:', storyData);
       
       if (selectedItem) {
-        // Handle updates based on type
+        // Update based on type
         if (storyData.type === StoryType.TASK) {
           const taskData = {
             taskName: storyData.title,
@@ -216,16 +275,20 @@ const Backlog = () => {
             priority: storyData.priority,
             status: storyData.status,
             projectId: storyData.project,
-            progress: storyData.storyPoints
+            sprintId: storyData.sprint,
+            progress: storyData.storyPoints,
+            reporter: userId
           };
           await taskService.updateTask(selectedItem._id, taskData);
-        } else if (storyData.type === StoryType.BUG) {
+        } else if (storyData.type === StoryType.DEFECT) {
           const defectData = {
             title: storyData.title,
             description: storyData.description,
             severity: storyData.priority,
             status: storyData.status,
-            projectId: storyData.project
+            projectId: storyData.project,
+            sprintId: storyData.sprint,
+            reporter: userId
           };
           await defectService.updateDefect(selectedItem._id, defectData);
         } else {
@@ -241,17 +304,21 @@ const Backlog = () => {
             priority: storyData.priority,
             status: storyData.status,
             projectId: storyData.project,
+            sprintId: storyData.sprint,
             progress: storyData.storyPoints,
-            category: 'Development'
+            category: 'Development',
+            reporter: userId
           };
           await taskService.createTask(taskData);
-        } else if (storyData.type === StoryType.BUG) {
+        } else if (storyData.type === StoryType.DEFECT) {
           const defectData = {
             title: storyData.title,
             description: storyData.description,
             severity: storyData.priority,
             status: storyData.status,
-            projectId: storyData.project
+            projectId: storyData.project,
+            sprintId: storyData.sprint,
+            reporter: userId
           };
           await defectService.createDefect(defectData);
         } else {
@@ -273,7 +340,7 @@ const Backlog = () => {
     try {
       if (type === StoryType.TASK) {
         await taskService.deleteTask(id);
-      } else if (type === StoryType.BUG) {
+      } else if (type === StoryType.DEFECT) {
         await defectService.deleteDefect(id);
       } else {
         await storyService.deleteStory(id);
@@ -287,20 +354,26 @@ const Backlog = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'PLANNING':
+    const normalizedStatus = status?.replace(/ /g, '_')?.toUpperCase();
+    switch (normalizedStatus) {
+      case StoryStatus.PLANNING:
         return 'info';
-      case 'IN_PROGRESS':
+      case StoryStatus.IN_PROGRESS:
         return 'warning';
-      case 'COMPLETED':
+      case StoryStatus.COMPLETED:
         return 'success';
-      case 'CANCELLED':
+      case StoryStatus.CANCELLED:
         return 'default';
-      case 'ON_HOLD':
+      case StoryStatus.ON_HOLD:
         return 'error';
       default:
         return 'default';
     }
+  };
+
+  const getStatusDisplay = (status) => {
+    const normalizedStatus = status?.replace(/_/g, ' ');
+    return normalizedStatus?.charAt(0) + normalizedStatus?.slice(1)?.toLowerCase();
   };
 
   const getTypeIcon = (type) => {
@@ -309,10 +382,8 @@ const Backlog = () => {
         return '📝';
       case StoryType.TASK:
         return '✅';
-      case StoryType.BUG:
+      case StoryType.DEFECT:
         return '🐛';
-      case StoryType.EPIC:
-        return '🚀';
       default:
         return '📋';
     }
@@ -322,7 +393,7 @@ const Backlog = () => {
     return (
       <Box component="form" noValidate autoComplete="off">
         <FormControl fullWidth margin="normal" required>
-          <InputLabel>Type</InputLabel>
+          <InputLabel>Increment Type</InputLabel>
           <Select
             name="type"
             value={formData.type}
@@ -330,8 +401,7 @@ const Backlog = () => {
           >
             <MenuItem value={StoryType.STORY}>Story</MenuItem>
             <MenuItem value={StoryType.TASK}>Task</MenuItem>
-            <MenuItem value={StoryType.BUG}>Bug</MenuItem>
-            <MenuItem value={StoryType.EPIC}>Epic</MenuItem>
+            <MenuItem value={StoryType.DEFECT}>Defect</MenuItem>
           </Select>
         </FormControl>
 
@@ -360,8 +430,8 @@ const Backlog = () => {
           <InputLabel>Project</InputLabel>
           <Select
             name="project"
-            value={formData.project}
-            onChange={handleInputChange}
+            value={typeof formData.project === 'object' ? formData.project._id : formData.project}
+            onChange={handleProjectChange}
           >
             <MenuItem value="">Select a project</MenuItem>
             {projects.map((project) => (
@@ -373,23 +443,46 @@ const Backlog = () => {
         </FormControl>
 
         <FormControl fullWidth margin="normal">
-          <InputLabel>Parent Feature</InputLabel>
+          <InputLabel>Sprint</InputLabel>
+          <Select
+            name="sprint"
+            value={formData.sprint || ''}
+            onChange={handleInputChange}
+          >
+            <MenuItem value="">None</MenuItem>
+            {sprints.map((sprint) => (
+              <MenuItem key={sprint._id} value={sprint._id}>
+                {sprint.name || `Sprint ${sprint.number}`}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>
+            Select a sprint (optional)
+          </FormHelperText>
+        </FormControl>
+
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Feature</InputLabel>
           <Select
             name="feature"
-            value={formData.feature}
+            value={formData.feature || ''}
             onChange={handleInputChange}
-            disabled={!formData.project}
+            disabled={formData.type !== StoryType.STORY}
           >
             <MenuItem value="">None</MenuItem>
             {features
-              .filter(feature => feature.project === formData.project)
+              .filter(feature => !formData.project || feature.project === formData.project)
               .map((feature) => (
                 <MenuItem key={feature._id} value={feature._id}>
                   {feature.name}
                 </MenuItem>
-            ))}
+              ))}
           </Select>
-          <FormHelperText>Select a project first to see available features</FormHelperText>
+          <FormHelperText>
+            {formData.type !== StoryType.STORY
+              ? 'Only Stories can be linked to Features'
+              : 'Select a feature (optional)'}
+          </FormHelperText>
         </FormControl>
 
         <FormControl fullWidth margin="normal">
@@ -413,11 +506,11 @@ const Backlog = () => {
             value={formData.status}
             onChange={handleInputChange}
           >
-            <MenuItem value={StoryStatus.PLANNING}>Planning</MenuItem>
-            <MenuItem value={StoryStatus.IN_PROGRESS}>In Progress</MenuItem>
-            <MenuItem value={StoryStatus.COMPLETED}>Completed</MenuItem>
-            <MenuItem value={StoryStatus.CANCELLED}>Cancelled</MenuItem>
-            <MenuItem value={StoryStatus.ON_HOLD}>On Hold</MenuItem>
+            {Object.values(StoryStatus).map((status) => (
+              <MenuItem key={status} value={status}>
+                {getStatusDisplay(status)}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 
@@ -425,7 +518,7 @@ const Backlog = () => {
           fullWidth
           margin="normal"
           name="effortPoints"
-          label="Story Points"
+          label="Increment Points"
           type="number"
           value={formData.effortPoints}
           onChange={handleInputChange}
@@ -445,7 +538,7 @@ const Backlog = () => {
     return (
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {selectedItem ? 'Edit Story' : 'Create Story'}
+          {selectedItem ? 'Edit Increment' : 'Create Increment'}
         </DialogTitle>
         <DialogContent>
           {renderForm()}
@@ -499,7 +592,7 @@ const Backlog = () => {
                 </TableCell>
                 <TableCell>
                   <Chip 
-                    label={story.status} 
+                    label={getStatusDisplay(story.status)}
                     color={getStatusColor(story.status)}
                     size="small"
                   />
@@ -535,7 +628,7 @@ const Backlog = () => {
             {stories.length === 0 && (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
-                  No stories found
+                  No increments found
                 </TableCell>
               </TableRow>
             )}
@@ -563,7 +656,7 @@ const Backlog = () => {
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog()}
           >
-            Create Story
+            Create Increment
           </Button>
         </Box>
 

@@ -4,10 +4,10 @@ import ErrorLogger from '../utils/errorLogger';
 
 // Export enums for use in components
 export const DefectStatus = {
-  NEW: 'New',
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled'
+  NEW: 'PLANNING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
 };
 
 export const DefectSeverity = {
@@ -133,7 +133,7 @@ class DefectService {
       const storyData = {
         title: defectData.title,
         description: defectData.description,
-        type: 'Bug',
+        type: 'Defect',
         priority: defectData.severity,
         status: defectData.status,
         project: defectData.projectId,
@@ -213,16 +213,24 @@ class DefectService {
     }
   }
 
-  async updateDefectStatus(id, newStatus) {
+  async updateDefectStatus(id, status) {
     try {
-      console.log(`📡 Updating defect ${id} status to ${newStatus}`);
-      const response = await api.patch(`/stories/${id}`, { status: newStatus });
-      console.log('✅ Defect status updated:', response.data);
+      console.log(`📡 Updating defect ${id} status to ${status}`);
+      
+      // Use PUT to update the status
+      const response = await api.put(`/stories/${id}`, { 
+        status: status.toUpperCase(),
+        type: 'Defect'
+      });
+      
+      console.log(`✅ Defect status successfully updated to ${status}`);
+      this.cache.delete('allDefects');
+      
       return response.data;
     } catch (error) {
-      console.error(`❌ Error updating defect status:`, error);
+      console.error(`❌ Error updating defect ${id}:`, error);
       this.logError(error, 'updateDefectStatus');
-      throw error;
+      throw new Error(`Failed to update defect: ${error.message}`);
     }
   }
 

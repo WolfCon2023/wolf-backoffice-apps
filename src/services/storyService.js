@@ -6,6 +6,14 @@ import ErrorLogger from '../utils/errorLogger';
  * Service for managing story-related API requests
  * This handles all interactions with the /stories endpoints
  */
+export const StoryStatus = {
+  PLANNING: 'PLANNING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  ON_HOLD: 'ON_HOLD'
+};
+
 class StoryService {
   constructor() {
     this.logError = this.logError.bind(this);
@@ -125,9 +133,19 @@ class StoryService {
 
   async updateStory(id, storyData) {
     try {
-      console.log(`📡 Updating story ${id}`);
+      console.log(`📡 Updating story ${id} with data:`, storyData);
+      
+      // Ensure status is uppercase if provided
+      if (storyData.status) {
+        storyData.status = storyData.status.toUpperCase();
+      }
+
       const response = await api.put(`/stories/${id}`, storyData);
       console.log('✅ Story updated:', response.data);
+      
+      // Clear cache since data changed
+      this.cache.delete('allStories');
+      
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating story ${id}:`, error);
@@ -182,26 +200,24 @@ class StoryService {
 
   async updateStoryStatus(id, status) {
     try {
-      // Validate status
-      if (!['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ON_HOLD'].includes(status.toUpperCase())) {
-        throw new Error(`Invalid status value: ${status}. Must be one of: PLANNING, IN_PROGRESS, COMPLETED, CANCELLED, ON_HOLD`);
-      }
-
       console.log(`📡 Updating story ${id} status to ${status}`);
+      
+      // Ensure status is uppercase
+      const normalizedStatus = status.toUpperCase();
       
       // Use the dedicated status update endpoint
       const response = await api.put(`/stories/${id}/status`, { 
-        status: status.toUpperCase()
+        status: normalizedStatus
       });
       
-      console.log(`✅ Status successfully updated to ${status}`);
+      console.log(`✅ Status successfully updated to ${normalizedStatus}`);
       this.cache.delete('allStories');
       
       return response.data;
     } catch (error) {
       console.error('❌ Error updating story status:', error);
       this.logError(error, 'updateStoryStatus');
-      throw new Error(`Failed to update story status: ${error.message}`);
+      throw new Error(`Failed to update story status: ${error.response?.data?.message || error.message}`);
     }
   }
 

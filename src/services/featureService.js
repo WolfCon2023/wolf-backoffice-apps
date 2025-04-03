@@ -1,30 +1,32 @@
 import { api } from './apiConfig';
-import { createErrorMessage } from '../utils';
 import ErrorLogger from '../utils/errorLogger';
 
 class FeatureService {
   constructor() {
-    this.logError = this.logError.bind(this);
     this.cache = new Map();
-    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
-  }
-
-  logError(error, context) {
-    console.error(`❌ Error in FeatureService - ${context}:`, error);
-    return ErrorLogger.logToFile(error, `FeatureService:${context}`);
   }
 
   async getAllFeatures() {
     try {
-      console.log('📡 Fetching all features');
+      console.log('📡 Fetching all features...');
       const response = await api.get('/features');
-      console.log('✅ Features fetched successfully:', response.data.length);
-      return response.data;
+      
+      // Ensure we have an array of features
+      const features = Array.isArray(response.data) ? response.data : [];
+      
+      console.log(`✅ Found ${features.length} features`);
+      this.cache.set('allFeatures', features);
+      
+      return features;
     } catch (error) {
       console.error('❌ Error fetching features:', error);
-      this.logError(error, 'getAllFeatures');
-      throw new Error(`Failed to fetch features: ${createErrorMessage(error)}`);
+      ErrorLogger.logToFile(error, 'FeatureService:getAllFeatures');
+      throw new Error(`Failed to fetch features: ${error.message}`);
     }
+  }
+
+  logError(error, context) {
+    ErrorLogger.logToFile(error, 'FeatureService:' + context);
   }
 
   async getFeatureById(id) {
@@ -35,8 +37,8 @@ class FeatureService {
       return response.data;
     } catch (error) {
       console.error(`❌ Error fetching feature ${id}:`, error);
-      this.logError(error, 'getFeatureById');
-      throw new Error(`Failed to fetch feature: ${createErrorMessage(error)}`);
+      ErrorLogger.logToFile(error, 'FeatureService:getFeatureById');
+      throw new Error(`Failed to fetch feature: ${error.message}`);
     }
   }
 
@@ -57,7 +59,7 @@ class FeatureService {
       return response.data;
     } catch (error) {
       console.error('❌ Error creating feature:', error);
-      this.logError(error, 'createFeature');
+      ErrorLogger.logToFile(error, 'FeatureService:createFeature');
       throw error;
     }
   }
@@ -76,8 +78,8 @@ class FeatureService {
       return response.data;
     } catch (error) {
       console.error(`❌ Error updating feature ${id}:`, error);
-      this.logError(error, 'updateFeature');
-      throw new Error(`Failed to update feature: ${createErrorMessage(error)}`);
+      ErrorLogger.logToFile(error, 'FeatureService:updateFeature');
+      throw new Error(`Failed to update feature: ${error.message}`);
     }
   }
 
@@ -89,12 +91,11 @@ class FeatureService {
       return response.data;
     } catch (error) {
       console.error(`❌ Error deleting feature ${id}:`, error);
-      this.logError(error, 'deleteFeature');
-      throw new Error(`Failed to delete feature: ${createErrorMessage(error)}`);
+      ErrorLogger.logToFile(error, 'FeatureService:deleteFeature');
+      throw new Error(`Failed to delete feature: ${error.message}`);
     }
   }
 }
 
-// Create and export a singleton instance
-const featureService = new FeatureService();
+export const featureService = new FeatureService();
 export default featureService; 

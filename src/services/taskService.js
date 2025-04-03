@@ -4,10 +4,10 @@ import ErrorLogger from '../utils/errorLogger';
 
 // Export enums for use in components
 export const TaskStatus = {
-  NEW: 'New',
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled'
+  NEW: 'PLANNING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
 };
 
 export const TaskPriority = {
@@ -254,16 +254,24 @@ class TaskService {
     }
   }
 
-  async updateTaskStatus(id, newStatus) {
+  async updateTaskStatus(id, status) {
     try {
-      console.log(`📡 Updating task ${id} status to ${newStatus}`);
-      const response = await api.patch(`/stories/${id}`, { status: newStatus });
-      console.log('✅ Task status updated:', response.data);
+      console.log(`📡 Updating task ${id} status to ${status}`);
+      
+      // Use PUT to update the status
+      const response = await api.put(`/stories/${id}`, { 
+        status: status.toUpperCase(),
+        type: 'Task'
+      });
+      
+      console.log(`✅ Task status successfully updated to ${status}`);
+      this.cache.delete('allTasks');
+      
       return response.data;
     } catch (error) {
-      console.error(`❌ Error updating task status:`, error);
+      console.error(`❌ Error updating task ${id}:`, error);
       this.logError(error, 'updateTaskStatus');
-      throw error;
+      throw new Error(`Failed to update task: ${error.message}`);
     }
   }
 

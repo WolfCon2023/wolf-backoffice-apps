@@ -174,7 +174,7 @@ const StratflowDashboard = () => {
     capacity: 10
   });
   const [projects, setProjects] = useState([]);
-  
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
