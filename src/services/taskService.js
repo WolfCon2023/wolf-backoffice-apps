@@ -2,9 +2,31 @@ import { api } from './apiConfig';
 import { createErrorMessage } from '../utils';
 import ErrorLogger from '../utils/errorLogger';
 
+// Export enums for use in components
+export const TaskStatus = {
+  NEW: 'New',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled'
+};
+
+export const TaskPriority = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  CRITICAL: 'Critical'
+};
+
+export const TaskCategory = {
+  DEVELOPMENT: 'Development',
+  TESTING: 'Testing',
+  DOCUMENTATION: 'Documentation',
+  MAINTENANCE: 'Maintenance'
+};
+
 /**
  * Service for managing task-related API requests
- * This handles all interactions with the /tasks endpoints
+ * This handles all interactions with the /tasks endpoint
  */
 class TaskService {
   constructor() {
@@ -67,61 +89,51 @@ class TaskService {
   }
 
   /**
-   * Constants for task enums
-   */
-  static TASK_STATUS = {
-    TODO: 'To Do',
-    IN_PROGRESS: 'In Progress',
-    DONE: 'Done',
-    BLOCKED: 'Blocked'
-  };
-
-  static TASK_PRIORITY = {
-    LOW: 'Low',
-    MEDIUM: 'Medium',
-    HIGH: 'High',
-    CRITICAL: 'Critical'
-  };
-
-  static TASK_CATEGORY = {
-    DEVELOPMENT: 'Development',
-    TESTING: 'Testing',
-    DOCUMENTATION: 'Documentation',
-    DESIGN: 'Design',
-    OTHER: 'Other'
-  };
-
-  /**
    * Get all tasks from the API
    * @returns {Array} List of tasks or empty array if API fails
    */
   async getAllTasks() {
     try {
       console.log('📡 Fetching all tasks');
-      console.log('Making request to:', `${api.defaults.baseURL}/tasks`);
-      const response = await api.get('/tasks');
+      console.log('Making request to: /stories?type=Task');
+      
+      const response = await api.get('/stories', {
+        params: {
+          type: 'Task'
+        }
+      });
+      
       console.log('Raw API Response:', response);
+      console.log('Response data:', response.data);
+      
+      // Map the Story model fields to task fields
+      const tasks = (response.data || [])
+        .filter(story => story.type === 'Task')
+        .map(task => ({
+          id: task._id,
+          _id: task._id,
+          taskName: task.title,
+          taskDescription: task.description,
+          priority: task.priority || TaskPriority.MEDIUM,
+          deadline: task.dueDate,
+          assignee: task.assignee,
+          status: task.status || TaskStatus.NEW,
+          category: task.category || TaskCategory.DEVELOPMENT,
+          progress: task.storyPoints || 0,
+          projectId: task.project,
+          project: task.project // Keep both for compatibility
+        }));
 
-      // Map the database fields to frontend fields
-      const tasks = response.data.map(task => ({
-        id: task._id,
-        taskName: task.taskName,
-        taskDescription: task.taskDescription || '',
-        priority: task.priority,
-        status: task.status,
-        assignee: task.assignee,
-        deadline: task.deadline,
-        category: task.category,
-        progress: task.progress,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt
-      }));
-
-      console.log('✅ Found ' + tasks.length + ' tasks:', tasks);
+      console.log(`✅ Found ${tasks.length} tasks:`, tasks);
       return tasks;
     } catch (error) {
       console.error('❌ Error fetching tasks:', error);
-      throw error;
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      this.logError(error, 'getAllTasks');
+      return []; // Return empty array instead of throwing
     }
   }
 
@@ -140,47 +152,43 @@ class TaskService {
 
   async createTask(taskData) {
     try {
-      // Map frontend fields to database fields
-      const payload = {
-        taskName: taskData.taskName,
-        taskDescription: taskData.taskDescription,
-        priority: taskData.priority || TaskService.TASK_PRIORITY.MEDIUM,
-        status: taskData.status || TaskService.TASK_STATUS.TODO,
+      console.log('📡 Creating new task');
+      console.log('Task data:', taskData);
+      
+      // Convert task fields to Story model fields
+      const storyData = {
+        title: taskData.taskName,
+        description: taskData.taskDescription,
+        type: 'Task',
+        priority: taskData.priority,
+        status: taskData.status,
+        dueDate: taskData.deadline,
         assignee: taskData.assignee,
-        deadline: taskData.deadline,
-        category: taskData.category || TaskService.TASK_CATEGORY.DEVELOPMENT,
-        progress: taskData.progress || 0
+        project: taskData.projectId,
+        category: taskData.category,
+        storyPoints: taskData.progress || 0
       };
-
-      console.log('Creating task with payload:', payload);
-      const response = await api.post('/tasks', payload);
+      
+      const response = await api.post('/stories', storyData);
+      console.log('✅ Task created:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error creating task:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
+      console.error('❌ Error creating task:', error);
+      this.logError(error, 'createTask');
       throw error;
     }
   }
 
   async updateTask(id, taskData) {
     try {
-      const payload = {
-        ...taskData,
-        status: taskData.status || TaskService.TASK_STATUS.TODO,
-        priority: taskData.priority || TaskService.TASK_PRIORITY.MEDIUM,
-        category: taskData.category || TaskService.TASK_CATEGORY.DEVELOPMENT,
-        progress: typeof taskData.progress === 'number' ? taskData.progress : 0
-      };
-
-      console.log(`Updating task ${id} with payload:`, payload);
-      const response = await api.put(`/tasks/${id}`, payload);
+      console.log(`📡 Updating task ${id}`);
+      const response = await api.put(`/tasks/${id}`, taskData);
+      console.log('✅ Task updated:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error updating task:', error);
-      throw error;
+      console.error(`❌ Error updating task ${id}:`, error);
+      this.logError(error, 'updateTask');
+      throw new Error(`Failed to update task: ${createErrorMessage(error)}`);
     }
   }
 
@@ -246,10 +254,12 @@ class TaskService {
     }
   }
 
-  async updateTaskStatus(id, status) {
+  async updateTaskStatus(id, newStatus) {
     try {
-      console.log(`📡 Updating task ${id} status to: ${status}`);
-      return this.updateTask(id, { status });
+      console.log(`📡 Updating task ${id} status to ${newStatus}`);
+      const response = await api.patch(`/stories/${id}`, { status: newStatus });
+      console.log('✅ Task status updated:', response.data);
+      return response.data;
     } catch (error) {
       console.error(`❌ Error updating task status:`, error);
       this.logError(error, 'updateTaskStatus');
@@ -348,12 +358,56 @@ class TaskService {
       throw new Error(`Failed to add attachment: ${createErrorMessage(error)}`);
     }
   }
+
+  async createTestTask(projectId, userId) {
+    try {
+      console.log('📡 Creating test task with:', { projectId, userId });
+      const testTask = {
+        title: 'Test Task',
+        description: 'This is a test task created for testing',
+        type: 'Task',
+        status: TaskStatus.NEW,
+        priority: TaskPriority.MEDIUM,
+        category: TaskCategory.DEVELOPMENT,
+        project: projectId,
+        assignee: userId,
+        storyPoints: 0
+      };
+      
+      console.log('Test task payload:', JSON.stringify(testTask, null, 2));
+      const response = await api.post('/stories', testTask);
+      console.log('Create task response:', response);
+      console.log('Created task data:', response.data);
+
+      // Map the response to match our task format
+      const createdTask = {
+        id: response.data._id,
+        _id: response.data._id,
+        taskName: response.data.title,
+        taskDescription: response.data.description,
+        priority: response.data.priority || TaskPriority.MEDIUM,
+        status: response.data.status || TaskStatus.NEW,
+        category: response.data.category || TaskCategory.DEVELOPMENT,
+        progress: response.data.storyPoints || 0,
+        projectId: response.data.project,
+        project: response.data.project,
+        assignee: response.data.assignee
+      };
+
+      console.log('Mapped task data:', createdTask);
+      return createdTask;
+    } catch (error) {
+      console.error('❌ Error creating test task:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      this.logError(error, 'createTestTask');
+      throw error;
+    }
+  }
 }
 
+// Export a singleton instance
 const taskService = new TaskService();
-export default taskService;
-
-// Export enums for use in components
-export const TaskStatus = TaskService.TASK_STATUS;
-export const TaskPriority = TaskService.TASK_PRIORITY;
-export const TaskCategory = TaskService.TASK_CATEGORY; 
+export default taskService; 

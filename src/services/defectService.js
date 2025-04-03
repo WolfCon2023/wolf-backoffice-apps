@@ -2,9 +2,24 @@ import { api } from './apiConfig';
 import { createErrorMessage } from '../utils';
 import ErrorLogger from '../utils/errorLogger';
 
+// Export enums for use in components
+export const DefectStatus = {
+  NEW: 'New',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled'
+};
+
+export const DefectSeverity = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  CRITICAL: 'Critical'
+};
+
 /**
  * Service for managing defect-related API requests
- * This handles all interactions with the /defects endpoints
+ * This handles all interactions with stories of type 'Bug'
  */
 class DefectService {
   constructor() {
@@ -66,89 +81,86 @@ class DefectService {
     console.info(`🔍 API Endpoint ${endpoint} availability: ${status ? 'Available' : 'Unavailable'}`);
   }
 
-  static DEFECT_STATUS = {
-    OPEN: 'Open',
-    IN_PROGRESS: 'In Progress',
-    FIXED: 'Fixed',
-    VERIFIED: 'Verified',
-    CLOSED: 'Closed'
-  };
-
-  static DEFECT_SEVERITY = {
-    CRITICAL: 'Critical',
-    HIGH: 'High',
-    MEDIUM: 'Medium',
-    LOW: 'Low'
-  };
-
   async getAllDefects() {
     try {
       console.log('📡 Fetching all defects');
-      console.log('Making request to:', `${api.defaults.baseURL}/defects`);
-      const response = await api.get('/defects');
+      console.log('Making request to: /stories?type=Defect');
+      
+      const response = await api.get('/stories', {
+        params: {
+          type: 'Defect'
+        }
+      });
+      
       console.log('Raw API Response:', response);
+      console.log('Response data:', response.data);
+      
+      // Map the Story model fields to defect fields
+      const defects = (response.data || [])
+        .filter(story => story.type === 'Defect')
+        .map(defect => ({
+          id: defect._id,
+          _id: defect._id,
+          title: defect.title,
+          description: defect.description,
+          severity: defect.priority || DefectSeverity.MEDIUM,
+          status: defect.status || DefectStatus.NEW,
+          dateReported: defect.createdAt,
+          projectId: defect.project,
+          project: defect.project,
+          reportedBy: defect.assignee
+        }));
 
-      // Map the database fields to frontend fields
-      const defects = response.data.map(defect => ({
-        id: defect._id,
-        title: defect.title,
-        description: defect.description || '',
-        severity: defect.severity,
-        status: defect.status,
-        dateReported: defect.dateReported,
-        projectId: defect.projectId,
-        reportedBy: defect.reportedBy,
-        createdAt: defect.createdAt,
-        updatedAt: defect.updatedAt
-      }));
-
-      console.log('✅ Found ' + defects.length + ' defects:', defects);
+      console.log(`✅ Found ${defects.length} defects:`, defects);
       return defects;
     } catch (error) {
       console.error('❌ Error fetching defects:', error);
-      throw error;
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      this.logError(error, 'getAllDefects');
+      return [];
     }
   }
 
   async createDefect(defectData) {
     try {
-      const payload = {
+      console.log('📡 Creating new defect');
+      console.log('Defect data:', defectData);
+      
+      // Convert defect fields to Story model fields
+      const storyData = {
         title: defectData.title,
         description: defectData.description,
-        severity: defectData.severity || DefectService.DEFECT_SEVERITY.MEDIUM,
-        status: defectData.status || DefectService.DEFECT_STATUS.OPEN,
-        projectId: defectData.projectId,
-        reportedBy: defectData.reportedBy,
-        dateReported: defectData.dateReported || new Date().toISOString()
+        type: 'Bug',
+        priority: defectData.severity,
+        status: defectData.status,
+        project: defectData.projectId,
+        assignee: defectData.reportedBy,
+        createdAt: defectData.dateReported || new Date().toISOString()
       };
-
-      console.log('Creating defect with payload:', payload);
-      const response = await api.post('/defects', payload);
+      
+      const response = await api.post('/stories', storyData);
+      console.log('✅ Defect created:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error creating defect:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
+      console.error('❌ Error creating defect:', error);
+      this.logError(error, 'createDefect');
       throw error;
     }
   }
 
   async updateDefect(id, defectData) {
     try {
-      const payload = {
-        ...defectData,
-        status: defectData.status || DefectService.DEFECT_STATUS.OPEN,
-        severity: defectData.severity || DefectService.DEFECT_SEVERITY.MEDIUM
-      };
-
-      console.log(`Updating defect ${id} with payload:`, payload);
-      const response = await api.put(`/defects/${id}`, payload);
+      console.log(`📡 Updating defect ${id}`);
+      const response = await api.put(`/defects/${id}`, defectData);
+      console.log('✅ Defect updated:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error updating defect:', error);
-      throw error;
+      console.error(`❌ Error updating defect ${id}:`, error);
+      this.logError(error, 'updateDefect');
+      throw new Error(`Failed to update defect: ${createErrorMessage(error)}`);
     }
   }
 
@@ -201,10 +213,12 @@ class DefectService {
     }
   }
 
-  async updateDefectStatus(id, status) {
+  async updateDefectStatus(id, newStatus) {
     try {
-      console.log(`📡 Updating defect ${id} status to: ${status}`);
-      return this.updateDefect(id, { status });
+      console.log(`📡 Updating defect ${id} status to ${newStatus}`);
+      const response = await api.patch(`/stories/${id}`, { status: newStatus });
+      console.log('✅ Defect status updated:', response.data);
+      return response.data;
     } catch (error) {
       console.error(`❌ Error updating defect status:`, error);
       this.logError(error, 'updateDefectStatus');
@@ -290,11 +304,67 @@ class DefectService {
       throw new Error(`Failed to add attachment: ${createErrorMessage(error)}`);
     }
   }
+
+  async deleteDefect(id) {
+    try {
+      console.log(`📡 Deleting defect ${id}`);
+      const response = await api.delete(`/defects/${id}`);
+      console.log('✅ Defect deleted');
+      return response.data;
+    } catch (error) {
+      console.error(`❌ Error deleting defect ${id}:`, error);
+      this.logError(error, 'deleteDefect');
+      throw new Error(`Failed to delete defect: ${createErrorMessage(error)}`);
+    }
+  }
+
+  async createTestDefect(projectId, userId) {
+    try {
+      console.log('📡 Creating test defect with:', { projectId, userId });
+      const testDefect = {
+        title: 'Test Defect',
+        description: 'This is a test defect created for testing',
+        type: 'Defect',
+        priority: DefectSeverity.MEDIUM,
+        status: DefectStatus.NEW,
+        project: projectId,
+        assignee: userId,
+        createdAt: new Date().toISOString()
+      };
+      
+      console.log('Test defect payload:', JSON.stringify(testDefect, null, 2));
+      const response = await api.post('/stories', testDefect);
+      console.log('Create defect response:', response);
+      console.log('Created defect data:', response.data);
+
+      // Map the response to match our defect format
+      const createdDefect = {
+        id: response.data._id,
+        _id: response.data._id,
+        title: response.data.title,
+        description: response.data.description,
+        severity: response.data.priority || DefectSeverity.MEDIUM,
+        status: response.data.status || DefectStatus.NEW,
+        dateReported: response.data.createdAt,
+        projectId: response.data.project,
+        project: response.data.project,
+        reportedBy: response.data.assignee
+      };
+
+      console.log('Mapped defect data:', createdDefect);
+      return createdDefect;
+    } catch (error) {
+      console.error('❌ Error creating test defect:', error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      this.logError(error, 'createTestDefect');
+      throw error;
+    }
+  }
 }
 
+// Export a singleton instance
 const defectService = new DefectService();
-export default defectService;
-
-// Export enums for use in components
-export const DefectStatus = DefectService.DEFECT_STATUS;
-export const DefectSeverity = DefectService.DEFECT_SEVERITY; 
+export default defectService; 

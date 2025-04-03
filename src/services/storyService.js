@@ -226,6 +226,46 @@ class StoryService {
       throw new Error(`Failed to update story assignee: ${createErrorMessage(error)}`);
     }
   }
+
+  async createTestStories(projectId, reporterId) {
+    try {
+      // Create a task
+      const taskStory = {
+        type: 'Task',
+        title: 'Test Task',
+        description: 'This is a test task',
+        status: 'PLANNING',
+        priority: 'Medium',
+        project: projectId,
+        reporter: reporterId,
+        key: `TASK-${Date.now()}`
+      };
+
+      // Create a bug (not defect - to match backend model)
+      const bugStory = {
+        type: 'Bug',  // Using 'Bug' to match the backend model's enum
+        title: 'Test Bug',
+        description: 'This is a test bug',
+        status: 'PLANNING',  // Using standard story status
+        priority: 'High',
+        project: projectId,
+        reporter: reporterId,
+        key: `BUG-${Date.now()}`
+      };
+
+      // Create both stories
+      const [task, bug] = await Promise.all([
+        this.createStory(taskStory),
+        this.createStory(bugStory)
+      ]);
+
+      console.log('Created test stories:', { task, bug });
+      return { task, bug };
+    } catch (error) {
+      console.error('Error creating test stories:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export a singleton instance
