@@ -66,30 +66,89 @@ class DefectService {
     console.info(`🔍 API Endpoint ${endpoint} availability: ${status ? 'Available' : 'Unavailable'}`);
   }
 
-  /**
-   * Get all defects from the API
-   * @returns {Array} List of defects or empty array if API fails
-   */
+  static DEFECT_STATUS = {
+    OPEN: 'Open',
+    IN_PROGRESS: 'In Progress',
+    FIXED: 'Fixed',
+    VERIFIED: 'Verified',
+    CLOSED: 'Closed'
+  };
+
+  static DEFECT_SEVERITY = {
+    CRITICAL: 'Critical',
+    HIGH: 'High',
+    MEDIUM: 'Medium',
+    LOW: 'Low'
+  };
+
   async getAllDefects() {
     try {
-      console.group('📡 Fetching all defects');
+      console.log('📡 Fetching all defects');
+      console.log('Making request to:', `${api.defaults.baseURL}/defects`);
       const response = await api.get('/defects');
-      console.log('✅ Defects API Response:', {
-        status: response.status,
-        data: response.data,
-        headers: response.headers
-      });
-      console.groupEnd();
+      console.log('Raw API Response:', response);
+
+      // Map the database fields to frontend fields
+      const defects = response.data.map(defect => ({
+        id: defect._id,
+        title: defect.title,
+        description: defect.description || '',
+        severity: defect.severity,
+        status: defect.status,
+        dateReported: defect.dateReported,
+        projectId: defect.projectId,
+        reportedBy: defect.reportedBy,
+        createdAt: defect.createdAt,
+        updatedAt: defect.updatedAt
+      }));
+
+      console.log('✅ Found ' + defects.length + ' defects:', defects);
+      return defects;
+    } catch (error) {
+      console.error('❌ Error fetching defects:', error);
+      throw error;
+    }
+  }
+
+  async createDefect(defectData) {
+    try {
+      const payload = {
+        title: defectData.title,
+        description: defectData.description,
+        severity: defectData.severity || DefectService.DEFECT_SEVERITY.MEDIUM,
+        status: defectData.status || DefectService.DEFECT_STATUS.OPEN,
+        projectId: defectData.projectId,
+        reportedBy: defectData.reportedBy,
+        dateReported: defectData.dateReported || new Date().toISOString()
+      };
+
+      console.log('Creating defect with payload:', payload);
+      const response = await api.post('/defects', payload);
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching defects:', {
+      console.error('Error creating defect:', {
         message: error.message,
         status: error.response?.status,
-        data: error.response?.data,
-        config: error.config
+        data: error.response?.data
       });
-      this.logError(error, 'getAllDefects');
-      throw new Error(`Failed to fetch defects: ${createErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async updateDefect(id, defectData) {
+    try {
+      const payload = {
+        ...defectData,
+        status: defectData.status || DefectService.DEFECT_STATUS.OPEN,
+        severity: defectData.severity || DefectService.DEFECT_SEVERITY.MEDIUM
+      };
+
+      console.log(`Updating defect ${id} with payload:`, payload);
+      const response = await api.put(`/defects/${id}`, payload);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating defect:', error);
+      throw error;
     }
   }
 
@@ -103,56 +162,6 @@ class DefectService {
       console.error(`❌ Error fetching defect ${id}:`, error);
       this.logError(error, 'getDefectById');
       throw new Error(`Failed to fetch defect: ${createErrorMessage(error)}`);
-    }
-  }
-
-  async createDefect(defectData) {
-    try {
-      console.log('📡 Creating new defect');
-      const payload = {
-        title: defectData.title,
-        description: defectData.description,
-        severity: defectData.severity || 'Medium',
-        status: defectData.status || 'New',
-        projectId: defectData.projectId,
-        reportedBy: defectData.reportedBy,
-        dateReported: new Date()
-      };
-
-      console.log('Creating defect with payload:', payload);
-      const response = await api.post('/defects', payload);
-      console.log('✅ Defect created:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error creating defect:', error);
-      this.logError(error, 'createDefect');
-      throw error;
-    }
-  }
-
-  async updateDefect(id, defectData) {
-    try {
-      console.log(`📡 Updating defect ${id}`);
-      const response = await api.put(`/defects/${id}`, defectData);
-      console.log('✅ Defect updated:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error(`❌ Error updating defect ${id}:`, error);
-      this.logError(error, 'updateDefect');
-      throw new Error(`Failed to update defect: ${createErrorMessage(error)}`);
-    }
-  }
-
-  async deleteDefect(id) {
-    try {
-      console.log(`📡 Deleting defect ${id}`);
-      const response = await api.delete(`/defects/${id}`);
-      console.log('✅ Defect deleted');
-      return response.data;
-    } catch (error) {
-      console.error(`❌ Error deleting defect ${id}:`, error);
-      this.logError(error, 'deleteDefect');
-      throw new Error(`Failed to delete defect: ${createErrorMessage(error)}`);
     }
   }
 
@@ -284,4 +293,8 @@ class DefectService {
 }
 
 const defectService = new DefectService();
-export default defectService; 
+export default defectService;
+
+// Export enums for use in components
+export const DefectStatus = DefectService.DEFECT_STATUS;
+export const DefectSeverity = DefectService.DEFECT_SEVERITY; 

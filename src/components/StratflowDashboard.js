@@ -212,396 +212,7 @@ const StratflowDashboard = () => {
       fetchDashboardData(healthResults);
     };
 
-    // Create sample data if none exists
-    const createSampleData = async () => {
-      console.group('📝 Creating Sample Data');
-      
-      // Create a sample story if none exist
-      const stories = await storyService.getAllStories();
-      if (stories.length === 0 && projects.length > 0) {
-        try {
-          const sampleStory = {
-            title: 'Sample Story',
-            description: 'This is a sample story to demonstrate functionality',
-            type: 'Feature',
-            status: 'New',
-            projectId: projects[0]._id,
-            reporter: 'system',
-            project: projects[0]._id, // Required field
-            priority: 'Medium',
-            storyPoints: 5
-          };
-          await storyService.createStory(sampleStory);
-          console.log('✅ Created sample story');
-        } catch (error) {
-          console.error('❌ Error creating sample story:', error);
-        }
-      }
-
-      // Create a sample task if none exist
-      const tasks = await taskService.getAllTasks();
-      if (tasks.length === 0 && projects.length > 0) {
-        try {
-          const sampleTask = {
-            title: 'Sample Task',
-            description: 'This is a sample task to demonstrate functionality',
-            status: 'New',
-            projectId: projects[0]._id,
-            reportedBy: 'system',
-            dateReported: new Date().toISOString()
-          };
-          await taskService.createTask(sampleTask);
-          console.log('✅ Created sample task');
-        } catch (error) {
-          console.error('❌ Error creating sample task:', error);
-        }
-      }
-
-      // Create a sample defect if none exist
-      const defects = await defectService.getAllDefects();
-      if (defects.length === 0 && projects.length > 0) {
-        try {
-          const sampleDefect = {
-            title: 'Sample Defect',
-            description: 'This is a sample defect to demonstrate functionality',
-            status: 'New',
-            projectId: projects[0]._id,
-            reportedBy: 'system',
-            dateReported: new Date().toISOString()
-          };
-          await defectService.createDefect(sampleDefect);
-          console.log('✅ Created sample defect');
-        } catch (error) {
-          console.error('❌ Error creating sample defect:', error);
-        }
-      }
-
-      console.groupEnd();
-    };
-    
-    const fetchDashboardData = async (healthStatus) => {
-      console.group('📊 StratFlow Dashboard - Data Fetching');
-      console.time('dashboardDataFetch');
-      
-      setLoading(true);
-      
-      // Create data containers
-      let projects = [], teams = [], sprints = [], stories = [], tasks = [], defects = [];
-      let apiStatus = {
-        projects: { success: false, error: null, count: 0 },
-        teams: { success: false, error: null, count: 0 },
-        sprints: { success: false, error: null, count: 0 },
-        stories: { success: false, error: null, count: 0 },
-        tasks: { success: false, error: null, count: 0 },
-        defects: { success: false, error: null, count: 0 }
-      };
-
-      // Modify the fetchWithRetry function to check for CORS unknown status
-      const fetchWithRetry = async (fetchFn, entityName, maxRetries = 2, retryDelay = 1000) => {
-        // Skip fetch if we already know the endpoint doesn't exist
-        const endpoint = `/${entityName}`;
-        const healthResult = healthStatus[endpoint];
-        
-        console.group(`🔄 Fetching ${entityName}`);
-        console.log('Health status:', healthResult);
-        
-        // If health check returned definitively unavailable (not just CORS unknown)
-        if (healthResult && healthResult.available === false) {
-          console.warn(`⚠️ Skipping ${entityName} fetch - endpoint not implemented`);
-          console.groupEnd();
-          return [];
-        }
-        
-        // If health status is unknown due to CORS, we'll try anyway
-        if (healthResult && healthResult.available === null) {
-          console.warn(`⚠️ ${entityName} status unknown due to CORS - attempting fetch anyway`);
-        }
-
-        let retries = 0;
-        let lastError = null;
-        
-        while (retries <= maxRetries) {
-          try {
-            const startTime = performance.now();
-            const data = await fetchFn();
-            const endTime = performance.now();
-            
-            console.log(`✅ ${entityName} fetched successfully in ${Math.round(endTime - startTime)}ms`);
-            console.log(`📦 ${entityName} data:`, data);
-            apiStatus[entityName] = { success: true, error: null, count: data.length };
-            console.groupEnd();
-            return data;
-          } catch (error) {
-            lastError = error;
-            
-            // Don't retry 404 errors - these mean the endpoint doesn't exist
-            if (error.response?.status === 404) {
-              console.warn(`⚠️ ${entityName} endpoint returned 404 - Not implemented yet`);
-              break;
-            }
-            
-            // Don't retry unauthorized errors
-            if (error.response?.status === 401 || error.response?.status === 403) {
-              console.error(`❌ ${entityName} fetch failed: Authentication error`);
-              break;
-            }
-            
-            retries++;
-            if (retries <= maxRetries) {
-              console.warn(`⚠️ ${entityName} fetch attempt ${retries} failed, retrying in ${retryDelay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-            }
-          }
-        }
-        
-        if (lastError) {
-          console.error(`❌ Failed to fetch ${entityName} after ${retries} attempts:`, lastError);
-          apiStatus[entityName] = { success: false, error: lastError, count: 0 };
-        }
-        
-        console.groupEnd();
-        return [];
-      };
-
-      // Fetch core data first - projects and teams
-      console.group('📊 Fetching Core Data');
-      console.time('coreDataFetch');
-      
-      // Projects
-      projects = await fetchWithRetry(
-        () => projectService.getAllProjects(),
-        'projects'
-      );
-      console.log(`📋 Loaded ${projects.length} projects`);
-      
-      // Store projects in state for sprint management
-      setProjects(projects);
-      
-      // Teams
-      teams = await fetchWithRetry(
-        () => teamService.getAllTeams(),
-        'teams'
-      );
-      console.log(`👥 Loaded ${teams.length} teams`);
-      
-      // Only try to fetch sprints if we have projects
-      if (projects.length > 0) {
-        sprints = await fetchWithRetry(
-          () => sprintService.getAllSprints(),
-          'sprints'
-        );
-        console.log(`🏃‍♂️ Loaded ${sprints.length} sprints`);
-        
-        // Store sprints in state for management
-        setSprints(sprints);
-      } else {
-        console.warn('⚠️ Skipping sprint fetch - no projects available');
-      }
-      
-      console.timeEnd('coreDataFetch');
-      console.groupEnd(); // Core data fetching
-
-      // Process core data
-      // Calculate project metrics
-      const projectMetricsData = {
-        total: projects.length,
-        active: projects.filter(p => p.status === 'Active').length,
-        completed: projects.filter(p => p.status === 'Completed').length,
-        onHold: projects.filter(p => p.status === 'On Hold').length,
-      };
-      setProjectMetrics(projectMetricsData);
-
-      // Calculate team metrics
-      const teamMetricsData = {
-        totalTeams: teams.length,
-        totalMembers: teams.reduce((total, team) => total + (team.members?.length || 0), 0),
-        activeTeams: teams.filter(t => t.status === 'Active').length,
-      };
-      setTeamMetrics(teamMetricsData);
-
-      // Update metrics with project and team data
-      setMetrics(prev => ({
-        ...prev,
-        totalProjects: projects.length,
-        activeProjects: projectMetricsData.active,
-        totalTeams: teams.length,
-        completedProjects: projectMetricsData.completed,
-      }));
-
-      // Calculate project progress
-      if (projects.length > 0) {
-        const progressData = projects.map(project => ({
-          name: project.name || 'Unnamed Project',
-          completed: project.progress || 0,
-          remaining: 100 - (project.progress || 0),
-        }));
-        setProjectProgress(progressData);
-
-        // Set recent projects with safe date handling
-        const sortedProjects = [...projects]
-          .filter(p => p && p.createdAt) // Only include projects with valid dates
-          .sort((a, b) => {
-            const dateA = new Date(a.createdAt);
-            const dateB = new Date(b.createdAt);
-            return isNaN(dateA.getTime()) || isNaN(dateB.getTime()) ? 0 : dateB - dateA;
-          })
-          .slice(0, 5);
-        setRecentProjects(sortedProjects);
-      }
-
-      // Calculate upcoming sprints
-      if (sprints.length > 0) {
-        const upcomingSprintsData = sprints
-          .filter(sprint => {
-            const startDate = new Date(sprint.startDate);
-            return !isNaN(startDate.getTime()) && startDate >= new Date();
-          })
-          .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-          .slice(0, 5)
-          .map(sprint => ({
-            ...sprint,
-            projectName: projects.find(p => p.id === sprint.projectId)?.name || 'Unknown Project'
-          }));
-        
-        setUpcomingSprints(upcomingSprintsData);
-      }
-
-      // Create sample data after fetching core data
-      if (projects.length > 0) {
-        await createSampleData();
-      }
-
-      // Fetch backlog data - these endpoints might not exist yet
-      console.group('📊 Fetching Backlog Data');
-      console.time('backlogDataFetch');
-      
-      // Check if we have a valid token
-      const token = localStorage.getItem('token');
-      console.log('🔑 Authentication token:', token ? 'Present' : 'Missing');
-      
-      if (!token) {
-        console.warn('⚠️ No authentication token found - API calls may fail');
-      }
-      
-      // Stories
-      stories = await fetchWithRetry(
-        () => storyService.getAllStories(),
-        'stories'
-      );
-      console.log(`📃 Loaded ${stories.length} stories`);
-      
-      // Tasks
-      tasks = await fetchWithRetry(
-        () => taskService.getAllTasks(),
-        'tasks'
-      );
-      console.log(`✓ Loaded ${tasks.length} tasks`);
-      
-      // Defects
-      defects = await fetchWithRetry(
-        () => defectService.getAllDefects(),
-        'defects'
-      );
-      console.log(`🐞 Loaded ${defects.length} defects`);
-      
-      console.timeEnd('backlogDataFetch');
-      console.groupEnd(); // Backlog data fetching
-
-      // Calculate backlog metrics if we have any data
-      console.group('📊 Calculating Backlog Metrics');
-      console.log('Stories:', stories);
-      console.log('Tasks:', tasks);
-      console.log('Defects:', defects);
-      
-      const backlogMetricsData = {
-        stories: {
-          total: stories.length,
-          byStatus: stories.reduce((acc, story) => {
-            acc[story.status] = (acc[story.status] || 0) + 1;
-            return acc;
-          }, {}),
-          byType: stories.reduce((acc, story) => {
-            acc[story.type] = (acc[story.type] || 0) + 1;
-            return acc;
-          }, {}),
-        },
-        tasks: {
-          total: tasks.length,
-          byStatus: tasks.reduce((acc, task) => {
-            acc[task.status] = (acc[task.status] || 0) + 1;
-            return acc;
-          }, {}),
-          byPriority: tasks.reduce((acc, task) => {
-            acc[task.priority] = (acc[task.priority] || 0) + 1;
-            return acc;
-          }, {}),
-        },
-        defects: {
-          total: defects.length,
-          bySeverity: defects.reduce((acc, defect) => {
-            acc[defect.severity] = (acc[defect.severity] || 0) + 1;
-            return acc;
-          }, {}),
-          byStatus: defects.reduce((acc, defect) => {
-            acc[defect.status] = (acc[defect.status] || 0) + 1;
-            return acc;
-          }, {}),
-        },
-      };
-      console.log('Calculated Metrics:', backlogMetricsData);
-      console.groupEnd();
-      
-      setBacklogMetrics(backlogMetricsData);
-
-      // Update overall metrics
-      setMetrics(prev => ({
-        ...prev,
-        totalStories: stories.length,
-        totalTasks: tasks.length,
-        totalDefects: defects.length,
-        activeSprints: sprints.filter(s => 
-          s.status === 'ACTIVE' || 
-          s.status === 'Active' || 
-          s.status === 'IN_PROGRESS' || 
-          s.status === 'In Progress'
-        ).length,
-      }));
-
-      // Print API Status Summary
-      console.group('📊 API Status Summary');
-      Object.entries(apiStatus).forEach(([entityName, status]) => {
-        if (status.success) {
-          console.log(`✅ ${entityName}: ${status.count} items`);
-        } else {
-          console.warn(`❌ ${entityName}: Failed to load`);
-          if (status.error?.response?.status === 404) {
-            console.warn(`   - Reason: API endpoint not implemented (404)`);
-          } else if (status.error) {
-            console.warn(`   - Error: ${status.error.message}`);
-          }
-        }
-      });
-      console.groupEnd(); // API Status Summary
-
-      setLoading(false);
-      console.timeEnd('dashboardDataFetch');
-      console.groupEnd(); // Dashboard Data Fetching
-    };
-
     checkApiHealth();
-  }, []);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await userService.getAllUsers();
-        setUsers(response);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        toast.error('Failed to fetch users');
-      }
-    };
-    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -974,6 +585,300 @@ const StratflowDashboard = () => {
       console.error('Failed to complete sprint:', error);
       toast.error(`Failed to complete sprint: ${error.message}`);
     }
+  };
+
+  const fetchDashboardData = async (healthStatus) => {
+    console.group('📊 StratFlow Dashboard - Data Fetching');
+    console.time('dashboardDataFetch');
+    
+    setLoading(true);
+    
+    // Create data containers
+    let projects = [], teams = [], sprints = [], stories = [], tasks = [], defects = [];
+    let apiStatus = {
+      projects: { success: false, error: null, count: 0 },
+      teams: { success: false, error: null, count: 0 },
+      sprints: { success: false, error: null, count: 0 },
+      stories: { success: false, error: null, count: 0 },
+      tasks: { success: false, error: null, count: 0 },
+      defects: { success: false, error: null, count: 0 }
+    };
+
+    // Modify the fetchWithRetry function to check for CORS unknown status
+    const fetchWithRetry = async (fetchFn, entityName, maxRetries = 2, retryDelay = 1000) => {
+      // Skip fetch if we already know the endpoint doesn't exist
+      const endpoint = `/${entityName}`;
+      const healthResult = healthStatus[endpoint];
+      
+      console.group(`🔄 Fetching ${entityName}`);
+      console.log('Health status:', healthResult);
+      
+      // If health check returned definitively unavailable (not just CORS unknown)
+      if (healthResult && healthResult.available === false) {
+        console.warn(`⚠️ Skipping ${entityName} fetch - endpoint not implemented`);
+        console.groupEnd();
+        return [];
+      }
+      
+      // If health status is unknown due to CORS, we'll try anyway
+      if (healthResult && healthResult.available === null) {
+        console.warn(`⚠️ ${entityName} status unknown due to CORS - attempting fetch anyway`);
+      }
+
+      let retries = 0;
+      let lastError = null;
+      
+      while (retries <= maxRetries) {
+        try {
+          const startTime = performance.now();
+          const data = await fetchFn();
+          const endTime = performance.now();
+          
+          console.log(`✅ ${entityName} fetched successfully in ${Math.round(endTime - startTime)}ms`);
+          console.log(`📦 ${entityName} data:`, data);
+          apiStatus[entityName] = { success: true, error: null, count: data.length };
+          console.groupEnd();
+          return data;
+        } catch (error) {
+          lastError = error;
+          
+          // Don't retry 404 errors - these mean the endpoint doesn't exist
+          if (error.response?.status === 404) {
+            console.warn(`⚠️ ${entityName} endpoint returned 404 - Not implemented yet`);
+            break;
+          }
+          
+          // Don't retry unauthorized errors
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            console.error(`❌ ${entityName} fetch failed: Authentication error`);
+            break;
+          }
+          
+          retries++;
+          if (retries <= maxRetries) {
+            console.warn(`⚠️ ${entityName} fetch attempt ${retries} failed, retrying in ${retryDelay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
+        }
+      }
+      
+      if (lastError) {
+        console.error(`❌ Failed to fetch ${entityName} after ${retries} attempts:`, lastError);
+        apiStatus[entityName] = { success: false, error: lastError, count: 0 };
+      }
+      
+      console.groupEnd();
+      return [];
+    };
+
+    // Fetch core data first - projects and teams
+    console.group('📊 Fetching Core Data');
+    console.time('coreDataFetch');
+    
+    // Projects
+    projects = await fetchWithRetry(
+      () => projectService.getAllProjects(),
+      'projects'
+    );
+    console.log(`📋 Loaded ${projects.length} projects`);
+    
+    // Teams
+    teams = await fetchWithRetry(
+      () => teamService.getAllTeams(),
+      'teams'
+    );
+    console.log(`👥 Loaded ${teams.length} teams`);
+    
+    // Sprints
+    sprints = await fetchWithRetry(
+      () => sprintService.getAllSprints(),
+      'sprints'
+    );
+    console.log(`🏃‍♂️ Loaded ${sprints.length} sprints`);
+    
+    console.timeEnd('coreDataFetch');
+    console.groupEnd();
+
+    // Fetch backlog data
+    console.group('📊 Fetching Backlog Data');
+    console.time('backlogDataFetch');
+    
+    // Check if we have a valid token
+    const token = localStorage.getItem('token');
+    console.log('🔑 Authentication token:', token ? 'Present' : 'Missing');
+    
+    // Stories
+    stories = await fetchWithRetry(
+      () => storyService.getAllStories(),
+      'stories'
+    );
+    console.log(`📃 Loaded ${stories.length} stories`);
+    
+    // Tasks
+    tasks = await fetchWithRetry(
+      () => taskService.getAllTasks(),
+      'tasks'
+    );
+    console.log(`✓ Loaded ${tasks.length} tasks`);
+    
+    // Defects
+    defects = await fetchWithRetry(
+      () => defectService.getAllDefects(),
+      'defects'
+    );
+    console.log(`🐞 Loaded ${defects.length} defects`);
+    
+    console.timeEnd('backlogDataFetch');
+    console.groupEnd(); // Backlog data fetching
+
+    // Calculate backlog metrics if we have any data
+    console.group('📊 Calculating Backlog Metrics');
+    console.log('Stories:', stories);
+    console.log('Tasks:', tasks);
+    console.log('Defects:', defects);
+    
+    const backlogMetricsData = {
+      stories: {
+        total: stories.length,
+        byStatus: stories.reduce((acc, story) => {
+          acc[story.status] = (acc[story.status] || 0) + 1;
+          return acc;
+        }, {}),
+        byType: stories.reduce((acc, story) => {
+          acc[story.type] = (acc[story.type] || 0) + 1;
+          return acc;
+        }, {}),
+      },
+      tasks: {
+        total: tasks.length,
+        byStatus: tasks.reduce((acc, task) => {
+          acc[task.status] = (acc[task.status] || 0) + 1;
+          return acc;
+        }, {}),
+        byPriority: tasks.reduce((acc, task) => {
+          acc[task.priority] = (acc[task.priority] || 0) + 1;
+          return acc;
+        }, {}),
+      },
+      defects: {
+        total: defects.length,
+        bySeverity: defects.reduce((acc, defect) => {
+          acc[defect.severity] = (acc[defect.severity] || 0) + 1;
+          return acc;
+        }, {}),
+        byStatus: defects.reduce((acc, defect) => {
+          acc[defect.status] = (acc[defect.status] || 0) + 1;
+          return acc;
+        }, {}),
+      },
+    };
+    console.log('Calculated Metrics:', backlogMetricsData);
+    console.groupEnd();
+    
+    // Update state with fetched data
+    setProjects(projects);
+    setTeams(teams);
+    setSprints(sprints);
+    setBacklogMetrics(backlogMetricsData);
+
+    // Process core data
+    // Calculate project metrics
+    const projectMetricsData = {
+      total: projects.length,
+      active: projects.filter(p => p.status === 'Active').length,
+      completed: projects.filter(p => p.status === 'Completed').length,
+      onHold: projects.filter(p => p.status === 'On Hold').length,
+    };
+    setProjectMetrics(projectMetricsData);
+
+    // Calculate team metrics
+    const teamMetricsData = {
+      totalTeams: teams.length,
+      totalMembers: teams.reduce((total, team) => total + (team.members?.length || 0), 0),
+      activeTeams: teams.filter(t => t.status === 'Active').length,
+    };
+    setTeamMetrics(teamMetricsData);
+
+    // Update metrics with project and team data
+    setMetrics(prev => ({
+      ...prev,
+      totalProjects: projects.length,
+      activeProjects: projectMetricsData.active,
+      totalTeams: teams.length,
+      completedProjects: projectMetricsData.completed,
+    }));
+
+    // Calculate project progress
+    if (projects.length > 0) {
+      const progressData = projects.map(project => ({
+        name: project.name || 'Unnamed Project',
+        completed: project.progress || 0,
+        remaining: 100 - (project.progress || 0),
+      }));
+      setProjectProgress(progressData);
+
+      // Set recent projects with safe date handling
+      const sortedProjects = [...projects]
+        .filter(p => p && p.createdAt) // Only include projects with valid dates
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt);
+          const dateB = new Date(b.createdAt);
+          return isNaN(dateA.getTime()) || isNaN(dateB.getTime()) ? 0 : dateB - dateA;
+        })
+        .slice(0, 5);
+      setRecentProjects(sortedProjects);
+    }
+
+    // Calculate upcoming sprints
+    if (sprints.length > 0) {
+      const upcomingSprintsData = sprints
+        .filter(sprint => {
+          const startDate = new Date(sprint.startDate);
+          return !isNaN(startDate.getTime()) && startDate >= new Date();
+        })
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+        .slice(0, 5)
+        .map(sprint => ({
+          ...sprint,
+          projectName: projects.find(p => p.id === sprint.projectId)?.name || 'Unknown Project'
+        }));
+      
+      setUpcomingSprints(upcomingSprintsData);
+    }
+
+    // Update overall metrics
+    setMetrics(prev => ({
+      ...prev,
+      totalStories: stories.length,
+      totalTasks: tasks.length,
+      totalDefects: defects.length,
+      activeSprints: sprints.filter(s => 
+        s.status === 'ACTIVE' || 
+        s.status === 'Active' || 
+        s.status === 'IN_PROGRESS' || 
+        s.status === 'In Progress'
+      ).length,
+    }));
+
+    // Print API Status Summary
+    console.group('📊 API Status Summary');
+    Object.entries(apiStatus).forEach(([entityName, status]) => {
+      if (status.success) {
+        console.log(`✅ ${entityName}: ${status.count} items`);
+      } else {
+        console.warn(`❌ ${entityName}: Failed to load`);
+        if (status.error?.response?.status === 404) {
+          console.warn(`   - Reason: API endpoint not implemented (404)`);
+        } else if (status.error) {
+          console.warn(`   - Error: ${status.error.message}`);
+        }
+      }
+    });
+    console.groupEnd(); // API Status Summary
+
+    setLoading(false);
+    console.timeEnd('dashboardDataFetch');
+    console.groupEnd(); // Dashboard Data Fetching
   };
 
   if (loading) {
@@ -1443,6 +1348,7 @@ const StratflowDashboard = () => {
                           <TableCell>{project.name || 'Unnamed Project'}</TableCell>
                           <TableCell>
                             <Chip
+                              key={`project-status-${project.id}`}
                               label={project.status || 'Unknown'}
                               size="small"
                               color={getStatusColor(project.status)}
@@ -1503,6 +1409,7 @@ const StratflowDashboard = () => {
                           </TableCell>
                           <TableCell>
                             <Chip
+                              key={`team-status-${team.id}`}
                               label={team.status}
                               color={team.status === 'ACTIVE' ? 'success' : 'default'}
                               size="small"

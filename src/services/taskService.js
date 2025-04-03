@@ -67,29 +67,61 @@ class TaskService {
   }
 
   /**
+   * Constants for task enums
+   */
+  static TASK_STATUS = {
+    TODO: 'To Do',
+    IN_PROGRESS: 'In Progress',
+    DONE: 'Done',
+    BLOCKED: 'Blocked'
+  };
+
+  static TASK_PRIORITY = {
+    LOW: 'Low',
+    MEDIUM: 'Medium',
+    HIGH: 'High',
+    CRITICAL: 'Critical'
+  };
+
+  static TASK_CATEGORY = {
+    DEVELOPMENT: 'Development',
+    TESTING: 'Testing',
+    DOCUMENTATION: 'Documentation',
+    DESIGN: 'Design',
+    OTHER: 'Other'
+  };
+
+  /**
    * Get all tasks from the API
    * @returns {Array} List of tasks or empty array if API fails
    */
   async getAllTasks() {
     try {
-      console.group('📡 Fetching all tasks');
+      console.log('📡 Fetching all tasks');
+      console.log('Making request to:', `${api.defaults.baseURL}/tasks`);
       const response = await api.get('/tasks');
-      console.log('✅ Tasks API Response:', {
-        status: response.status,
-        data: response.data,
-        headers: response.headers
-      });
-      console.groupEnd();
-      return response.data;
+      console.log('Raw API Response:', response);
+
+      // Map the database fields to frontend fields
+      const tasks = response.data.map(task => ({
+        id: task._id,
+        taskName: task.taskName,
+        taskDescription: task.taskDescription || '',
+        priority: task.priority,
+        status: task.status,
+        assignee: task.assignee,
+        deadline: task.deadline,
+        category: task.category,
+        progress: task.progress,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt
+      }));
+
+      console.log('✅ Found ' + tasks.length + ' tasks:', tasks);
+      return tasks;
     } catch (error) {
-      console.error('❌ Error fetching tasks:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
-        config: error.config
-      });
-      this.logError(error, 'getAllTasks');
-      throw new Error(`Failed to fetch tasks: ${createErrorMessage(error)}`);
+      console.error('❌ Error fetching tasks:', error);
+      throw error;
     }
   }
 
@@ -108,38 +140,47 @@ class TaskService {
 
   async createTask(taskData) {
     try {
-      console.log('📡 Creating new task');
+      // Map frontend fields to database fields
       const payload = {
-        title: taskData.title,
-        description: taskData.description,
-        severity: taskData.severity || 'Medium',
-        status: taskData.status || 'New',
-        projectId: taskData.projectId,
-        reportedBy: taskData.reportedBy,
-        dateReported: new Date()
+        taskName: taskData.taskName,
+        taskDescription: taskData.taskDescription,
+        priority: taskData.priority || TaskService.TASK_PRIORITY.MEDIUM,
+        status: taskData.status || TaskService.TASK_STATUS.TODO,
+        assignee: taskData.assignee,
+        deadline: taskData.deadline,
+        category: taskData.category || TaskService.TASK_CATEGORY.DEVELOPMENT,
+        progress: taskData.progress || 0
       };
 
       console.log('Creating task with payload:', payload);
       const response = await api.post('/tasks', payload);
-      console.log('✅ Task created:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Error creating task:', error);
-      this.logError(error, 'createTask');
+      console.error('Error creating task:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       throw error;
     }
   }
 
   async updateTask(id, taskData) {
     try {
-      console.log(`📡 Updating task ${id}`);
-      const response = await api.put(`/tasks/${id}`, taskData);
-      console.log('✅ Task updated:', response.data);
+      const payload = {
+        ...taskData,
+        status: taskData.status || TaskService.TASK_STATUS.TODO,
+        priority: taskData.priority || TaskService.TASK_PRIORITY.MEDIUM,
+        category: taskData.category || TaskService.TASK_CATEGORY.DEVELOPMENT,
+        progress: typeof taskData.progress === 'number' ? taskData.progress : 0
+      };
+
+      console.log(`Updating task ${id} with payload:`, payload);
+      const response = await api.put(`/tasks/${id}`, payload);
       return response.data;
     } catch (error) {
-      console.error(`❌ Error updating task ${id}:`, error);
-      this.logError(error, 'updateTask');
-      throw new Error(`Failed to update task: ${createErrorMessage(error)}`);
+      console.error('Error updating task:', error);
+      throw error;
     }
   }
 
@@ -310,4 +351,9 @@ class TaskService {
 }
 
 const taskService = new TaskService();
-export default taskService; 
+export default taskService;
+
+// Export enums for use in components
+export const TaskStatus = TaskService.TASK_STATUS;
+export const TaskPriority = TaskService.TASK_PRIORITY;
+export const TaskCategory = TaskService.TASK_CATEGORY; 
