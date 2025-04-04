@@ -41,9 +41,9 @@ import defectService from '../services/defectService';
 import { sprintService } from '../services/sprintService';
 
 const StoryType = {
-  STORY: 'Story',
+  STORY: 'Feature',
   TASK: 'Task',
-  DEFECT: 'Bug'
+  DEFECT: 'Defect'
 };
 
 const Priority = {
@@ -51,6 +51,11 @@ const Priority = {
   MEDIUM: 'Medium',
   HIGH: 'High',
   CRITICAL: 'Critical'
+};
+
+const normalizeStatus = (status) => {
+  if (!status) return StoryStatus.PLANNING;
+  return status.toUpperCase().replace(/\s+/g, '_');
 };
 
 const Backlog = () => {
@@ -86,12 +91,14 @@ const Backlog = () => {
     title: task.taskName,
     description: task.taskDescription,
     type: StoryType.TASK,
-    project: task.projectId,
-    status: task.status.toUpperCase().replace(/\s+/g, '_'),
+    key: task.key,
+    project: task.project,
+    status: normalizeStatus(task.status),
     priority: task.priority,
     storyPoints: task.progress || 0,
     assignee: task.assignee,
-    deadline: task.deadline
+    deadline: task.deadline,
+    taskNumber: task.taskNumber
   });
 
   const mapDefectToStory = (defect) => ({
@@ -99,11 +106,13 @@ const Backlog = () => {
     title: defect.title,
     description: defect.description,
     type: StoryType.DEFECT,
+    key: defect.key,
     project: defect.projectId,
-    status: defect.status.toUpperCase().replace(/\s+/g, '_'),
+    status: normalizeStatus(defect.status),
     priority: defect.severity,
     reportedBy: defect.reportedBy,
-    dateReported: defect.dateReported
+    dateReported: defect.dateReported,
+    defectNumber: defect.defectNumber
   });
 
   const fetchData = async () => {
@@ -154,13 +163,11 @@ const Backlog = () => {
   const handleOpenDialog = (item = null) => {
     setSelectedItem(item);
     if (item) {
-      // Normalize the item data for the form
-      const normalizedStatus = item.status ? item.status.toUpperCase().replace(/\s+/g, '_') : StoryStatus.PLANNING;
       setFormData({
         title: item.title || item.taskName || '',
         description: item.description || item.taskDescription || '',
         type: item.type || StoryType.STORY,
-        status: normalizedStatus,
+        status: normalizeStatus(item.status),
         priority: item.priority || item.severity || Priority.MEDIUM,
         project: item.project || item.projectId || '',
         sprint: item.sprint?._id || item.sprintId || '',
@@ -203,11 +210,9 @@ const Backlog = () => {
     
     // Special handling for status to ensure correct format
     if (name === 'status') {
-      // Normalize status by replacing spaces with underscores and converting to uppercase
-      const formattedStatus = value.toUpperCase().replace(/\s+/g, '_');
       setFormData(prev => ({
         ...prev,
-        [name]: formattedStatus
+        [name]: normalizeStatus(value)
       }));
       return;
     }
@@ -239,100 +244,97 @@ const Backlog = () => {
 
   const handleSubmit = async () => {
     try {
-      if (!formData.title || !formData.project) {
-        setError('Title and Project are required');
-        return;
-      }
+      setLoading(true);
+      let result;
 
-      // Get the current user ID from localStorage
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        setError('User ID is required');
-        return;
-      }
-
-      const storyData = {
-        title: formData.title,
-        description: formData.description,
-        type: formData.type,
-        status: formData.status,
+      const commonData = {
+        project: formData.project,
+        sprint: formData.sprint || null,
         priority: formData.priority,
-        project: typeof formData.project === 'object' ? formData.project._id : formData.project,
-        sprint: formData.sprint ? (typeof formData.sprint === 'object' ? formData.sprint._id : formData.sprint) : null,
-        feature: formData.feature ? (typeof formData.feature === 'object' ? formData.feature._id : formData.feature) : null,
-        storyPoints: parseInt(formData.effortPoints) || 0,
-        reporter: userId
+        status: formData.status
       };
 
-      console.log('Creating/Updating with data:', storyData);
-      
       if (selectedItem) {
-        // Update based on type
-        if (storyData.type === StoryType.TASK) {
-          const taskData = {
-            taskName: storyData.title,
-            taskDescription: storyData.description,
-            priority: storyData.priority,
-            status: storyData.status,
-            projectId: storyData.project,
-            sprintId: storyData.sprint,
-            progress: storyData.storyPoints,
-            reporter: userId
-          };
-          await taskService.updateTask(selectedItem._id, taskData);
-        } else if (storyData.type === StoryType.DEFECT) {
-          const defectData = {
-            title: storyData.title,
-            description: storyData.description,
-            severity: storyData.priority,
-            status: storyData.status,
-            projectId: storyData.project,
-            sprintId: storyData.sprint,
-            reporter: userId
-          };
-          await defectService.updateDefect(selectedItem._id, defectData);
-        } else {
-          await storyService.updateStory(selectedItem._id, storyData);
+        // Update existing item
+        switch (formData.type) {
+          case StoryType.STORY:
+            result = await storyService.updateStory(selectedItem._id, {
+              ...commonData,
+              title: formData.title,
+              description: formData.description,
+              storyPoints: formData.effortPoints,
+              feature: formData.feature || null,
+              assignee: formData.assignee,
+              reporter: formData.reporter
+            });
+            break;
+          case StoryType.TASK:
+            result = await taskService.updateTask(selectedItem._id, {
+              ...commonData,
+              taskName: formData.title,
+              taskDescription: formData.description,
+              progress: formData.effortPoints,
+              assignee: formData.assignee,
+              deadline: formData.deadline
+            });
+            break;
+          case StoryType.DEFECT:
+            result = await defectService.updateDefect(selectedItem._id, {
+              ...commonData,
+              title: formData.title,
+              description: formData.description,
+              severity: formData.priority,
+              reportedBy: formData.reporter
+            });
+            break;
         }
-        toast.success('Item updated successfully');
       } else {
-        // Handle creation based on type
-        if (storyData.type === StoryType.TASK) {
-          const taskData = {
-            taskName: storyData.title,
-            taskDescription: storyData.description,
-            priority: storyData.priority,
-            status: storyData.status,
-            projectId: storyData.project,
-            sprintId: storyData.sprint,
-            progress: storyData.storyPoints,
-            category: 'Development',
-            reporter: userId
-          };
-          await taskService.createTask(taskData);
-        } else if (storyData.type === StoryType.DEFECT) {
-          const defectData = {
-            title: storyData.title,
-            description: storyData.description,
-            severity: storyData.priority,
-            status: storyData.status,
-            projectId: storyData.project,
-            sprintId: storyData.sprint,
-            reporter: userId
-          };
-          await defectService.createDefect(defectData);
-        } else {
-          await storyService.createStory(storyData);
+        // Create new item
+        switch (formData.type) {
+          case StoryType.STORY:
+            result = await storyService.createStory({
+              ...commonData,
+              title: formData.title,
+              description: formData.description,
+              type: formData.type,
+              storyPoints: formData.effortPoints,
+              feature: formData.feature || null,
+              assignee: formData.assignee,
+              reporter: formData.reporter
+            });
+            break;
+          case StoryType.TASK:
+            result = await taskService.createTask({
+              ...commonData,
+              taskName: formData.title,
+              taskDescription: formData.description,
+              progress: formData.effortPoints,
+              assignee: formData.assignee,
+              deadline: formData.deadline,
+              category: 'Development'
+            });
+            break;
+          case StoryType.DEFECT:
+            result = await defectService.createDefect({
+              ...commonData,
+              title: formData.title,
+              description: formData.description,
+              severity: formData.priority,
+              reportedBy: formData.reporter,
+              dateReported: new Date()
+            });
+            break;
         }
-        toast.success('Item created successfully');
       }
 
       handleCloseDialog();
-      fetchData();
+      await fetchData();
+      toast.success(`${formData.type} ${selectedItem ? 'updated' : 'created'} successfully`);
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      setError(error.message || 'An error occurred while saving');
-      toast.error('Failed to save item');
+      console.error('Error submitting form:', error);
+      toast.error(`Failed to ${selectedItem ? 'update' : 'create'} ${formData.type.toLowerCase()}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -354,7 +356,7 @@ const Backlog = () => {
   };
 
   const getStatusColor = (status) => {
-    const normalizedStatus = status?.replace(/ /g, '_')?.toUpperCase();
+    const normalizedStatus = normalizeStatus(status);
     switch (normalizedStatus) {
       case StoryStatus.PLANNING:
         return 'info';

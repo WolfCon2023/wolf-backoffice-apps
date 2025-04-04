@@ -175,59 +175,6 @@ const StratflowDashboard = () => {
   });
   const [projects, setProjects] = useState([]);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'N/A';
-      return format(date, 'MMM d, yyyy');
-    } catch (error) {
-      return 'N/A';
-    }
-  };
-
-  useEffect(() => {
-    // Prevent duplicate API calls in StrictMode
-    if (mountedRef.current) return;
-    mountedRef.current = true;
-    
-    // Check API health first to identify which endpoints are implemented
-    const checkApiHealth = async () => {
-      console.group('🔍 API Health Check');
-      console.log('Checking API endpoint health...');
-      
-      const endpoints = [
-        '/projects',
-        '/teams',
-        '/sprints',
-        '/stories',
-        '/tasks',
-        '/defects'
-      ];
-      
-      const healthResults = await apiHealthService.checkMultipleEndpoints(endpoints);
-      apiHealthService.logApiHealthSummary(healthResults);
-      
-      // Continue with data fetching
-      fetchDashboardData(healthResults);
-    };
-
-    checkApiHealth();
-  }, []);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await userService.getAllUsers();
-        setUsers(response);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        toast.error('Failed to fetch users');
-      }
-    };
-    fetchUsers();
-  }, []);
-
   const getStatusColor = (status) => {
     // Normalize status to uppercase for consistent matching
     const normalizedStatus = status?.toUpperCase();
@@ -239,6 +186,8 @@ const StratflowDashboard = () => {
       CANCELLED: 'error',
       PLANNED: 'info',
       IN_PROGRESS: 'primary',
+      PLANNING: 'info',
+      CLOSED: 'default'
     };
     
     return statusColors[normalizedStatus] || 'default';
@@ -265,39 +214,233 @@ const StratflowDashboard = () => {
     return colors[severity] || 'default';
   };
 
-  const handleAddTeamMember = async (teamId, userId) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     try {
-      if (!teamId || !userId) {
-        console.error('Missing required parameters:', { teamId, userId });
-        toast.error('Missing required parameters');
-        return;
-      }
-
-      await teamService.addTeamMember(teamId, {
-        userId,
-        role: 'TEAM_MEMBER',
-        joinedAt: new Date().toISOString(),
-      });
-      
-      toast.success('Team member added successfully');
-      setOpenAddMemberDialog(false);
-      
-      // Refresh team data
-      const updatedTeamData = await teamService.getTeam(teamId);
-      setSelectedTeam(updatedTeamData);
-      
-      // Refresh teams list
-      const updatedTeams = await teamService.getAllTeams();
-      setTeams(updatedTeams);
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return format(date, 'MMM d, yyyy');
     } catch (error) {
-      console.error('Error adding team member:', error);
-      toast.error('Failed to add team member');
+      return 'N/A';
     }
   };
 
+  useEffect(() => {
+    // Prevent duplicate API calls in StrictMode
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    console.group('📊 Dashboard Data Fetching');
+    console.log('Starting data fetch...');
+    
+    try {
+      setLoading(true);
+
+      // Fetch all data in parallel with individual error handling
+      const [projectsData, teamsData, sprintsData, storiesData, tasksData, defectsData, usersData] = await Promise.allSettled([
+        projectService.getAllProjects().catch(err => {
+          console.warn('Failed to fetch projects:', err);
+          return [];
+        }),
+        teamService.getAllTeams().catch(err => {
+          console.warn('Failed to fetch teams:', err);
+          return [];
+        }),
+        sprintService.getAllSprints().catch(err => {
+          console.warn('Failed to fetch sprints:', err);
+          return [];
+        }),
+        storyService.getAllStories().catch(err => {
+          console.warn('Failed to fetch stories:', err);
+          return [];
+        }),
+        taskService.getAllTasks().catch(err => {
+          console.warn('Failed to fetch tasks:', err);
+          return [];
+        }),
+        defectService.getAllDefects().catch(err => {
+          console.warn('Failed to fetch defects:', err);
+          return [];
+        }),
+        userService.getAllUsers().catch(err => {
+          console.warn('Failed to fetch users:', err);
+          return [];
+        })
+      ]);
+
+      // Extract values from Promise.allSettled results
+      const [
+        projects,
+        teams,
+        sprints,
+        stories,
+        tasks,
+        defects,
+        users
+      ] = [
+        projectsData.value || [],
+        teamsData.value || [],
+        sprintsData.value || [],
+        storiesData.value || [],
+        tasksData.value || [],
+        defectsData.value || [],
+        usersData.value || []
+      ];
+
+      console.log('✅ Data fetched:', {
+        projects: projects.length,
+        teams: teams.length,
+        sprints: sprints.length,
+        stories: stories.length,
+        tasks: tasks.length,
+        defects: defects.length,
+        users: users.length
+      });
+
+      // Update state with fetched data
+      setProjects(projects);
+      setTeams(teams);
+      setSprints(sprints);
+      setUsers(users);
+
+      // Calculate metrics
+      const activeProjectsCount = projects.filter(p => p.status === 'ACTIVE').length;
+      const activeSprintsCount = sprints.filter(s => 
+        s.status === 'ACTIVE' || 
+        s.status === 'IN_PROGRESS'
+      ).length;
+
+      setMetrics({
+        totalProjects: projects.length,
+        activeProjects: activeProjectsCount,
+        totalTeams: teams.length,
+        activeSprints: activeSprintsCount,
+        totalStories: stories.length,
+        totalTasks: tasks.length,
+        totalDefects: defects.length
+      });
+
+      // Calculate backlog metrics
+      const backlogData = {
+        stories: {
+          total: stories.length,
+          byStatus: groupByStatus(stories),
+          byType: groupByType(stories)
+        },
+        tasks: {
+          total: tasks.length,
+          byStatus: groupByStatus(tasks),
+          byPriority: groupByPriority(tasks)
+        },
+        defects: {
+          total: defects.length,
+          bySeverity: groupBySeverity(defects),
+          byStatus: groupByStatus(defects)
+        }
+      };
+
+      setBacklogMetrics(backlogData);
+
+      // Calculate project progress
+      const progressData = projects.map(project => {
+        const projectTasks = tasks.filter(task => task.project === project._id);
+        const projectDefects = defects.filter(defect => defect.projectId === project._id);
+        const projectStories = stories.filter(story => story.project === project._id);
+
+        const totalItems = projectTasks.length + projectDefects.length + projectStories.length;
+        const completedItems = [
+          ...projectTasks.filter(task => task.status === 'COMPLETED'),
+          ...projectDefects.filter(defect => defect.status === 'CLOSED'),
+          ...projectStories.filter(story => story.status === 'COMPLETED')
+        ].length;
+
+        return {
+          name: project.name,
+          progress: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0
+        };
+      });
+
+      setProjectProgress(progressData);
+
+      // Set team metrics
+      setTeamMetrics({
+        totalTeams: teams.length,
+        totalMembers: teams.reduce((acc, team) => acc + (team.members?.length || 0), 0)
+      });
+
+      // Set project metrics
+      setProjectMetrics({
+        total: projects.length,
+        active: projects.filter(p => p.status === 'ACTIVE').length,
+        completed: projects.filter(p => p.status === 'COMPLETED').length,
+        onHold: projects.filter(p => p.status === 'ON_HOLD').length
+      });
+
+      // Set upcoming sprints
+      const upcomingSprints = sprints
+        .filter(sprint => 
+          sprint.status === 'PLANNING' || 
+          sprint.status === 'ACTIVE' || 
+          sprint.status === 'IN_PROGRESS'
+        )
+        .map(sprint => ({
+          ...sprint,
+          projectName: projects.find(p => p._id === sprint.project)?.name || 'Unknown Project'
+        }))
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+        .slice(0, 5);
+
+      setUpcomingSprints(upcomingSprints);
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load some dashboard data');
+    } finally {
+      setLoading(false);
+      console.groupEnd();
+    }
+  };
+
+  const groupByStatus = (items) => {
+    return items?.reduce((acc, item) => {
+      const status = item.status || 'UNKNOWN';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {}) || {};
+  };
+
+  const groupByType = (items) => {
+    return items?.reduce((acc, item) => {
+      const type = item.type || 'UNKNOWN';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {}) || {};
+  };
+
+  const groupByPriority = (items) => {
+    return items?.reduce((acc, item) => {
+      const priority = item.priority || 'MEDIUM';
+      acc[priority] = (acc[priority] || 0) + 1;
+      return acc;
+    }, {}) || {};
+  };
+
+  const groupBySeverity = (items) => {
+    return items?.reduce((acc, item) => {
+      const severity = item.severity || 'MEDIUM';
+      acc[severity] = (acc[severity] || 0) + 1;
+      return acc;
+    }, {}) || {};
+  };
+
+  // Add missing user management functions
   const handleCreateUser = async () => {
     try {
-      await userService.createUser(newUser);
+      const response = await userService.createUser(newUser);
       toast.success('User created successfully');
       setOpenUserManagementDialog(false);
       setNewUser({
@@ -346,6 +489,37 @@ const StratflowDashboard = () => {
     }
   };
 
+  // Add missing team management functions
+  const handleAddTeamMember = async (teamId, userId) => {
+    try {
+      if (!teamId || !userId) {
+        console.error('Missing required parameters:', { teamId, userId });
+        toast.error('Missing required parameters');
+        return;
+      }
+
+      await teamService.addTeamMember(teamId, {
+        userId,
+        role: 'TEAM_MEMBER',
+        joinedAt: new Date().toISOString(),
+      });
+      
+      toast.success('Team member added successfully');
+      setOpenAddMemberDialog(false);
+      
+      // Refresh team data
+      const updatedTeamData = await teamService.getTeam(teamId);
+      setSelectedTeam(updatedTeamData);
+      
+      // Refresh teams list
+      const updatedTeams = await teamService.getAllTeams();
+      setTeams(updatedTeams);
+    } catch (error) {
+      console.error('Error adding team member:', error);
+      toast.error('Failed to add team member');
+    }
+  };
+
   const handleCreateTeam = async () => {
     try {
       if (!newTeam.name) {
@@ -376,6 +550,8 @@ const StratflowDashboard = () => {
         updatedAt: new Date().toISOString(),
       });
       setTeams(teams.map(t => t.id === team.id ? updatedTeam : t));
+      setOpenNewTeamDialog(false);
+      setSelectedTeam(null);
       toast.success('Team updated successfully!');
     } catch (error) {
       console.error('Error updating team:', error);
@@ -383,10 +559,7 @@ const StratflowDashboard = () => {
     }
   };
 
-  const handleOpenSprintManagement = () => {
-    setOpenSprintManagementDialog(true);
-  };
-
+  // Add sprint management functions
   const handleCloseSprintManagement = () => {
     setOpenSprintManagementDialog(false);
   };
@@ -406,6 +579,16 @@ const StratflowDashboard = () => {
 
   const handleCloseNewSprint = () => {
     setOpenNewSprintDialog(false);
+    setEditingSprint(null);
+    setNewSprint({
+      name: '',
+      project: '',
+      goal: '',
+      status: 'PLANNING',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      capacity: 10
+    });
   };
 
   const handleSprintChange = (e) => {
@@ -418,31 +601,27 @@ const StratflowDashboard = () => {
 
   const handleCreateSprint = async () => {
     try {
-      // Validate required fields
       if (!newSprint.name || !newSprint.project || !newSprint.startDate || !newSprint.endDate) {
         toast.error('Missing required fields');
         return;
       }
 
       const response = await sprintService.createSprint(newSprint);
-      
       setSprints(prev => [...prev, response]);
       toast.success('Sprint created successfully');
       handleCloseNewSprint();
-      
-      // Refresh the data
+
+      // Refresh sprints
       const updatedSprints = await sprintService.getAllSprints();
       setSprints(updatedSprints);
-      
-      // Update metrics for active sprints
+
+      // Update metrics
       setMetrics(prev => ({
         ...prev,
         activeSprints: updatedSprints.filter(s => 
           s.status === 'ACTIVE' || 
-          s.status === 'Active' || 
-          s.status === 'IN_PROGRESS' || 
-          s.status === 'In Progress'
-        ).length,
+          s.status === 'IN_PROGRESS'
+        ).length
       }));
     } catch (error) {
       console.error('Failed to create sprint:', error);
@@ -466,33 +645,19 @@ const StratflowDashboard = () => {
 
   const handleUpdateSprint = async () => {
     try {
-      // Validate required fields
       if (!newSprint.name || !newSprint.project || !newSprint.startDate || !newSprint.endDate) {
         toast.error('Missing required fields');
         return;
       }
 
       const response = await sprintService.updateSprint(editingSprint.id, newSprint);
-      
       setSprints(prev => prev.map(s => s.id === editingSprint.id ? response : s));
       toast.success('Sprint updated successfully');
-      setEditingSprint(null);
       handleCloseNewSprint();
-      
-      // Refresh the data
+
+      // Refresh sprints
       const updatedSprints = await sprintService.getAllSprints();
       setSprints(updatedSprints);
-      
-      // Update metrics for active sprints
-      setMetrics(prev => ({
-        ...prev,
-        activeSprints: updatedSprints.filter(s => 
-          s.status === 'ACTIVE' || 
-          s.status === 'Active' || 
-          s.status === 'IN_PROGRESS' || 
-          s.status === 'In Progress'
-        ).length,
-      }));
     } catch (error) {
       console.error('Failed to update sprint:', error);
       toast.error(`Failed to update sprint: ${error.message}`);
@@ -500,23 +665,24 @@ const StratflowDashboard = () => {
   };
 
   const handleDeleteSprint = async (sprintId) => {
+    if (!window.confirm('Are you sure you want to delete this sprint?')) {
+      return;
+    }
+
     try {
       await sprintService.deleteSprint(sprintId);
-      
       setSprints(prev => prev.filter(s => s.id !== sprintId));
       toast.success('Sprint deleted successfully');
-      
-      // Update metrics for active sprints
+
+      // Update metrics
       setMetrics(prev => ({
         ...prev,
         activeSprints: sprints.filter(s => 
-          (s.id !== sprintId) && (
+          s.id !== sprintId && (
             s.status === 'ACTIVE' || 
-            s.status === 'Active' || 
-            s.status === 'IN_PROGRESS' || 
-            s.status === 'In Progress'
+            s.status === 'IN_PROGRESS'
           )
-        ).length,
+        ).length
       }));
     } catch (error) {
       console.error('Failed to delete sprint:', error);
@@ -533,21 +699,18 @@ const StratflowDashboard = () => {
       };
       
       const response = await sprintService.updateSprint(sprintId, updatedSprint);
-      
       setSprints(prev => prev.map(s => s.id === sprintId ? response : s));
       toast.success('Sprint started successfully');
       
-      // Update metrics for active sprints
+      // Update metrics
       setMetrics(prev => ({
         ...prev,
         activeSprints: sprints.filter(s => 
-          (s.id === sprintId) || (
+          s.id === sprintId || (
             s.status === 'ACTIVE' || 
-            s.status === 'Active' || 
-            s.status === 'IN_PROGRESS' || 
-            s.status === 'In Progress'
+            s.status === 'IN_PROGRESS'
           )
-        ).length,
+        ).length
       }));
     } catch (error) {
       console.error('Failed to start sprint:', error);
@@ -565,21 +728,18 @@ const StratflowDashboard = () => {
       };
       
       const response = await sprintService.updateSprint(sprintId, updatedSprint);
-      
       setSprints(prev => prev.map(s => s.id === sprintId ? response : s));
       toast.success('Sprint completed successfully');
       
-      // Update metrics for active sprints
+      // Update metrics
       setMetrics(prev => ({
         ...prev,
         activeSprints: sprints.filter(s => 
-          (s.id !== sprintId) && (
+          s.id !== sprintId && (
             s.status === 'ACTIVE' || 
-            s.status === 'Active' || 
-            s.status === 'IN_PROGRESS' || 
-            s.status === 'In Progress'
+            s.status === 'IN_PROGRESS'
           )
-        ).length,
+        ).length
       }));
     } catch (error) {
       console.error('Failed to complete sprint:', error);
@@ -587,298 +747,16 @@ const StratflowDashboard = () => {
     }
   };
 
-  const fetchDashboardData = async (healthStatus) => {
-    console.group('📊 StratFlow Dashboard - Data Fetching');
-    console.time('dashboardDataFetch');
-    
-    setLoading(true);
-    
-    // Create data containers
-    let projects = [], teams = [], sprints = [], stories = [], tasks = [], defects = [];
-    let apiStatus = {
-      projects: { success: false, error: null, count: 0 },
-      teams: { success: false, error: null, count: 0 },
-      sprints: { success: false, error: null, count: 0 },
-      stories: { success: false, error: null, count: 0 },
-      tasks: { success: false, error: null, count: 0 },
-      defects: { success: false, error: null, count: 0 }
-    };
-
-    // Modify the fetchWithRetry function to check for CORS unknown status
-    const fetchWithRetry = async (fetchFn, entityName, maxRetries = 2, retryDelay = 1000) => {
-      // Skip fetch if we already know the endpoint doesn't exist
-      const endpoint = `/${entityName}`;
-      const healthResult = healthStatus[endpoint];
-      
-      console.group(`🔄 Fetching ${entityName}`);
-      console.log('Health status:', healthResult);
-      
-      // If health check returned definitively unavailable (not just CORS unknown)
-      if (healthResult && healthResult.available === false) {
-        console.warn(`⚠️ Skipping ${entityName} fetch - endpoint not implemented`);
-        console.groupEnd();
-        return [];
-      }
-      
-      // If health status is unknown due to CORS, we'll try anyway
-      if (healthResult && healthResult.available === null) {
-        console.warn(`⚠️ ${entityName} status unknown due to CORS - attempting fetch anyway`);
-      }
-
-      let retries = 0;
-      let lastError = null;
-      
-      while (retries <= maxRetries) {
-        try {
-          const startTime = performance.now();
-          const data = await fetchFn();
-          const endTime = performance.now();
-          
-          console.log(`✅ ${entityName} fetched successfully in ${Math.round(endTime - startTime)}ms`);
-          console.log(`📦 ${entityName} data:`, data);
-          apiStatus[entityName] = { success: true, error: null, count: data.length };
-          console.groupEnd();
-          return data;
-        } catch (error) {
-          lastError = error;
-          
-          // Don't retry 404 errors - these mean the endpoint doesn't exist
-          if (error.response?.status === 404) {
-            console.warn(`⚠️ ${entityName} endpoint returned 404 - Not implemented yet`);
-            break;
-          }
-          
-          // Don't retry unauthorized errors
-          if (error.response?.status === 401 || error.response?.status === 403) {
-            console.error(`❌ ${entityName} fetch failed: Authentication error`);
-            break;
-          }
-          
-          retries++;
-          if (retries <= maxRetries) {
-            console.warn(`⚠️ ${entityName} fetch attempt ${retries} failed, retrying in ${retryDelay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-          }
-        }
-      }
-      
-      if (lastError) {
-        console.error(`❌ Failed to fetch ${entityName} after ${retries} attempts:`, lastError);
-        apiStatus[entityName] = { success: false, error: lastError, count: 0 };
-      }
-      
-      console.groupEnd();
-      return [];
-    };
-
-    // Fetch core data first - projects and teams
-    console.group('📊 Fetching Core Data');
-    console.time('coreDataFetch');
-    
-    // Projects
-    projects = await fetchWithRetry(
-      () => projectService.getAllProjects(),
-      'projects'
-    );
-    console.log(`📋 Loaded ${projects.length} projects`);
-    
-    // Teams
-    teams = await fetchWithRetry(
-      () => teamService.getAllTeams(),
-      'teams'
-    );
-    console.log(`👥 Loaded ${teams.length} teams`);
-    
-    // Sprints
-    sprints = await fetchWithRetry(
-      () => sprintService.getAllSprints(),
-      'sprints'
-    );
-    console.log(`🏃‍♂️ Loaded ${sprints.length} sprints`);
-    
-    console.timeEnd('coreDataFetch');
-    console.groupEnd();
-
-    // Fetch backlog data
-    console.group('📊 Fetching Backlog Data');
-    console.time('backlogDataFetch');
-    
-    // Check if we have a valid token
-    const token = localStorage.getItem('token');
-    console.log('🔑 Authentication token:', token ? 'Present' : 'Missing');
-    
-    // Stories
-    stories = await fetchWithRetry(
-      () => storyService.getAllStories(),
-      'stories'
-    );
-    console.log(`📃 Loaded ${stories.length} stories`);
-    
-    // Tasks
-    tasks = await fetchWithRetry(
-      () => taskService.getAllTasks(),
-      'tasks'
-    );
-    console.log(`✓ Loaded ${tasks.length} tasks`);
-    
-    // Defects
-    defects = await fetchWithRetry(
-      () => defectService.getAllDefects(),
-      'defects'
-    );
-    console.log(`🐞 Loaded ${defects.length} defects`);
-    
-    console.timeEnd('backlogDataFetch');
-    console.groupEnd(); // Backlog data fetching
-
-    // Calculate backlog metrics if we have any data
-    console.group('📊 Calculating Backlog Metrics');
-    console.log('Stories:', stories);
-    console.log('Tasks:', tasks);
-    console.log('Defects:', defects);
-    
-    const backlogMetricsData = {
-      stories: {
-        total: stories.length,
-        byStatus: stories.reduce((acc, story) => {
-          acc[story.status] = (acc[story.status] || 0) + 1;
-          return acc;
-        }, {}),
-        byType: stories.reduce((acc, story) => {
-          acc[story.type] = (acc[story.type] || 0) + 1;
-          return acc;
-        }, {}),
-      },
-      tasks: {
-        total: tasks.length,
-        byStatus: tasks.reduce((acc, task) => {
-          acc[task.status] = (acc[task.status] || 0) + 1;
-          return acc;
-        }, {}),
-        byPriority: tasks.reduce((acc, task) => {
-          acc[task.priority] = (acc[task.priority] || 0) + 1;
-          return acc;
-        }, {}),
-      },
-      defects: {
-        total: defects.length,
-        bySeverity: defects.reduce((acc, defect) => {
-          acc[defect.severity] = (acc[defect.severity] || 0) + 1;
-          return acc;
-        }, {}),
-        byStatus: defects.reduce((acc, defect) => {
-          acc[defect.status] = (acc[defect.status] || 0) + 1;
-          return acc;
-        }, {}),
-      },
-    };
-    console.log('Calculated Metrics:', backlogMetricsData);
-    console.groupEnd();
-    
-    // Update state with fetched data
-    setProjects(projects);
-    setTeams(teams);
-    setSprints(sprints);
-    setBacklogMetrics(backlogMetricsData);
-
-    // Process core data
-    // Calculate project metrics
-    const projectMetricsData = {
-      total: projects.length,
-      active: projects.filter(p => p.status === 'Active').length,
-      completed: projects.filter(p => p.status === 'Completed').length,
-      onHold: projects.filter(p => p.status === 'On Hold').length,
-    };
-    setProjectMetrics(projectMetricsData);
-
-    // Calculate team metrics
-    const teamMetricsData = {
-      totalTeams: teams.length,
-      totalMembers: teams.reduce((total, team) => total + (team.members?.length || 0), 0),
-      activeTeams: teams.filter(t => t.status === 'Active').length,
-    };
-    setTeamMetrics(teamMetricsData);
-
-    // Update metrics with project and team data
-    setMetrics(prev => ({
-      ...prev,
-      totalProjects: projects.length,
-      activeProjects: projectMetricsData.active,
-      totalTeams: teams.length,
-      completedProjects: projectMetricsData.completed,
-    }));
-
-    // Calculate project progress
-    if (projects.length > 0) {
-      const progressData = projects.map(project => ({
-        name: project.name || 'Unnamed Project',
-        completed: project.progress || 0,
-        remaining: 100 - (project.progress || 0),
-      }));
-      setProjectProgress(progressData);
-
-      // Set recent projects with safe date handling
-      const sortedProjects = [...projects]
-        .filter(p => p && p.createdAt) // Only include projects with valid dates
-        .sort((a, b) => {
-          const dateA = new Date(a.createdAt);
-          const dateB = new Date(b.createdAt);
-          return isNaN(dateA.getTime()) || isNaN(dateB.getTime()) ? 0 : dateB - dateA;
-        })
-        .slice(0, 5);
-      setRecentProjects(sortedProjects);
-    }
-
-    // Calculate upcoming sprints
-    if (sprints.length > 0) {
-      const upcomingSprintsData = sprints
-        .filter(sprint => {
-          const startDate = new Date(sprint.startDate);
-          return !isNaN(startDate.getTime()) && startDate >= new Date();
-        })
-        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-        .slice(0, 5)
-        .map(sprint => ({
-          ...sprint,
-          projectName: projects.find(p => p.id === sprint.projectId)?.name || 'Unknown Project'
-        }));
-      
-      setUpcomingSprints(upcomingSprintsData);
-    }
-
-    // Update overall metrics
-    setMetrics(prev => ({
-      ...prev,
-      totalStories: stories.length,
-      totalTasks: tasks.length,
-      totalDefects: defects.length,
-      activeSprints: sprints.filter(s => 
-        s.status === 'ACTIVE' || 
-        s.status === 'Active' || 
-        s.status === 'IN_PROGRESS' || 
-        s.status === 'In Progress'
-      ).length,
-    }));
-
-    // Print API Status Summary
-    console.group('📊 API Status Summary');
-    Object.entries(apiStatus).forEach(([entityName, status]) => {
-      if (status.success) {
-        console.log(`✅ ${entityName}: ${status.count} items`);
-      } else {
-        console.warn(`❌ ${entityName}: Failed to load`);
-        if (status.error?.response?.status === 404) {
-          console.warn(`   - Reason: API endpoint not implemented (404)`);
-        } else if (status.error) {
-          console.warn(`   - Error: ${status.error.message}`);
-        }
-      }
-    });
-    console.groupEnd(); // API Status Summary
-
-    setLoading(false);
-    console.timeEnd('dashboardDataFetch');
-    console.groupEnd(); // Dashboard Data Fetching
+  // Fix the Chip components in the team members section
+  const renderTeamMembers = (members) => {
+    return members?.map((member) => (
+      <Chip
+        key={`team-member-${member.id || member._id}`}
+        label={member.name || member.username}
+        size="small"
+        sx={{ mr: 1, mb: 1 }}
+      />
+    ));
   };
 
   if (loading) {
@@ -975,7 +853,7 @@ const StratflowDashboard = () => {
               <Button
                 variant="outlined"
                 startIcon={<Timeline />}
-                onClick={handleOpenSprintManagement}
+                onClick={() => setOpenSprintManagementDialog(true)}
               >
                 Sprint Management
               </Button>
@@ -1165,8 +1043,7 @@ const StratflowDashboard = () => {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <RechartsTooltip />
-                    <Bar dataKey="completed" stackId="a" fill="#2563eb" name="Completed" />
-                    <Bar dataKey="remaining" stackId="a" fill="#e5e7eb" name="Remaining" />
+                    <Bar dataKey="progress" stackId="a" fill="#2563eb" name="Progress" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -1344,11 +1221,11 @@ const StratflowDashboard = () => {
                     </TableHead>
                     <TableBody>
                       {recentProjects.map((project) => (
-                        <TableRow key={project.id}>
+                        <TableRow key={`recent-project-${project._id || project.id}`}>
                           <TableCell>{project.name || 'Unnamed Project'}</TableCell>
                           <TableCell>
                             <Chip
-                              key={`project-status-${project.id}`}
+                              key={`project-status-${project._id || project.id}`}
                               label={project.status || 'Unknown'}
                               size="small"
                               color={getStatusColor(project.status)}
@@ -1395,21 +1272,14 @@ const StratflowDashboard = () => {
                     </TableHead>
                     <TableBody>
                       {teams.map((team) => (
-                        <TableRow key={team.id}>
+                        <TableRow key={`team-${team._id || team.id}`}>
                           <TableCell>{team.name}</TableCell>
                           <TableCell>
-                            {team.members?.map((member) => (
-                              <Chip
-                                key={member.id}
-                                label={member.name}
-                                size="small"
-                                sx={{ mr: 1, mb: 1 }}
-                              />
-                            ))}
+                            {renderTeamMembers(team.members)}
                           </TableCell>
                           <TableCell>
                             <Chip
-                              key={`team-status-${team.id}`}
+                              key={`team-status-${team._id || team.id}`}
                               label={team.status}
                               color={team.status === 'ACTIVE' ? 'success' : 'default'}
                               size="small"
@@ -1751,13 +1621,14 @@ const StratflowDashboard = () => {
                 <TableBody>
                   {sprints.length > 0 ? (
                     sprints.map((sprint) => (
-                      <TableRow key={sprint.id}>
+                      <TableRow key={`sprint-${sprint._id || sprint.id}`}>
                         <TableCell>{sprint.name}</TableCell>
                         <TableCell>
                           {projects.find(p => p._id === sprint.project)?.name || 'Unknown Project'}
                         </TableCell>
                         <TableCell>
                           <Chip
+                            key={`sprint-status-${sprint._id || sprint.id}`}
                             label={sprint.status}
                             color={getStatusColor(sprint.status)}
                             size="small"
@@ -1775,7 +1646,7 @@ const StratflowDashboard = () => {
                           </IconButton>
                           <IconButton
                             size="small"
-                            onClick={() => handleDeleteSprint(sprint.id)}
+                            onClick={() => handleDeleteSprint(sprint._id || sprint.id)}
                             color="error"
                           >
                             <Delete />
@@ -1784,7 +1655,7 @@ const StratflowDashboard = () => {
                             <Tooltip title="Start Sprint">
                               <IconButton
                                 size="small"
-                                onClick={() => handleStartSprint(sprint.id)}
+                                onClick={() => handleStartSprint(sprint._id || sprint.id)}
                                 color="success"
                               >
                                 <PlayArrow />
@@ -1796,7 +1667,7 @@ const StratflowDashboard = () => {
                             <Tooltip title="Complete Sprint">
                               <IconButton
                                 size="small"
-                                onClick={() => handleCompleteSprint(sprint.id)}
+                                onClick={() => handleCompleteSprint(sprint._id || sprint.id)}
                                 color="info"
                               >
                                 <CheckCircle />
@@ -1807,7 +1678,7 @@ const StratflowDashboard = () => {
                       </TableRow>
                     ))
                   ) : (
-                    <TableRow>
+                    <TableRow key="no-sprints">
                       <TableCell colSpan={6} align="center">
                         No sprints found
                       </TableCell>

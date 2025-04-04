@@ -188,44 +188,50 @@ const Metrics = () => {
   const calculateQualityMetrics = (defects, stories) => {
     // Calculate Defect Density
     const moduleDefects = defects.reduce((acc, defect) => {
-      acc[defect.module] = (acc[defect.module] || 0) + 1;
+      const module = defect.projectId || 'Unknown';
+      acc[module] = (acc[module] || 0) + 1;
       return acc;
     }, {});
 
-    const totalFeatures = stories.length;
+    const totalFeatures = stories.filter(story => story.type === 'Feature').length;
     const defectDensity = totalFeatures > 0
       ? Math.round((defects.length / totalFeatures) * 100) / 100
       : 0;
 
-    // Calculate Defect Leakage
-    const productionDefects = defects.filter(d => d.environment === 'PRODUCTION');
+    // Calculate Defect Leakage Rate
+    const leakedDefects = defects.filter(defect => 
+      defect.status === 'REOPENED' || 
+      (defect.status === 'OPEN' && defect.dateReported)
+    );
     const leakageRate = defects.length > 0
-      ? Math.round((productionDefects.length / defects.length) * 100)
+      ? Math.round((leakedDefects.length / defects.length) * 100)
       : 0;
 
     // Calculate Change Failure Rate
-    const failedDeployments = defects.filter(d => d.type === 'DEPLOYMENT_FAILURE').length;
-    const totalDeployments = stories.filter(s => s.status === 'DEPLOYED').length;
-    const failureRate = totalDeployments > 0
-      ? Math.round((failedDeployments / totalDeployments) * 100)
+    const failedChanges = defects.filter(defect => 
+      defect.severity === 'Critical' || 
+      defect.severity === 'High'
+    );
+    const changeFailureRate = defects.length > 0
+      ? Math.round((failedChanges.length / defects.length) * 100)
       : 0;
 
     return {
       defectDensity: {
         overall: defectDensity,
         byModule: Object.entries(moduleDefects).map(([module, count]) => ({
-          name: module,
-          count,
-        })),
+          module,
+          count
+        }))
       },
       defectLeakage: {
         rate: leakageRate,
-        trend: groupDefectsByTimeframe(productionDefects),
+        trend: groupDefectsByTimeframe(leakedDefects)
       },
       changeFailure: {
-        rate: failureRate,
-        trend: groupFailuresByTimeframe(defects.filter(d => d.type === 'DEPLOYMENT_FAILURE')),
-      },
+        rate: changeFailureRate,
+        trend: groupFailuresByTimeframe(failedChanges)
+      }
     };
   };
 
@@ -465,7 +471,7 @@ const Metrics = () => {
                         <Pie
                           data={qualityMetrics.defectDensity.byModule}
                           dataKey="count"
-                          nameKey="name"
+                          nameKey="module"
                           cx="50%"
                           cy="50%"
                           outerRadius={80}

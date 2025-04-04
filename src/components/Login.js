@@ -18,10 +18,16 @@ const Login = ({ setAuthToken }) => {
 
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
-      const token = response.data.token;
+      const { token, user } = response.data;
 
+      // Always store the token
       localStorage.setItem("token", token);
       setAuthToken(token);
+
+      // Only store user ID if it exists
+      if (user && user.id) {
+        localStorage.setItem("userId", user.id);
+      }
 
       // ✅ Wait a short time before navigating to ensure state updates
       setTimeout(() => {
