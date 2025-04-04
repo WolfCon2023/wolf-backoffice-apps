@@ -41,7 +41,7 @@ import defectService from '../services/defectService';
 import { sprintService } from '../services/sprintService';
 
 const StoryType = {
-  STORY: 'Feature',
+  STORY: 'Story',
   TASK: 'Task',
   DEFECT: 'Defect'
 };
@@ -144,14 +144,14 @@ const Backlog = () => {
       setSprints(sprintsData || []);
       setFeatures(featuresData || []);
 
-      // Combine all items into one list with correct type values
-      const allStories = [
-        ...(storiesData || []).map(story => ({ ...story, type: StoryType.STORY })),
-        ...(tasksData || []).map(task => mapTaskToStory(task)),
-        ...(defectsData || []).map(defect => mapDefectToStory(defect))
+      // Keep each type separate but in the same array for display
+      const allIncrements = [
+        ...(storiesData || []),
+        ...(tasksData || []),
+        ...(defectsData || [])
       ];
 
-      setStories(allStories);
+      setStories(allIncrements);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
@@ -247,44 +247,61 @@ const Backlog = () => {
       setLoading(true);
       let result;
 
-      const commonData = {
-        project: formData.project,
-        sprint: formData.sprint || null,
-        priority: formData.priority,
-        status: formData.status
-      };
+      // Validate required fields
+      if (!formData.title || !formData.project || !formData.type) {
+        toast.error('Title, project and type are required');
+        return;
+      }
+
+      // Get current user ID for reporter field
+      const currentUser = JSON.parse(localStorage.getItem('user')) || {};
+      const reporterId = currentUser._id;
+
+      if (!reporterId) {
+        toast.error('No user found. Please log in again.');
+        return;
+      }
 
       if (selectedItem) {
         // Update existing item
         switch (formData.type) {
           case StoryType.STORY:
             result = await storyService.updateStory(selectedItem._id, {
-              ...commonData,
               title: formData.title,
               description: formData.description,
+              status: formData.status,
+              priority: formData.priority,
+              project: formData.project,
+              reporter: reporterId,
               storyPoints: formData.effortPoints,
               feature: formData.feature || null,
               assignee: formData.assignee,
-              reporter: formData.reporter
+              sprint: formData.sprint || null
             });
             break;
           case StoryType.TASK:
             result = await taskService.updateTask(selectedItem._id, {
-              ...commonData,
               taskName: formData.title,
               taskDescription: formData.description,
+              status: formData.status,
+              priority: formData.priority,
+              project: formData.project,
+              reporter: reporterId,
               progress: formData.effortPoints,
               assignee: formData.assignee,
-              deadline: formData.deadline
+              deadline: formData.deadline,
+              sprint: formData.sprint || null
             });
             break;
           case StoryType.DEFECT:
             result = await defectService.updateDefect(selectedItem._id, {
-              ...commonData,
               title: formData.title,
               description: formData.description,
+              status: formData.status,
               severity: formData.priority,
-              reportedBy: formData.reporter
+              project: formData.project,
+              reportedBy: reporterId,
+              sprint: formData.sprint || null
             });
             break;
         }
@@ -293,34 +310,42 @@ const Backlog = () => {
         switch (formData.type) {
           case StoryType.STORY:
             result = await storyService.createStory({
-              ...commonData,
               title: formData.title,
               description: formData.description,
-              type: formData.type,
+              status: formData.status,
+              priority: formData.priority,
+              project: formData.project,
+              reporter: reporterId,
               storyPoints: formData.effortPoints,
               feature: formData.feature || null,
               assignee: formData.assignee,
-              reporter: formData.reporter
+              sprint: formData.sprint || null
             });
             break;
           case StoryType.TASK:
             result = await taskService.createTask({
-              ...commonData,
               taskName: formData.title,
               taskDescription: formData.description,
+              status: formData.status,
+              priority: formData.priority,
+              project: formData.project,
+              reporter: reporterId,
               progress: formData.effortPoints,
               assignee: formData.assignee,
               deadline: formData.deadline,
+              sprint: formData.sprint || null,
               category: 'Development'
             });
             break;
           case StoryType.DEFECT:
             result = await defectService.createDefect({
-              ...commonData,
               title: formData.title,
               description: formData.description,
+              status: formData.status,
               severity: formData.priority,
-              reportedBy: formData.reporter,
+              project: formData.project,
+              reportedBy: reporterId,
+              sprint: formData.sprint || null,
               dateReported: new Date()
             });
             break;
@@ -332,7 +357,7 @@ const Backlog = () => {
       toast.success(`${formData.type} ${selectedItem ? 'updated' : 'created'} successfully`);
     } catch (error) {
       console.error('Error submitting form:', error);
-      toast.error(`Failed to ${selectedItem ? 'update' : 'create'} ${formData.type.toLowerCase()}`);
+      toast.error(`Failed to ${selectedItem ? 'update' : 'create'} ${formData.type.toLowerCase()}: ${error.message}`);
     } finally {
       setLoading(false);
     }

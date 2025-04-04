@@ -3,10 +3,11 @@ import ErrorLogger from '../utils/errorLogger';
 
 // Export enums for use in components
 export const TaskStatus = {
-  PLANNING: 'Planning',
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled'
+  TODO: 'TODO',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  ON_HOLD: 'ON_HOLD',
+  CANCELLED: 'CANCELLED'
 };
 
 export const TaskPriority = {
@@ -17,10 +18,12 @@ export const TaskPriority = {
 };
 
 export const TaskCategory = {
-  DEVELOPMENT: 'Development',
-  TESTING: 'Testing',
-  DOCUMENTATION: 'Documentation',
-  MAINTENANCE: 'Maintenance'
+  DEVELOPMENT: 'DEVELOPMENT',
+  TESTING: 'TESTING',
+  DOCUMENTATION: 'DOCUMENTATION',
+  DESIGN: 'DESIGN',
+  RESEARCH: 'RESEARCH',
+  OTHER: 'OTHER'
 };
 
 /**
@@ -97,29 +100,17 @@ class TaskService {
       const response = await api.get('/tasks');
       
       if (!response.data) {
-        console.warn('No data received from tasks API');
+        console.warn('⚠️ No data received from tasks API');
         return [];
       }
 
-      // Map the response to match our expected format
-      const tasks = response.data.map(task => ({
-        id: task._id,
-        taskName: task.taskName,
-        taskDescription: task.taskDescription,
-        priority: task.priority,
-        deadline: task.deadline,
-        assignee: task.assignee,
-        status: task.status,
-        category: task.category,
-        progress: task.progress
-      }));
-
+      const tasks = Array.isArray(response.data) ? response.data : [];
       console.log(`✅ Found ${tasks.length} tasks`);
       return tasks;
     } catch (error) {
       console.error('❌ Error fetching tasks:', error);
       this.logError(error, 'getAllTasks');
-      throw new Error(`Failed to fetch tasks: ${error.message}`);
+      return []; // Return empty array instead of throwing
     }
   }
 
@@ -132,42 +123,54 @@ class TaskService {
     } catch (error) {
       console.error('❌ Error fetching task:', error);
       this.logError(error, 'getTaskById');
-      throw new Error(`Failed to fetch task: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async generateTaskKey(projectId) {
+    try {
+      if (!projectId) {
+        throw new Error('Project ID is required to generate task key');
+      }
+
+      // Get the project details to get the project key
+      const project = await api.get(`/projects/${projectId}`);
+      const projectKey = project.data.key;
+
+      // Get all tasks for the project to determine the next number
+      const tasks = await api.get(`/tasks/project/${projectId}`);
+      const projectTasks = tasks.data || [];
+      
+      // Find the highest task number for this project
+      const taskNumbers = projectTasks
+        .map(task => {
+          const match = task.key?.match(new RegExp(`${projectKey}-T(\\d+)`));
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter(num => !isNaN(num));
+
+      const nextNumber = taskNumbers.length > 0 ? Math.max(...taskNumbers) + 1 : 1;
+      
+      // Generate the new key with 'T' prefix for tasks
+      const newKey = `${projectKey}-T${nextNumber}`;
+      console.log(`📝 Generated new task key: ${newKey}`);
+      return newKey;
+    } catch (error) {
+      console.error('❌ Error generating task key:', error);
+      this.logError(error, 'generateTaskKey');
+      throw new Error('Failed to generate task key');
     }
   }
 
   async createTask(taskData) {
     try {
-      console.log('📡 Creating task with data:', taskData);
-      
-      // Validate required fields
-      if (!taskData.title) {
-        throw new Error('Title is required');
-      }
-
-      // Format the data to match the database schema
-      const formattedData = {
-        taskName: taskData.title,
-        taskDescription: taskData.description || '',
-        status: taskData.status || 'Planning',
-        priority: taskData.priority || 'Medium',
-        assignee: taskData.assignee || 'Unassigned',
-        category: taskData.category || 'Development',
-        progress: taskData.progress || 0,
-        deadline: taskData.deadline || null
-      };
-
-      console.log('📝 Formatted task data:', formattedData);
-
-      const response = await api.post('/tasks', formattedData);
+      console.log('📡 Creating new task:', taskData);
+      const response = await api.post('/tasks', taskData);
       console.log('✅ Task created successfully:', response.data);
+      this.cache.delete('allTasks');
       return response.data;
     } catch (error) {
       console.error('❌ Error creating task:', error);
-      if (error.response) {
-        console.error('Server response:', error.response.data);
-        throw new Error(error.response.data.message || 'Failed to create task');
-      }
       this.logError(error, 'createTask');
       throw error;
     }
@@ -175,29 +178,13 @@ class TaskService {
 
   async updateTask(id, taskData) {
     try {
-      console.log(`📡 Updating task ${id} with data:`, taskData);
-      
-      // Format the data to match the database schema
-      const formattedData = {
-        taskName: taskData.title,
-        taskDescription: taskData.description,
-        status: taskData.status,
-        priority: taskData.priority,
-        assignee: taskData.assignee,
-        category: taskData.category,
-        progress: taskData.progress,
-        deadline: taskData.deadline
-      };
-
-      const response = await api.put(`/tasks/${id}`, formattedData);
-      console.log('✅ Task updated successfully:', response.data);
+      console.log(`📡 Updating task ${id}:`, taskData);
+      const response = await api.put(`/tasks/${id}`, taskData);
+      console.log('✅ Task updated successfully');
+      this.cache.delete('allTasks');
       return response.data;
     } catch (error) {
       console.error('❌ Error updating task:', error);
-      if (error.response) {
-        console.error('Server response:', error.response.data);
-        throw new Error(error.response.data.message || 'Failed to update task');
-      }
       this.logError(error, 'updateTask');
       throw error;
     }
@@ -212,51 +199,55 @@ class TaskService {
     } catch (error) {
       console.error('❌ Error deleting task:', error);
       this.logError(error, 'deleteTask');
-      throw new Error(`Failed to delete task: ${error.message}`);
+      throw error;
     }
   }
 
   async getTasksByProject(projectId) {
+    const cacheKey = `projectTasks:${projectId}`;
+    const cached = this.getCachedData(cacheKey);
+    if (cached) return cached;
+
     try {
       console.log(`📡 Fetching tasks for project ${projectId}`);
       const response = await api.get(`/tasks/project/${projectId}`);
-      console.log(`✅ Found ${response.data.length} tasks for project`);
+      console.log('✅ Project tasks fetched:', response.data);
+      this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching project tasks:', error);
       this.logError(error, 'getTasksByProject');
-      throw new Error(`Failed to fetch project tasks: ${error.message}`);
+      return [];
     }
   }
 
   async getTasksBySprint(sprintId) {
+    const cacheKey = `sprintTasks:${sprintId}`;
+    const cached = this.getCachedData(cacheKey);
+    if (cached) return cached;
+
     try {
       console.log(`📡 Fetching tasks for sprint ${sprintId}`);
       const response = await api.get(`/tasks/sprint/${sprintId}`);
-      console.log(`✅ Found ${response.data.length} tasks for sprint`);
+      console.log('✅ Sprint tasks fetched:', response.data);
+      this.setCachedData(cacheKey, response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching sprint tasks:', error);
       this.logError(error, 'getTasksBySprint');
-      throw new Error(`Failed to fetch sprint tasks: ${error.message}`);
+      return [];
     }
   }
 
   async updateTaskStatus(id, status) {
     try {
       console.log(`📡 Updating task ${id} status to ${status}`);
-      
-      // Use PUT to update the status
-      const response = await api.put(`/tasks/${id}`, { 
-        status: status
-      });
-      
+      const response = await api.put(`/tasks/${id}/status`, { status });
       console.log(`✅ Task status successfully updated to ${status}`);
       this.cache.delete('allTasks');
-      
       return response.data;
     } catch (error) {
-      console.error(`❌ Error updating task status:`, error);
+      console.error('❌ Error updating task status:', error);
       this.logError(error, 'updateTaskStatus');
       throw error;
     }

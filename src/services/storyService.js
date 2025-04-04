@@ -107,30 +107,62 @@ class StoryService {
 
   async createStory(storyData) {
     try {
-      console.log('📡 Creating story with data:', storyData);
+      console.log('📡 Creating new story with data:', storyData);
+
+      // Safely extract IDs from objects
+      const getIdFromObject = (obj) => {
+        if (!obj) return null;
+        if (typeof obj === 'string') return obj;
+        return obj._id || obj.id || null;
+      };
+
+      // Get project ID for key generation
+      const projectId = getIdFromObject(storyData.project);
       
+      // Generate key if not provided
+      let key = storyData.key;
+      if (!key && projectId) {
+        try {
+          key = await this.generateStoryKey(projectId);
+          console.log('Generated new key:', key);
+        } catch (error) {
+          console.warn('Failed to generate story key:', error);
+          key = `STORY-${Date.now()}`; // Fallback
+        }
+      }
+
       // Format the data for the API
       const formattedData = {
         title: storyData.title,
-        description: storyData.description,
-        type: storyData.type || 'Feature',
-        status: storyData.status?.toUpperCase().replace(/\s+/g, '_') || 'PLANNING',
-        priority: storyData.priority || 'Medium',
-        project: storyData.project,
-        sprint: storyData.sprint || null,
-        feature: storyData.feature || null,
-        reporter: storyData.reporter,
-        assignee: storyData.assignee || null,
+        type: storyData.type || 'Story',
+        status: storyData.status?.toUpperCase().replace(/[\s-]+/g, '_') || 'IN_PROGRESS',
+        priority: storyData.priority || 'High',
+        project: projectId,
+        reporter: getIdFromObject(storyData.reporter),
+        key: key,
+        description: storyData.description || '',
+        sprint: getIdFromObject(storyData.sprint),
+        feature: getIdFromObject(storyData.feature),
+        assignee: getIdFromObject(storyData.assignee),
         storyPoints: parseInt(storyData.storyPoints) || 0
       };
 
+      // Validate required fields
+      const requiredFields = ['title', 'type', 'status', 'priority', 'project', 'reporter', 'key'];
+      const missingFields = requiredFields.filter(field => !formattedData[field]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      console.log('📤 Sending formatted data:', formattedData);
       const response = await api.post('/stories', formattedData);
       console.log('✅ Story created successfully:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Error creating story:', error);
       this.logError(error, 'createStory');
-      throw new Error(`Failed to create story: ${error.message}`);
+      throw error;
     }
   }
 
@@ -138,36 +170,122 @@ class StoryService {
     try {
       console.log('📡 Updating story with data:', storyData);
       
-      // Format the data for the API ensuring all required fields
-      const formattedData = {
-        type: storyData.type || 'Task', // Required field
-        title: storyData.title,
-        description: storyData.description || '',
-        status: storyData.status?.toUpperCase().replace(/\s+/g, '_') || 'PLANNING',
-        priority: storyData.priority || 'Medium',
-        storyPoints: parseInt(storyData.storyPoints) || 0,
-        project: storyData.project?._id || storyData.project, // Send only the ID
-        sprint: storyData.sprint || null,
-        assignee: storyData.assignee?._id || storyData.assignee || null, // Send only the ID
-        reporter: storyData.reporter?._id || storyData.reporter, // Send only the ID
-        key: storyData.key // Preserve the existing key
+      // If only status is being updated, use the dedicated endpoint
+      if (Object.keys(storyData).length === 1 && storyData.status) {
+        return this.updateStoryStatus(storyId, storyData.status);
+      }
+
+      // Safely extract IDs from objects or use direct values
+      const getIdFromObject = (obj) => {
+        if (!obj) return null;
+        if (typeof obj === 'string') return obj;
+        return obj._id || obj.id || null;
       };
 
-      // Remove any undefined or null values
-      Object.keys(formattedData).forEach(key => {
-        if (formattedData[key] === undefined) {
-          delete formattedData[key];
-        }
-      });
+      // Format the data for the API ensuring all required fields
+      const formattedData = {
+        // Required fields
+        title: storyData.title,
+        type: storyData.type || 'Story',
+        status: (storyData.status || 'IN_PROGRESS').toUpperCase().replace(/[\s-]+/g, '_'),
+        priority: storyData.priority || 'High',
+        project: getIdFromObject(storyData.project),
+        reporter: getIdFromObject(storyData.reporter),
+        
+        // Optional fields
+        description: storyData.description || '',
+        sprint: getIdFromObject(storyData.sprint),
+        feature: getIdFromObject(storyData.feature),
+        assignee: getIdFromObject(storyData.assignee),
+        storyPoints: parseInt(storyData.storyPoints) || 0
+      };
 
-      console.log('📤 Sending formatted data:', formattedData);
-      const response = await api.put(`/stories/${storyId}`, formattedData);
-      console.log('✅ Story updated successfully:', response.data);
-      return response.data;
+      // First try to update the existing story
+      try {
+        // Try to get existing story just to check if it exists and get its key
+        const existingStory = await this.getStoryById(storyId);
+        formattedData.key = existingStory.key;
+        
+        console.log('📤 Updating existing story with data:', formattedData);
+        const response = await api.put(`/stories/${storyId}`, formattedData);
+        console.log('✅ Story updated successfully:', response.data);
+        return response.data;
+      } catch (error) {
+        // If story doesn't exist (404) or API route not found, create a new story
+        if (error.response?.status === 404 || error.message.includes('API route not found')) {
+          console.log('Story not found or invalid ID, creating new story instead');
+          
+          // Generate a key for the new story
+          if (formattedData.project) {
+            try {
+              formattedData.key = await this.generateStoryKey(formattedData.project);
+            } catch (keyError) {
+              console.warn('Failed to generate story key:', keyError);
+              formattedData.key = `STORY-${Date.now()}`;
+            }
+          } else {
+            formattedData.key = `STORY-${Date.now()}`;
+          }
+
+          // Validate required fields before creating
+          const requiredFields = ['title', 'type', 'status', 'priority', 'project', 'reporter', 'key'];
+          const missingFields = requiredFields.filter(field => !formattedData[field]);
+          
+          if (missingFields.length > 0) {
+            throw new Error(`Missing required fields for new story: ${missingFields.join(', ')}`);
+          }
+
+          console.log('📤 Creating new story with data:', formattedData);
+          return await this.createStory(formattedData);
+        }
+        
+        // If it's not a 404 error or API route not found, rethrow
+        throw error;
+      }
     } catch (error) {
-      console.error('❌ Error updating story:', error);
+      console.error('❌ Error updating/creating story:', error);
       this.logError(error, 'updateStory');
       throw error;
+    }
+  }
+
+  /**
+   * Generate a unique story key for a project
+   * @param {string} projectId - The ID of the project
+   * @returns {Promise<string>} The generated story key
+   */
+  async generateStoryKey(projectId) {
+    try {
+      if (!projectId) {
+        throw new Error('Project ID is required to generate story key');
+      }
+
+      // Get the project details to get the project key
+      const project = await api.get(`/projects/${projectId}`);
+      const projectKey = project.data.key;
+
+      // Get all stories for the project to determine the next number
+      const stories = await api.get(`/stories/project/${projectId}`);
+      const projectStories = stories.data || [];
+      
+      // Find the highest story number for this project
+      const storyNumbers = projectStories
+        .map(story => {
+          const match = story.key?.match(new RegExp(`${projectKey}-(\\d+)`));
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter(num => !isNaN(num));
+
+      const nextNumber = storyNumbers.length > 0 ? Math.max(...storyNumbers) + 1 : 1;
+      
+      // Generate the new key
+      const newKey = `${projectKey}-${nextNumber}`;
+      console.log(`📝 Generated new story key: ${newKey}`);
+      return newKey;
+    } catch (error) {
+      console.error('❌ Error generating story key:', error);
+      this.logError(error, 'generateStoryKey');
+      throw new Error('Failed to generate story key');
     }
   }
 
@@ -219,8 +337,14 @@ class StoryService {
     try {
       console.log(`📡 Updating story ${id} status to ${status}`);
       
-      // Ensure status is uppercase
-      const normalizedStatus = status.toUpperCase();
+      // Normalize status to match enum
+      const normalizedStatus = status.toUpperCase().replace(/[\s-]+/g, '_');
+      
+      // Validate status is a valid enum value
+      const validStatuses = Object.values(StoryStatus);
+      if (!validStatuses.includes(normalizedStatus)) {
+        throw new Error(`Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
+      }
       
       // Use the dedicated status update endpoint
       const response = await api.put(`/stories/${id}/status`, { 
@@ -228,13 +352,11 @@ class StoryService {
       });
       
       console.log(`✅ Status successfully updated to ${normalizedStatus}`);
-      this.cache.delete('allStories');
-      
       return response.data;
     } catch (error) {
       console.error('❌ Error updating story status:', error);
       this.logError(error, 'updateStoryStatus');
-      throw new Error(`Failed to update story status: ${error.response?.data?.message || error.message}`);
+      throw error;
     }
   }
 
