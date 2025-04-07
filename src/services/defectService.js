@@ -168,6 +168,14 @@ class DefectService {
       return cached;
     }
 
+    // Check if this endpoint was marked as unavailable
+    if (this.endpointAvailability['/defects']?.available === false) {
+      console.log('⚠️ /defects endpoint was previously marked as unavailable. Using increments API instead.');
+      console.timeEnd('getAllDefects');
+      console.groupEnd();
+      return [];
+    }
+
     try {
       console.log('📡 Fetching all defects from /defects endpoint...');
       const startTime = performance.now();
@@ -184,11 +192,19 @@ class DefectService {
       console.groupEnd();
       return response.data;
     } catch (error) {
-      // 404 errors mean the endpoint doesn't exist yet
+      // IMPORTANT: Log 404 errors in detail for API troubleshooting
       if (error.response?.status === 404) {
-        console.warn('⚠️ The defects endpoint (/api/defects) returned 404.');
-        console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
-        console.warn('📋 Check your backend implementation for missing routes.');
+        console.error('⚠️ API ENDPOINT NOT FOUND ERROR ⚠️');
+        console.error(`🔍 Attempted to access: ${error.config?.url || '/defects'}`);
+        console.error(`📋 Status: ${error.response?.status} - ${error.response?.statusText}`);
+        console.error(`📝 Message: ${error.response?.data?.message || 'No error message provided'}`);
+        console.error('👉 This endpoint is missing in the backend implementation.');
+        console.error('📝 RECOMMENDATION: Use the unified increments API instead - /increments will contain all defect data');
+        console.error('📋 Troubleshooting steps:');
+        console.error('   1. Check if the backend server is running');
+        console.error('   2. Use /increments or /increments/backlog endpoints instead');
+        console.error('   3. Update code to use the new unified data model');
+        
         this.checkEndpointAvailability('/defects', false);
       } else {
         // Other errors could be permissions, server issues, etc.

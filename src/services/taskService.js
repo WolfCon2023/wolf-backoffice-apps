@@ -158,6 +158,14 @@ class TaskService {
       return cached;
     }
 
+    // Check if this endpoint was marked as unavailable
+    if (this.endpointAvailability['/tasks']?.available === false) {
+      console.log('⚠️ /tasks endpoint was previously marked as unavailable. Using increments API instead.');
+      console.timeEnd('getAllTasks');
+      console.groupEnd();
+      return [];
+    }
+
     try {
       console.log('📡 Fetching all tasks from /tasks endpoint...');
       const startTime = performance.now();
@@ -174,11 +182,19 @@ class TaskService {
       console.groupEnd();
       return response.data;
     } catch (error) {
-      // 404 errors mean the endpoint doesn't exist yet
+      // IMPORTANT: Log 404 errors in detail for API troubleshooting
       if (error.response?.status === 404) {
-        console.warn('⚠️ The tasks endpoint (/api/tasks) returned 404.');
-        console.warn('👉 This likely means the endpoint has not been implemented in the backend yet.');
-        console.warn('📋 Check your backend implementation for missing routes.');
+        console.error('⚠️ API ENDPOINT NOT FOUND ERROR ⚠️');
+        console.error(`🔍 Attempted to access: ${error.config?.url || '/tasks'}`);
+        console.error(`📋 Status: ${error.response?.status} - ${error.response?.statusText}`);
+        console.error(`📝 Message: ${error.response?.data?.message || 'No error message provided'}`);
+        console.error('👉 This endpoint is missing in the backend implementation.');
+        console.error('📝 RECOMMENDATION: Use the unified increments API instead - /increments will contain all task data');
+        console.error('📋 Troubleshooting steps:');
+        console.error('   1. Check if the backend server is running');
+        console.error('   2. Use /increments or /increments/backlog endpoints instead');
+        console.error('   3. Update code to use the new unified data model');
+        
         this.checkEndpointAvailability('/tasks', false);
       } else {
         // Other errors could be permissions, server issues, etc.

@@ -31,7 +31,8 @@ import {
   Divider,
   Alert,
   Badge,
-  Avatar
+  Avatar,
+  FormHelperText
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -51,7 +52,8 @@ import incrementService from '../services/incrementService';
 import { userService } from '../services/userService';
 
 const Backlog = () => {
-  const [activeTab, setActiveTab] = useState('all');
+  console.log('🔄 Backlog component rendering...');
+
   const [loading, setLoading] = useState(true);
   const [backlogData, setBacklogData] = useState({
     sprints: [],
@@ -63,6 +65,7 @@ const Backlog = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [incrementType, setIncrementType] = useState('story');
   const [selectedItem, setSelectedItem] = useState(null);
+  const [sprintsForDropdown, setSprintsForDropdown] = useState([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -79,6 +82,15 @@ const Backlog = () => {
     severity: '',
   });
 
+  // Add new state for form validation errors
+  const [formErrors, setFormErrors] = useState({
+    title: false,
+    project: false,
+  });
+
+  // Add a new state to track submission in progress
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -88,6 +100,28 @@ const Backlog = () => {
       fetchBacklogData(selectedProject);
     }
   }, [selectedProject]);
+
+  useEffect(() => {
+    // Add effect to update sprint dropdown options at component level
+    if (backlogData.sprints && backlogData.sprints.length > 0) {
+      setSprintsForDropdown(backlogData.sprints);
+      console.log('Using sprints from backlogData for dropdown:', backlogData.sprints.length);
+    } else {
+      // Otherwise fetch them directly
+      const fetchSprintsForDropdown = async () => {
+        try {
+          console.log('Fetching sprints directly for dropdown...');
+          const fetchedSprints = await sprintService.getAllSprints();
+          console.log('Fetched sprints for dropdown:', fetchedSprints.length);
+          setSprintsForDropdown(fetchedSprints);
+        } catch (error) {
+          console.error('Failed to fetch sprints for dropdown:', error);
+        }
+      };
+      
+      fetchSprintsForDropdown();
+    }
+  }, [backlogData.sprints]);
 
   const fetchInitialData = async () => {
     try {
@@ -112,18 +146,83 @@ const Backlog = () => {
   const fetchBacklogData = async (projectId) => {
     try {
       setLoading(true);
+      console.log(`Fetching backlog data for project ${projectId}...`);
+      
+      // First, let's get the sprints for this project specifically
+      console.log('Fetching sprints by project ID...');
+      const projectSprints = await sprintService.getSprintsByProject(projectId);
+      console.log(`Found ${projectSprints.length} sprints for project ${projectId}`);
+      
+      // Then get backlog data
       const data = await incrementService.getBacklogData(projectId);
-      setBacklogData(data);
+      console.log('Backlog data received:', data);
+      
+      // Debug sprint data
+      if (data.sprints) {
+        console.log('SPRINTS DEBUG FROM API:');
+        data.sprints.forEach(sprint => {
+          console.log(`Sprint from API: ${sprint.name}, Status: ${sprint.status}, ID: ${sprint._id}`);
+        });
+      } else {
+        console.error('No sprints array in API response!');
+      }
+      
+      console.log('PROJECT SPRINTS FROM DIRECT FETCH:');
+      projectSprints.forEach(sprint => {
+        console.log(`Sprint from direct fetch: ${sprint.name}, Status: ${sprint.status}, ID: ${sprint._id}`);
+      });
+      
+      // Check if we have valid data structure
+      if (!data.sprints || !data.backlogItems) {
+        console.warn('Invalid backlog data format received:', data);
+        toast.warning('Backend returned invalid data format');
+      }
+      
+      // Merge sprints from both sources
+      const combinedSprints = [...projectSprints];
+      
+      // Add any sprints from backlog data that aren't already in the direct fetch results
+      if (data.sprints && data.sprints.length > 0) {
+        data.sprints.forEach(backlogSprint => {
+          // Check if this sprint is already in our combined list
+          const alreadyExists = combinedSprints.some(
+            sprint => sprint._id === backlogSprint._id
+          );
+          
+          // If not already in the list, add it
+          if (!alreadyExists) {
+            combinedSprints.push(backlogSprint);
+          } else {
+            // If it exists, make sure it has the increments data
+            const existingIndex = combinedSprints.findIndex(
+              sprint => sprint._id === backlogSprint._id
+            );
+            
+            if (existingIndex !== -1 && backlogSprint.increments) {
+              combinedSprints[existingIndex].increments = backlogSprint.increments;
+            }
+          }
+        });
+      }
+      
+      console.log(`Combined ${combinedSprints.length} sprints from both sources`);
+      
+      // Set the data with our merged sprints list
+      setBacklogData({
+        sprints: combinedSprints,
+        backlogItems: data.backlogItems || []
+      });
     } catch (error) {
-      toast.error('Failed to fetch backlog data');
       console.error('Error fetching backlog data:', error);
+      toast.error('Failed to fetch backlog data: ' + error.message);
+      // Set empty data to prevent rendering errors
+      setBacklogData({
+        sprints: [],
+        backlogItems: []
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
   };
 
   const handleProjectChange = (event) => {
@@ -175,29 +274,72 @@ const Backlog = () => {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
+    
+    // Update form data
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    
+    // Clear validation error for this field if it exists
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: false
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {
+      title: !formData.title,
+      project: !formData.project,
+    };
+    
+    setFormErrors(errors);
+    
+    // Form is valid if no errors are true
+    return !Object.values(errors).some(error => error);
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) {
+      console.log('🛑 Already submitting, preventing duplicate submission');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    console.log('🔍 DEBUG: handleSubmit called! Timestamp:', new Date().toISOString());
+    console.log('🔍 DEBUG: Form data at submission time:', JSON.stringify(formData, null, 2));
+    
+    // Check if we can directly access the network API to test connectivity
+    try {
+      const networkStatus = navigator.onLine 
+        ? '✅ Browser reports online' 
+        : '❌ Browser reports offline';
+      console.log(networkStatus);
+    } catch (e) {
+      console.warn('Could not check network status:', e);
+    }
+    
+    document.activeElement.blur(); // Blur active element to prevent double submission
+    
     try {
       const userData = JSON.parse(localStorage.getItem('user'));
       const currentUserId = userData?._id;
+      const token = localStorage.getItem('token');
+      
+      console.log('🔑 Token available:', token ? '✅ Yes' : '❌ No');
       
       if (!currentUserId) {
         toast.error('User information not found. Please login again.');
         return;
       }
       
-      if (!formData.title) {
-        toast.error('Title is required');
-        return;
-      }
-      
-      if (!formData.project) {
-        toast.error('Project is required');
+      // Validate the form
+      if (!validateForm()) {
+        console.warn('Form validation failed');
+        toast.error('Please fill in all required fields');
         return;
       }
       
@@ -205,24 +347,85 @@ const Backlog = () => {
       const incrementData = {
         ...formData,
         createdBy: currentUserId,
+        // Map incrementType to type for the API (backend expects 'type')
+        type: formData.type || formData.incrementType,
       };
       
-      let response;
+      // Remove the incrementType field to avoid confusing the API
+      delete incrementData.incrementType;
       
-      if (selectedItem) {
-        response = await incrementService.updateIncrement(selectedItem._id, incrementData);
-        toast.success('Item updated successfully!');
-      } else {
-        response = await incrementService.createIncrement(incrementData);
-        toast.success('Item created successfully!');
+      console.log('💾 Preparing to create increment with data:', JSON.stringify(incrementData, null, 2));
+      console.log('👤 Current user ID:', currentUserId);
+      console.log('🏢 Selected project:', formData.project);
+      console.log('🏃 Selected sprint:', formData.sprint);
+      
+      // If creating a new increment, attempt a direct fetch first to check API connectivity
+      if (!selectedItem) {
+        try {
+          console.log('🔌 Testing API connectivity...');
+          const testResult = await fetch(`${process.env.REACT_APP_API_BASE_URL || "https://wolf-backoffice-backend-development.up.railway.app/api"}/health`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          console.log('🔌 API health check status:', testResult.status);
+          if (testResult.ok) {
+            console.log('🔌 API health check response:', await testResult.text());
+          }
+        } catch (connectError) {
+          console.warn('🔌 API connection test failed:', connectError);
+        }
       }
       
-      // Refresh backlog data
-      fetchBacklogData(selectedProject);
-      handleCloseDialog();
+      try {
+        console.log('⏱️ Starting API request at:', new Date().toISOString());
+        
+        if (selectedItem) {
+          console.log(`📝 Updating increment ${selectedItem._id}...`);
+          const response = await incrementService.updateIncrement(selectedItem._id, incrementData);
+          console.log('✅ Update response:', response);
+          toast.success('Item updated successfully!');
+        } else {
+          console.log('➕ Creating new increment...');
+          const response = await incrementService.createIncrement(incrementData);
+          console.log('✅ Create response:', response);
+          toast.success('Item created successfully!');
+        }
+        
+        console.log('⏱️ Completed API request at:', new Date().toISOString());
+        console.log('🔄 Refreshing backlog data...');
+        
+        // Refresh backlog data
+        await fetchBacklogData(selectedProject);
+        handleCloseDialog();
+      } catch (apiError) {
+        console.error('❌ API Error:', apiError);
+        
+        // More detailed logging of request error
+        if (apiError.response) {
+          console.error('Response status:', apiError.response.status);
+          console.error('Response data:', apiError.response.data);
+          console.error('Response headers:', apiError.response.headers);
+        } else if (apiError.request) {
+          console.error('No response received:', apiError.request);
+        } else {
+          console.error('Request setup error:', apiError.message);
+        }
+        
+        toast.error(`Failed to ${selectedItem ? 'update' : 'create'} item: ${apiError.message}`);
+      }
     } catch (error) {
-      console.error('Error saving increment:', error);
+      console.error('❌ Error in submit handler:', error);
+      
+      // Add more detailed error logging
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Status:', error.response.status);
+      }
+      
       toast.error(`Failed to ${selectedItem ? 'update' : 'create'} item: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -252,6 +455,31 @@ const Backlog = () => {
     }
   };
 
+  // Helper to normalize sprint statuses for UI display
+  const normalizeSprintStatus = (status) => {
+    if (!status) return 'Unknown';
+    
+    const normalized = status.toUpperCase();
+    if (normalized === 'IN_PROGRESS' || normalized === 'ACTIVE') {
+      return 'Active';
+    } else if (normalized === 'PLANNING') {
+      return 'Planning';
+    } else if (normalized === 'COMPLETED') {
+      return 'Completed';
+    } else {
+      return status; // Return original if no mapping
+    }
+  };
+  
+  // Helper to check if a sprint is active/in planning and should be available for selection
+  const isSelectableSprint = (sprint) => {
+    if (!sprint || !sprint.status) return true; // Include sprints even if they have no status
+    
+    const status = sprint.status.toUpperCase();
+    // Accept almost any status except explicitly COMPLETED or CANCELLED
+    return status !== 'COMPLETED' && status !== 'CANCELLED';
+  };
+
   const getStatusColor = (status) => {
     const statusColors = {
       'Backlog': 'default',
@@ -265,12 +493,16 @@ const Backlog = () => {
   };
 
   const getIncrementTypeIcon = (type) => {
-    switch (type) {
+    if (!type) return <AssignmentIcon fontSize="small" />;
+    
+    const normalizedType = type.toLowerCase();
+    switch (normalizedType) {
       case 'story':
         return <AssignmentIcon fontSize="small" color="primary" />;
       case 'task':
         return <TaskIcon fontSize="small" color="success" />;
       case 'defect':
+      case 'bug':
         return <BugIcon fontSize="small" color="error" />;
       default:
         return <AssignmentIcon fontSize="small" />;
@@ -301,6 +533,8 @@ const Backlog = () => {
           required
           value={formData.title}
           onChange={handleInputChange}
+          error={formErrors.title}
+          helperText={formErrors.title ? "Title is required" : ""}
         />
         
         <TextField
@@ -313,13 +547,14 @@ const Backlog = () => {
           onChange={handleInputChange}
         />
         
-        <FormControl fullWidth>
+        <FormControl fullWidth error={formErrors.project}>
           <InputLabel>Project</InputLabel>
           <Select
             name="project"
             value={formData.project}
             onChange={handleInputChange}
             label="Project"
+            required
           >
             {projects.map(project => (
               <MenuItem key={project._id} value={project._id}>
@@ -327,6 +562,7 @@ const Backlog = () => {
               </MenuItem>
             ))}
           </Select>
+          {formErrors.project && <FormHelperText>Project is required</FormHelperText>}
         </FormControl>
         
         <FormControl fullWidth>
@@ -338,11 +574,18 @@ const Backlog = () => {
             label="Sprint"
           >
             <MenuItem value="">None</MenuItem>
-            {backlogData.sprints.map(sprint => (
-              <MenuItem key={sprint._id} value={sprint._id}>
-                {sprint.name}
-              </MenuItem>
-            ))}
+            {console.log('Sprint Dropdown Options:', sprintsForDropdown.length)}
+            {sprintsForDropdown
+              .filter(sprint => isSelectableSprint(sprint))
+              .map(sprint => {
+                console.log(`Adding sprint to dropdown: ${sprint.name}, Status: ${sprint.status}`);
+                return (
+                  <MenuItem key={sprint._id} value={sprint._id}>
+                    {sprint.name} ({normalizeSprintStatus(sprint.status)})
+                  </MenuItem>
+                );
+              })
+            }
           </Select>
         </FormControl>
         
@@ -449,21 +692,6 @@ const Backlog = () => {
       );
     }
 
-    // Filter items based on activeTab
-    const filteredItems = activeTab === 'all' 
-      ? items 
-      : items.filter(item => item.incrementType === activeTab);
-    
-    if (filteredItems.length === 0) {
-      return (
-        <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-          <Typography align="center" color="textSecondary">
-            No {activeTab} items found
-          </Typography>
-        </Paper>
-      );
-    }
-
     return (
       <TableContainer component={Paper} variant="outlined" sx={{ mt: 2 }}>
         <Table>
@@ -479,12 +707,12 @@ const Backlog = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredItems.map((item) => (
+            {items.map((item) => (
               <TableRow key={item._id}>
                 <TableCell>
-                  {getIncrementTypeIcon(item.incrementType)}
+                  {getIncrementTypeIcon(item.incrementType || item.type)}
                   <Typography variant="caption" sx={{ ml: 1 }}>
-                    {item.incrementType}
+                    {item.incrementType || item.type || 'Unknown'}
                   </Typography>
                 </TableCell>
                 <TableCell>{item.title}</TableCell>
@@ -516,7 +744,7 @@ const Backlog = () => {
                   )}
                 </TableCell>
                 <TableCell>
-                  {item.incrementType === 'story' && item.storyPoints && (
+                  {(item.incrementType === 'story' || item.type === 'story') && item.storyPoints && (
                     <Chip 
                       label={`${item.storyPoints} pts`} 
                       size="small" 
@@ -525,7 +753,7 @@ const Backlog = () => {
                       sx={{ mr: 1 }}
                     />
                   )}
-                  {item.incrementType === 'task' && item.estimatedHours && (
+                  {(item.incrementType === 'task' || item.type === 'task') && item.estimatedHours && (
                     <Chip 
                       label={`${item.estimatedHours} hrs`} 
                       size="small" 
@@ -534,9 +762,9 @@ const Backlog = () => {
                       sx={{ mr: 1 }}
                     />
                   )}
-                  {item.incrementType === 'defect' && item.severity && (
+                  {(item.incrementType === 'defect' || item.type === 'defect') && (item.severity || item.priority) && (
                     <Chip 
-                      label={item.severity} 
+                      label={item.severity || item.priority} 
                       size="small" 
                       color="error"
                       variant="outlined"
@@ -547,7 +775,7 @@ const Backlog = () => {
                 <TableCell>
                   <IconButton
                     size="small"
-                    onClick={() => handleOpenDialog(item.incrementType, item)}
+                    onClick={() => handleOpenDialog(item.incrementType || item.type, item)}
                     title="Edit"
                   >
                     <EditIcon fontSize="small" />
@@ -569,6 +797,9 @@ const Backlog = () => {
   };
 
   const renderSprintSection = (sprint) => {
+    console.log('Rendering sprint section for:', sprint);
+    console.log('Sprint increments:', sprint.increments);
+    
     return (
       <Card key={sprint._id} variant="outlined" sx={{ mb: 2 }}>
         <CardContent>
@@ -576,8 +807,8 @@ const Backlog = () => {
             <Typography variant="h6">{sprint.name}</Typography>
             <Box>
               <Chip 
-                label={sprint.status} 
-                color={sprint.status === 'Active' ? 'success' : 'default'}
+                label={normalizeSprintStatus(sprint.status)} 
+                color={isSelectableSprint(sprint) ? 'success' : 'default'}
                 size="small"
                 sx={{ mr: 1 }}
               />
@@ -591,7 +822,15 @@ const Backlog = () => {
             </Box>
           </Box>
           
-          {renderBacklogItems(sprint.increments)}
+          {Array.isArray(sprint.increments) ? (
+            renderBacklogItems(sprint.increments)
+          ) : (
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography align="center" color="textSecondary">
+                No increments found in this sprint
+              </Typography>
+            </Paper>
+          )}
         </CardContent>
       </Card>
     );
@@ -636,62 +875,38 @@ const Backlog = () => {
           </Box>
         </Box>
 
-        <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-          <Tab
-            value="all"
-            icon={<Badge badgeContent={backlogData.backlogItems?.length || 0} color="primary">
-              <DragIcon />
-            </Badge>}
-            label="All Items"
-            iconPosition="start"
-          />
-          <Tab
-            value="story"
-            icon={<Badge 
-              badgeContent={
-                backlogData.backlogItems?.filter(item => item.incrementType === 'story').length || 0
-              } 
-              color="primary"
-            >
-              <AssignmentIcon />
-            </Badge>}
-            label="Stories"
-            iconPosition="start"
-          />
-          <Tab
-            value="task"
-            icon={<Badge 
-              badgeContent={
-                backlogData.backlogItems?.filter(item => item.incrementType === 'task').length || 0
-              } 
-              color="success"
-            >
-              <TaskIcon />
-            </Badge>}
-            label="Tasks"
-            iconPosition="start"
-          />
-          <Tab
-            value="defect"
-            icon={<Badge 
-              badgeContent={
-                backlogData.backlogItems?.filter(item => item.incrementType === 'defect').length || 0
-              } 
-              color="error"
-            >
-              <BugIcon />
-            </Badge>}
-            label="Defects"
-            iconPosition="start"
-          />
-        </Tabs>
-
         <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Backlog Items</Typography>
         {renderBacklogItems(backlogData.backlogItems)}
 
         <Typography variant="h6" sx={{ mt: 4, mb: 2 }}>Sprints</Typography>
         {backlogData.sprints && backlogData.sprints.length > 0 ? (
-          backlogData.sprints.map(sprint => renderSprintSection(sprint))
+          <>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Found {backlogData.sprints.length} sprints ({backlogData.sprints.filter(s => isSelectableSprint(s)).length} active)
+              </Typography>
+            </Box>
+            {/* Sort sprints - active/in progress first, then planning, then others */}
+            {backlogData.sprints
+              .sort((a, b) => {
+                // Define status priorities for sorting
+                const getPriority = (status) => {
+                  if (!status) return 99;
+                  const s = status.toUpperCase();
+                  if (s === 'IN_PROGRESS' || s === 'ACTIVE') return 0;
+                  if (s === 'PLANNING') return 1;
+                  if (s === 'IN_REVIEW') return 2;
+                  if (s === 'COMPLETED') return 3;
+                  return 99; // Unknown status at the end
+                };
+                
+                return getPriority(a.status) - getPriority(b.status);
+              })
+              .map(sprint => {
+                console.log(`Preparing to render sprint ${sprint.name} with status ${sprint.status} and ${sprint.increments?.length || 0} increments`);
+                return renderSprintSection(sprint);
+              })}
+          </>
         ) : (
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography align="center" color="textSecondary">
@@ -705,6 +920,8 @@ const Backlog = () => {
           onClose={handleCloseDialog}
           maxWidth="sm"
           fullWidth
+          disableEscapeKeyDown={isSubmitting}
+          disableBackdropClick={isSubmitting}
         >
           <DialogTitle>
             {selectedItem ? 'Edit' : 'Create'} Item
@@ -713,9 +930,30 @@ const Backlog = () => {
             {renderDialogContent()}
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button variant="contained" onClick={handleSubmit}>
-              {selectedItem ? 'Update' : 'Create'}
+            <Button 
+              id="cancel-button" 
+              type="button" 
+              onClick={handleCloseDialog}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              id="submit-button" 
+              type="button" 
+              variant="contained" 
+              color="primary"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <CircularProgress size={20} sx={{ mr: 1 }} color="inherit" />
+                  {selectedItem ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                selectedItem ? 'Update' : 'Create'
+              )}
             </Button>
           </DialogActions>
         </Dialog>

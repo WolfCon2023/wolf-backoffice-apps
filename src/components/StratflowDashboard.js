@@ -51,9 +51,9 @@ import {
   PersonAdd,
   Edit,
   Delete,
-  AdminPanelSettings,
   PlayArrow,
   CheckCircle,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -75,9 +75,9 @@ import sprintService from '../services/sprintService';
 import storyService from '../services/storyService';
 import taskService from '../services/taskService';
 import defectService from '../services/defectService';
+import incrementService from '../services/incrementService';
 import { userService } from '../services/userService';
 import { Link as RouterLink } from 'react-router-dom';
-import apiHealthService from '../services/apiHealthService';
 
 ChartJS.register(
   CategoryScale,
@@ -172,9 +172,6 @@ const StratflowDashboard = () => {
     capacity: 10
   });
   const [projects, setProjects] = useState([]);
-  
-  const [apiHealth, setApiHealth] = useState({});
-  const [showApiStatus, setShowApiStatus] = useState(false);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -192,326 +189,313 @@ const StratflowDashboard = () => {
     if (mountedRef.current) return;
     mountedRef.current = true;
     
-    // Check API health first to identify which endpoints are implemented
-    const checkApiHealth = async () => {
-      console.group('🔍 API Health Check');
-      console.log('Checking API endpoint health...');
-      
-      const endpoints = [
-        '/projects',
-        '/teams',
-        '/sprints',
-        '/stories',
-        '/tasks',
-        '/defects'
-      ];
-      
-      const healthResults = await apiHealthService.checkMultipleEndpoints(endpoints);
-      apiHealthService.logApiHealthSummary(healthResults);
-      
-      setApiHealth(healthResults);
-      console.groupEnd();
-      
-      // Continue with data fetching
-      fetchDashboardData(healthResults);
-    };
+    // Fetch dashboard data
+    fetchDashboardData();
     
-    const fetchDashboardData = async (healthStatus) => {
-      console.group('📊 StratFlow Dashboard - Data Fetching');
-      console.time('dashboardDataFetch');
-      
+    // Fetch users
+    fetchUsers();
+  }, []);
+
+  // Define the fetchDashboardData function
+  const fetchDashboardData = async () => {
+    try {
       setLoading(true);
+      console.log('Fetching dashboard data...');
       
-      // Create data containers
-      let projects = [], teams = [], sprints = [], stories = [], tasks = [], defects = [];
-      let apiStatus = {
-        projects: { success: false, error: null, count: 0 },
-        teams: { success: false, error: null, count: 0 },
-        sprints: { success: false, error: null, count: 0 },
-        stories: { success: false, error: null, count: 0 },
-        tasks: { success: false, error: null, count: 0 },
-        defects: { success: false, error: null, count: 0 }
-      };
-
-      // Modify the fetchWithRetry function to check for CORS unknown status
-      const fetchWithRetry = async (fetchFn, entityName, maxRetries = 2, retryDelay = 1000) => {
-        // Skip fetch if we already know the endpoint doesn't exist
-        const endpoint = `/${entityName}`;
-        const healthResult = healthStatus[endpoint];
+      // Initialize empty arrays for data that might not be available
+      let storiesData = [];
+      let tasksData = [];
+      let defectsData = [];
+      let incrementsData = [];
+      
+      // Fetch data in parallel for better performance
+      const [
+        projectsData,
+        teamsData,
+        sprintsData
+      ] = await Promise.all([
+        projectService.getAllProjects(),
+        teamService.getAllTeams(),
+        sprintService.getAllSprints()
+      ]);
+      
+      // Try to fetch increments (new unified data model)
+      try {
+        incrementsData = await incrementService.getAllIncrements();
+        console.log('- Increments:', incrementsData.length);
         
-        // If health check returned definitively unavailable (not just CORS unknown)
-        if (healthResult && healthResult.available === false) {
-          console.warn(`⚠️ Skipping ${entityName} fetch - endpoint not implemented`);
-          return [];
+        // Debug: Print the structure of the first increment to help troubleshoot
+        if (incrementsData.length > 0) {
+          const firstIncrement = incrementsData[0];
+          console.log('First increment data sample:');
+          console.log('- ID:', firstIncrement._id);
+          console.log('- Title:', firstIncrement.title);
+          console.log('- Type:', firstIncrement.type);
+          console.log('- Fields:', Object.keys(firstIncrement));
+          console.log('- Sprint ID type:', typeof firstIncrement.sprint);
+          console.log('- Sprint value:', firstIncrement.sprint);
         }
         
-        // If health status is unknown due to CORS, we'll try anyway
-        if (healthResult && healthResult.available === null) {
-          console.warn(`⚠️ ${entityName} status unknown due to CORS - attempting fetch anyway`);
-        }
-
-        let retries = 0;
-        let lastError = null;
+        // If we have increments data, we don't need to try the legacy endpoints
+        console.log('Using unified increments model - skipping legacy API calls');
         
-        while (retries <= maxRetries) {
-          try {
-            const startTime = performance.now();
-            const data = await fetchFn();
-            const endTime = performance.now();
-            
-            console.log(`✅ ${entityName} fetched successfully in ${Math.round(endTime - startTime)}ms`);
-            apiStatus[entityName] = { success: true, error: null, count: data.length };
-            return data;
-          } catch (error) {
-            lastError = error;
-            
-            // Don't retry 404 errors - these mean the endpoint doesn't exist
-            if (error.response?.status === 404) {
-              console.warn(`⚠️ ${entityName} endpoint returned 404 - Not implemented yet`);
-              break;
-            }
-            
-            // Don't retry unauthorized errors
-            if (error.response?.status === 401 || error.response?.status === 403) {
-              console.error(`❌ ${entityName} fetch failed: Authentication error`);
-              break;
-            }
-            
-            retries++;
-            if (retries <= maxRetries) {
-              console.warn(`⚠️ ${entityName} fetch attempt ${retries} failed, retrying in ${retryDelay}ms...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
-            }
-          }
+      } catch (error) {
+        console.error('Error fetching increments:', error);
+        toast.error('Failed to load increment data');
+        incrementsData = [];
+        
+        // Only try to fetch legacy data models if increments data is not available
+        console.log('Increments data not available - trying legacy endpoints');
+        
+        try {
+          storiesData = await storyService.getAllStories();
+        } catch (error) {
+          console.warn('Stories endpoint not available:', error.message);
+          storiesData = [];
         }
         
-        if (lastError) {
-          console.error(`❌ Failed to fetch ${entityName} after ${retries} attempts:`, lastError);
-          apiStatus[entityName] = { success: false, error: lastError, count: 0 };
+        try {
+          tasksData = await taskService.getAllTasks();
+        } catch (error) {
+          console.warn('Tasks endpoint not available:', error.message);
+          tasksData = [];
         }
         
-        return [];
-      };
-
-      // Fetch core data first - projects and teams
-      console.group('📊 Fetching Core Data');
-      console.time('coreDataFetch');
-      
-      // Projects
-      projects = await fetchWithRetry(
-        () => projectService.getAllProjects(),
-        'projects'
-      );
-      console.log(`📋 Loaded ${projects.length} projects`);
-      
-      // Store projects in state for sprint management
-      setProjects(projects);
-      
-      // Teams
-      teams = await fetchWithRetry(
-        () => teamService.getAllTeams(),
-        'teams'
-      );
-      console.log(`👥 Loaded ${teams.length} teams`);
-      
-      // Only try to fetch sprints if we have projects
-      if (projects.length > 0) {
-        sprints = await fetchWithRetry(
-          () => sprintService.getAllSprints(),
-          'sprints'
-        );
-        console.log(`🏃‍♂️ Loaded ${sprints.length} sprints`);
-        
-        // Store sprints in state for management
-        setSprints(sprints);
-      } else {
-        console.warn('⚠️ Skipping sprint fetch - no projects available');
+        try {
+          defectsData = await defectService.getAllDefects();
+        } catch (error) {
+          console.warn('Defects endpoint not available:', error.message);
+          defectsData = [];
+        }
       }
       
-      console.timeEnd('coreDataFetch');
-      console.groupEnd(); // Core data fetching
-
-      // Process core data
-      // Calculate project metrics
+      console.log('Dashboard data loaded:');
+      console.log('- Projects:', projectsData.length);
+      console.log('- Teams:', teamsData.length);
+      console.log('- Sprints:', sprintsData.length);
+      console.log('- Stories:', storiesData.length);
+      console.log('- Tasks:', tasksData.length);
+      console.log('- Defects:', defectsData.length);
+      console.log('- Increments:', incrementsData.length);
+      
+      // Set projects
+      setProjects(projectsData);
+      
+      // Set teams and team metrics
+      setTeams(teamsData);
+      let totalMembers = 0;
+      teamsData.forEach(team => {
+        if (team.members) {
+          totalMembers += team.members.length;
+        }
+      });
+      
+      setTeamMetrics({
+        totalTeams: teamsData.length,
+        totalMembers: totalMembers
+      });
+      
+      // Set sprints
+      setSprints(sprintsData);
+      
+      // Get upcoming/active sprints
+      const upcoming = sprintsData
+        .filter(sprint => 
+          sprint.status === 'PLANNING' || 
+          sprint.status === 'ACTIVE' || 
+          sprint.status === 'Planning' ||
+          sprint.status === 'Active'
+        )
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+        .slice(0, 5)
+        .map(sprint => ({
+          ...sprint,
+          projectName: projectsData.find(p => p._id === sprint.project)?.name || 'Unknown Project'
+        }));
+      
+      setUpcomingSprints(upcoming);
+      
+      // Project metrics
       const projectMetricsData = {
-        total: projects.length,
-        active: projects.filter(p => p.status === 'Active').length,
-        completed: projects.filter(p => p.status === 'Completed').length,
-        onHold: projects.filter(p => p.status === 'On Hold').length,
+        total: projectsData.length,
+        active: projectsData.filter(p => p.status === 'ACTIVE' || p.status === 'Active').length,
+        completed: projectsData.filter(p => p.status === 'COMPLETED' || p.status === 'Completed').length,
+        onHold: projectsData.filter(p => p.status === 'ON_HOLD' || p.status === 'On Hold').length,
       };
       setProjectMetrics(projectMetricsData);
-
-      // Calculate team metrics
-      const teamMetricsData = {
-        totalTeams: teams.length,
-        totalMembers: teams.reduce((total, team) => total + (team.members?.length || 0), 0),
-        activeTeams: teams.filter(t => t.status === 'Active').length,
-      };
-      setTeamMetrics(teamMetricsData);
-
-      // Update metrics with project and team data
-      setMetrics(prev => ({
-        ...prev,
-        totalProjects: projects.length,
-        activeProjects: projectMetricsData.active,
-        totalTeams: teams.length,
-        completedProjects: projectMetricsData.completed,
-      }));
-
-      // Calculate project progress
-      if (projects.length > 0) {
-        const progressData = projects.map(project => ({
-          name: project.name || 'Unnamed Project',
-          completed: project.progress || 0,
-          remaining: 100 - (project.progress || 0),
-        }));
-        setProjectProgress(progressData);
-
-        // Set recent projects with safe date handling
-        const sortedProjects = [...projects]
-          .filter(p => p && p.createdAt) // Only include projects with valid dates
-          .sort((a, b) => {
-            const dateA = new Date(a.createdAt);
-            const dateB = new Date(b.createdAt);
-            return isNaN(dateA.getTime()) || isNaN(dateB.getTime()) ? 0 : dateB - dateA;
-          })
-          .slice(0, 5);
-        setRecentProjects(sortedProjects);
-      }
-
-      // Calculate upcoming sprints
-      if (sprints.length > 0) {
-        const upcomingSprintsData = sprints
-          .filter(sprint => {
-            const startDate = new Date(sprint.startDate);
-            return !isNaN(startDate.getTime()) && startDate >= new Date();
-          })
-          .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
-          .slice(0, 5)
-          .map(sprint => ({
-            ...sprint,
-            projectName: projects.find(p => p.id === sprint.projectId)?.name || 'Unknown Project'
-          }));
+      
+      // Project progress
+      const progressData = projectsData.map(project => {
+        const projectSprints = sprintsData.filter(s => s.project === project._id);
+        const completedSprints = projectSprints.filter(s => 
+          s.status === 'COMPLETED' || s.status === 'Completed'
+        ).length;
+        const totalSprints = projectSprints.length || 1; // Avoid division by zero
         
-        setUpcomingSprints(upcomingSprintsData);
+        return {
+          name: project.name,
+          completed: (completedSprints / totalSprints) * 100,
+          remaining: ((totalSprints - completedSprints) / totalSprints) * 100
+        };
+      });
+      setProjectProgress(progressData);
+      
+      // Backlog metrics - using the new increment data if available
+      console.log('Processing data for backlog metrics...');
+      
+      // Determine which data source to use
+      const useIncrements = incrementsData.length > 0;
+      
+      let processedStories = [];
+      let processedTasks = [];
+      let processedDefects = [];
+      
+      if (useIncrements) {
+        // Use new increment model - filter by 'type' property
+        console.log('Filtering increments by type property...');
+        console.log('Increment data sample:', incrementsData.length > 0 ? incrementsData[0] : 'No increments');
+        
+        processedStories = incrementsData.filter(inc => inc.type === 'story');
+        processedTasks = incrementsData.filter(inc => inc.type === 'task');
+        processedDefects = incrementsData.filter(inc => inc.type === 'defect');
+        
+        console.log('After filtering:');
+        console.log('- Filtered stories:', processedStories.length);
+        console.log('- Filtered tasks:', processedTasks.length);
+        console.log('- Filtered defects:', processedDefects.length);
+      } else {
+        // Fallback to legacy models
+        processedStories = storiesData;
+        processedTasks = tasksData;
+        processedDefects = defectsData;
       }
-
-      // Fetch backlog data - these endpoints might not exist yet
-      console.group('📊 Fetching Backlog Data');
-      console.time('backlogDataFetch');
       
-      // Stories
-      stories = await fetchWithRetry(
-        () => storyService.getAllStories(),
-        'stories'
-      );
-      console.log(`📃 Loaded ${stories.length} stories`);
+      console.log('Processed data for metrics:');
+      console.log('- Stories:', processedStories.length);
+      console.log('- Tasks:', processedTasks.length);
+      console.log('- Defects:', processedDefects.length);
       
-      // Tasks
-      tasks = await fetchWithRetry(
-        () => taskService.getAllTasks(),
-        'tasks'
-      );
-      console.log(`✓ Loaded ${tasks.length} tasks`);
+      // Group stories by status
+      const storyStatusCounts = {};
+      processedStories.forEach(story => {
+        storyStatusCounts[story.status] = (storyStatusCounts[story.status] || 0) + 1;
+      });
       
-      // Defects
-      defects = await fetchWithRetry(
-        () => defectService.getAllDefects(),
-        'defects'
-      );
-      console.log(`🐞 Loaded ${defects.length} defects`);
+      // Group tasks by priority and status
+      const taskPriorityCounts = {};
+      const taskStatusCounts = {};
+      processedTasks.forEach(task => {
+        taskPriorityCounts[task.priority] = (taskPriorityCounts[task.priority] || 0) + 1;
+        taskStatusCounts[task.status] = (taskStatusCounts[task.status] || 0) + 1;
+      });
       
-      console.timeEnd('backlogDataFetch');
-      console.groupEnd(); // Backlog data fetching
-
-      // Calculate backlog metrics if we have any data
-      const backlogMetricsData = {
+      // Group defects by severity and status
+      const defectSeverityCounts = {};
+      const defectStatusCounts = {};
+      processedDefects.forEach(defect => {
+        // Some defect records may use 'priority' instead of 'severity'
+        const severityValue = defect.severity || defect.priority || 'Unknown';
+        defectSeverityCounts[severityValue] = (defectSeverityCounts[severityValue] || 0) + 1;
+        defectStatusCounts[defect.status] = (defectStatusCounts[defect.status] || 0) + 1;
+      });
+      
+      setBacklogMetrics({
         stories: {
-          total: stories.length,
-          byStatus: stories.reduce((acc, story) => {
-            acc[story.status] = (acc[story.status] || 0) + 1;
-            return acc;
-          }, {}),
-          byType: stories.reduce((acc, story) => {
-            acc[story.type] = (acc[story.type] || 0) + 1;
-            return acc;
-          }, {}),
+          total: processedStories.length,
+          byStatus: storyStatusCounts,
+          byType: {} // Any other story categorization if needed
         },
         tasks: {
-          total: tasks.length,
-          byStatus: tasks.reduce((acc, task) => {
-            acc[task.status] = (acc[task.status] || 0) + 1;
-            return acc;
-          }, {}),
-          byPriority: tasks.reduce((acc, task) => {
-            acc[task.priority] = (acc[task.priority] || 0) + 1;
-            return acc;
-          }, {}),
+          total: processedTasks.length,
+          byStatus: taskStatusCounts,
+          byPriority: taskPriorityCounts
         },
         defects: {
-          total: defects.length,
-          bySeverity: defects.reduce((acc, defect) => {
-            acc[defect.severity] = (acc[defect.severity] || 0) + 1;
-            return acc;
-          }, {}),
-          byStatus: defects.reduce((acc, defect) => {
-            acc[defect.status] = (acc[defect.status] || 0) + 1;
-            return acc;
-          }, {}),
-        },
-      };
-      setBacklogMetrics(backlogMetricsData);
-
-      // Update overall metrics
-      setMetrics(prev => ({
-        ...prev,
-        totalStories: stories.length,
-        totalTasks: tasks.length,
-        totalDefects: defects.length,
-        activeSprints: sprints.filter(s => 
+          total: processedDefects.length,
+          byStatus: defectStatusCounts,
+          bySeverity: defectSeverityCounts
+        }
+      });
+      
+      // Overall metrics
+      setMetrics({
+        totalProjects: projectsData.length,
+        activeProjects: projectsData.filter(p => p.status === 'ACTIVE' || p.status === 'Active').length,
+        totalTeams: teamsData.length,
+        activeSprints: sprintsData.filter(s => 
           s.status === 'ACTIVE' || 
           s.status === 'Active' || 
           s.status === 'IN_PROGRESS' || 
           s.status === 'In Progress'
         ).length,
-      }));
-
-      // Print API Status Summary
-      console.group('📊 API Status Summary');
-      Object.entries(apiStatus).forEach(([entityName, status]) => {
-        if (status.success) {
-          console.log(`✅ ${entityName}: ${status.count} items`);
-        } else {
-          console.warn(`❌ ${entityName}: Failed to load`);
-          if (status.error?.response?.status === 404) {
-            console.warn(`   - Reason: API endpoint not implemented (404)`);
-          } else if (status.error) {
-            console.warn(`   - Error: ${status.error.message}`);
-          }
-        }
+        totalStories: processedStories.length,
+        totalTasks: processedTasks.length,
+        totalDefects: processedDefects.length
       });
-      console.groupEnd(); // API Status Summary
-
+      
+      // Velocity data
+      const sprintVelocityData = {
+        labels: [],
+        datasets: [{
+          label: 'Velocity',
+          data: [],
+          fill: false,
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1
+        }]
+      };
+      
+      // Get completed sprints sorted by end date
+      const completedSprints = sprintsData
+        .filter(s => s.status === 'COMPLETED' || s.status === 'Completed')
+        .sort((a, b) => new Date(a.endDate) - new Date(b.endDate))
+        .slice(-10); // Get last 10 sprints
+      
+      completedSprints.forEach(sprint => {
+        // For each sprint, calculate velocity (sum of story points)
+        let velocity = 0;
+        
+        if (useIncrements) {
+          // Use increments data - account for different ID formats
+          const sprintIncrements = incrementsData.filter(inc => {
+            // Handle different formats of sprint IDs
+            const incSprintId = typeof inc.sprint === 'object' ? inc.sprint._id : inc.sprint;
+            return incSprintId === sprint._id || incSprintId === String(sprint._id);
+          });
+          
+          console.log(`Sprint ${sprint.name} has ${sprintIncrements.length} increments`);
+          velocity = sprintIncrements.reduce((sum, inc) => sum + (parseInt(inc.storyPoints) || 0), 0);
+        } else {
+          // Try to use legacy data
+          const sprintStories = storiesData.filter(s => s.sprint === sprint._id);
+          velocity = sprintStories.reduce((sum, story) => sum + (parseInt(story.storyPoints) || 0), 0);
+        }
+        
+        sprintVelocityData.labels.push(sprint.name);
+        sprintVelocityData.datasets[0].data.push(velocity);
+      });
+      
+      setVelocityData(sprintVelocityData);
+      
+      console.log('Dashboard data loading completed successfully');
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data: ' + error.message);
+    } finally {
       setLoading(false);
-      console.timeEnd('dashboardDataFetch');
-      console.groupEnd(); // Dashboard Data Fetching
-    };
+    }
+  };
 
-    checkApiHealth();
-  }, []);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await userService.getAllUsers();
-        setUsers(response);
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        toast.error('Failed to fetch users');
-      }
-    };
-    fetchUsers();
-  }, []);
+  // Separate useEffect for fetching user data
+  const fetchUsers = async () => {
+    try {
+      const users = await userService.getAllUsers();
+      setUsers(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load user data');
+    }
+  };
 
   const getStatusColor = (status) => {
     // Normalize status to uppercase for consistent matching
@@ -546,6 +530,11 @@ const StratflowDashboard = () => {
       'High': 'error',
       'Medium': 'warning',
       'Low': 'info',
+      'Highest': 'error',
+      'Urgent': 'error',
+      'Normal': 'warning',
+      'Minor': 'info',
+      'Trivial': 'default'
     };
     return colors[severity] || 'default';
   };
@@ -654,72 +643,6 @@ const StratflowDashboard = () => {
       console.error('Error updating team:', error);
       toast.error('Failed to update team');
     }
-  };
-
-  // Add a new method to render the API health status dialog
-  const renderApiStatusDialog = () => {
-    return (
-      <Dialog 
-        open={showApiStatus} 
-        onClose={() => setShowApiStatus(false)}
-        maxWidth="md"
-      >
-        <DialogTitle>API Endpoint Status</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-            <Typography variant="body2">
-              <strong>Note:</strong> CORS restrictions may prevent accurate status checks in development environment.
-              The actual backend features might be available despite showing as "Unknown" here.
-            </Typography>
-          </Box>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Endpoint</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Details</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {Object.entries(apiHealth).map(([endpoint, status]) => (
-                  <TableRow key={endpoint}>
-                    <TableCell>{endpoint}</TableCell>
-                    <TableCell>
-                      {status.available === true ? (
-                        <Chip
-                          label="Available"
-                          color="success"
-                          size="small"
-                        />
-                      ) : status.available === null ? (
-                        <Chip
-                          label="Unknown"
-                          color="warning"
-                          size="small"
-                        />
-                      ) : (
-                        <Chip
-                          label="Not Implemented"
-                          color="error"
-                          size="small"
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {status.available !== true && status.error && status.error.message}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowApiStatus(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    );
   };
 
   const handleOpenSprintManagement = () => {
@@ -1025,15 +948,6 @@ const StratflowDashboard = () => {
                 Sprint Management
               </Button>
             </Grid>
-            <Grid item>
-              <Button
-                variant="outlined"
-                startIcon={<AdminPanelSettings />}
-                onClick={() => setShowApiStatus(true)}
-              >
-                API Status
-              </Button>
-            </Grid>
           </Grid>
         </Box>
 
@@ -1049,8 +963,8 @@ const StratflowDashboard = () => {
                 </Box>
                 <Typography variant="h4" sx={{ mb: 2 }}>{backlogMetrics.stories.total}</Typography>
                 <Typography variant="subtitle2" color="textSecondary">By Status</Typography>
-                {Object.entries(backlogMetrics.stories.byStatus).map(([status, count]) => (
-                  <Box key={status} sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
+                {Object.entries(backlogMetrics.stories.byStatus).map(([status, count], index) => (
+                  <Box key={`story-status-${status}-${index}`} sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
                     <Chip
                       label={status}
                       size="small"
@@ -1072,8 +986,8 @@ const StratflowDashboard = () => {
                 </Box>
                 <Typography variant="h4" sx={{ mb: 2 }}>{backlogMetrics.tasks.total}</Typography>
                 <Typography variant="subtitle2" color="textSecondary">By Priority</Typography>
-                {Object.entries(backlogMetrics.tasks.byPriority).map(([priority, count]) => (
-                  <Box key={priority} sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
+                {Object.entries(backlogMetrics.tasks.byPriority).map(([priority, count], index) => (
+                  <Box key={`task-priority-${priority}-${index}`} sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
                     <Chip
                       label={priority}
                       size="small"
@@ -1095,8 +1009,8 @@ const StratflowDashboard = () => {
                 </Box>
                 <Typography variant="h4" sx={{ mb: 2 }}>{backlogMetrics.defects.total}</Typography>
                 <Typography variant="subtitle2" color="textSecondary">By Severity</Typography>
-                {Object.entries(backlogMetrics.defects.bySeverity).map(([severity, count]) => (
-                  <Box key={severity} sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
+                {Object.entries(backlogMetrics.defects.bySeverity).map(([severity, count], index) => (
+                  <Box key={`defect-severity-${severity}-${index}`} sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
                     <Chip
                       label={severity}
                       size="small"
@@ -1266,6 +1180,7 @@ const StratflowDashboard = () => {
                         </TableCell>
                         <TableCell>
                           <Chip
+                            key={`sprint-status-${sprint.id}`}
                             label={sprint.status}
                             color={getStatusColor(sprint.status)}
                             size="small"
@@ -1402,6 +1317,7 @@ const StratflowDashboard = () => {
                           <TableCell>{project.name || 'Unnamed Project'}</TableCell>
                           <TableCell>
                             <Chip
+                              key={`project-status-${project.id}`}
                               label={project.status || 'Unknown'}
                               size="small"
                               color={getStatusColor(project.status)}
@@ -1462,6 +1378,7 @@ const StratflowDashboard = () => {
                           </TableCell>
                           <TableCell>
                             <Chip
+                              key={`team-status-${team.id}`}
                               label={team.status}
                               color={team.status === 'ACTIVE' ? 'success' : 'default'}
                               size="small"
@@ -1570,8 +1487,13 @@ const StratflowDashboard = () => {
         </Grid>
 
         {/* Add Team Member Dialog */}
-        <Dialog open={openAddMemberDialog} onClose={() => setOpenAddMemberDialog(false)}>
-          <DialogTitle>Add Team Member</DialogTitle>
+        <Dialog 
+          open={openAddMemberDialog} 
+          onClose={() => setOpenAddMemberDialog(false)}
+          aria-labelledby="add-team-member-dialog-title"
+          disableEnforceFocus
+        >
+          <DialogTitle id="add-team-member-dialog-title">Add Team Member</DialogTitle>
           <DialogContent>
             <FormControl fullWidth sx={{ mt: 2 }}>
               <InputLabel>Select User</InputLabel>
@@ -1600,8 +1522,13 @@ const StratflowDashboard = () => {
         </Dialog>
 
         {/* User Management Dialog */}
-        <Dialog open={openUserManagementDialog} onClose={() => setOpenUserManagementDialog(false)}>
-          <DialogTitle>
+        <Dialog 
+          open={openUserManagementDialog} 
+          onClose={() => setOpenUserManagementDialog(false)}
+          aria-labelledby="user-management-dialog-title"
+          disableEnforceFocus
+        >
+          <DialogTitle id="user-management-dialog-title">
             {editingUser ? 'Edit User' : 'Create New User'}
           </DialogTitle>
           <DialogContent>
@@ -1689,8 +1616,13 @@ const StratflowDashboard = () => {
         </Dialog>
 
         {/* New Team Dialog */}
-        <Dialog open={openNewTeamDialog} onClose={() => setOpenNewTeamDialog(false)}>
-          <DialogTitle>
+        <Dialog 
+          open={openNewTeamDialog} 
+          onClose={() => setOpenNewTeamDialog(false)}
+          aria-labelledby="team-dialog-title"
+          disableEnforceFocus
+        >
+          <DialogTitle id="team-dialog-title">
             {selectedTeam ? 'Edit Team' : 'Create New Team'}
           </DialogTitle>
           <DialogContent>
@@ -1763,17 +1695,16 @@ const StratflowDashboard = () => {
           </DialogActions>
         </Dialog>
 
-        {/* API Status Dialog */}
-        {renderApiStatusDialog()}
-
         {/* Sprint Management Dialog */}
         <Dialog
           open={openSprintManagementDialog}
           onClose={handleCloseSprintManagement}
           maxWidth="md"
           fullWidth
+          aria-labelledby="sprint-management-dialog-title"
+          disableEnforceFocus
         >
-          <DialogTitle>
+          <DialogTitle id="sprint-management-dialog-title">
             Sprint Management
             <Box sx={{ float: 'right' }}>
               <Button
@@ -1879,8 +1810,10 @@ const StratflowDashboard = () => {
           onClose={handleCloseNewSprint}
           maxWidth="sm"
           fullWidth
+          aria-labelledby="sprint-dialog-title"
+          disableEnforceFocus
         >
-          <DialogTitle>
+          <DialogTitle id="sprint-dialog-title">
             {editingSprint ? 'Edit Sprint' : 'Create New Sprint'}
           </DialogTitle>
           <DialogContent>

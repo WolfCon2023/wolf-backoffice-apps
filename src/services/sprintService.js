@@ -313,6 +313,70 @@ class SprintService {
            error.message || 
            'An unknown error occurred';
   }
+
+  /**
+   * Get all sprints by project ID
+   * @param {string} projectId - The project ID to filter sprints by
+   * @returns {Array} List of sprints for the specified project
+   */
+  async getSprintsByProject(projectId) {
+    if (!projectId) {
+      console.warn('No project ID provided for getSprintsByProject');
+      return [];
+    }
+
+    const cacheKey = `projectSprints:${projectId}`;
+    
+    // Check cache first
+    if (this.cache.has(cacheKey)) {
+      const cachedData = this.cache.get(cacheKey);
+      const now = Date.now();
+      if (now - cachedData.timestamp < this.cacheTimeout) {
+        console.log(`Using cached sprints for project ${projectId}`);
+        return cachedData.data;
+      }
+    }
+    
+    try {
+      console.log(`📡 Fetching sprints for project ${projectId}...`);
+      const response = await api.get(`/sprints?project=${projectId}`);
+      const sprints = Array.isArray(response.data) ? response.data : [];
+      console.log(`✅ Found ${sprints.length} sprints for project ${projectId}`);
+      
+      // Store in cache
+      this.cache.set(cacheKey, {
+        data: sprints,
+        timestamp: Date.now()
+      });
+      
+      return sprints;
+    } catch (error) {
+      console.error(`❌ Error fetching sprints for project ${projectId}:`, error);
+      
+      // Fall back to filtering manually from all sprints if possible
+      try {
+        console.log('Attempting to fetch all sprints and filter client-side...');
+        const allSprints = await this.getAllSprints();
+        const filteredSprints = allSprints.filter(sprint => 
+          sprint.project === projectId || 
+          sprint.project?._id === projectId
+        );
+        console.log(`✅ Filtered ${filteredSprints.length} sprints for project ${projectId}`);
+        
+        // Store in cache
+        this.cache.set(cacheKey, {
+          data: filteredSprints,
+          timestamp: Date.now()
+        });
+        
+        return filteredSprints;
+      } catch (fallbackError) {
+        console.error('❌ Fallback filtering also failed:', fallbackError);
+        this.logError(error, `getSprintsByProject:${projectId}`);
+        return [];
+      }
+    }
+  }
 }
 
 const sprintService = new SprintService();
