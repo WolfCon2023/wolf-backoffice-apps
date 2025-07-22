@@ -14,7 +14,7 @@
     margin-bottom: 20px;
   }
   
-  /* 📌 Two-column layout for form fields */
+  /* Two-column layout for form fields */
   .form-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -22,7 +22,7 @@
     margin-bottom: 20px;
   }
   
-  /* 📌 Full-width for date picker */
+  /* Full-width for date picker */
   .date-picker {
     width: 100%;
     padding: 10px;
@@ -32,17 +32,17 @@
     background: #f8f9fa;
   }
   
-  /* 📌 Adjusts input field styles */
+  /* Adjusts input field styles */
   .form-container .MuiTextField-root {
     width: 100%;
   }
   
-  /* 📌 Makes Notes field full-width */
+  /* Makes Notes field full-width */
   .notes-field {
     grid-column: span 2;
   }
   
-  /* 📌 Button styles */
+  /* Button styles */
   .button-container {
     display: flex;
     justify-content: center;
