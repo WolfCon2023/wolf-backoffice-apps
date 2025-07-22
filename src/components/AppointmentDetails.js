@@ -41,7 +41,7 @@ const AppointmentDetails = () => {
         setAppointment(response.data);
       }
     } catch (error) {
-      console.error("❌ Error fetching appointment details:", error);
+      console.error("Error fetching appointment details:", error);
     }
   };
 
@@ -58,7 +58,7 @@ const AppointmentDetails = () => {
         setUsers(response.data);
       }
     } catch (error) {
-      console.error("❌ Error fetching users:", error);
+      console.error("Error fetching users:", error);
     }
   };
 
@@ -66,19 +66,19 @@ const AppointmentDetails = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        console.error("❌ No token found.");
+        console.error("No token found.");
         alert("Session expired. Please log in again.");
         navigate("/login");
         return;
       }
 
       if (!appointment || !appointment._id) {
-        console.error("❌ No appointment ID found.");
+        console.error("No appointment ID found.");
         alert("Error: Appointment ID is missing.");
         return;
       }
 
-      console.log("🔄 Sending update request for appointment:", appointment);
+      console.log("Sending update request for appointment:", appointment);
 
       const updatedAppointment = {
         ...appointment,
@@ -93,7 +93,7 @@ const AppointmentDetails = () => {
         }
       );
 
-      console.log("✅ Appointment updated successfully:", response.data);
+      console.log("Appointment updated successfully:", response.data);
       alert("Appointment updated successfully!");
 
       // Refresh the page to reflect the changes
@@ -101,7 +101,7 @@ const AppointmentDetails = () => {
       window.location.reload();
       
     } catch (error) {
-      console.error("❌ Error saving appointment:", error.response?.data || error.message);
+      console.error("Error saving appointment:", error.response?.data || error.message);
       alert("Error updating appointment. Please try again.");
     }
   };
